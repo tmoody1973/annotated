@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+.next/
+out/
+dist/
+build/
+.turbo/
+.plasmo/
+
+# Convex
+.convex/
+
+# Environment
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+*.log
+
+# TypeScript
+*.tsbuildinfo
