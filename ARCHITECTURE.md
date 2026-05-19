@@ -53,7 +53,7 @@ This is the load-bearing flow. When a user opens the sidebar on a podcast page:
 4. **Upsert source (Convex mutation).** Insert or look up the `sources` row by canonical URL. Two users clipping the same episode share this row.
 5. **Transcribe if needed (Convex → worker → Deepgram).** If no `transcripts` row exists for this source, Convex calls the Fly worker's `POST /transcribe` endpoint with the MP3 URL. Worker streams the MP3 to Deepgram with `diarize=true` and a Convex webhook URL. Deepgram processes async (10-60s for a typical episode) and POSTs back to the worker, which writes the `transcripts` row.
 6. **Stream transcript to sidebar (Convex subscription).** The sidebar subscribes to the transcript by source ID. As soon as it lands, the sidebar renders the words with drag-select.
-7. **User drags clip span.** Sidebar computes `clipStartMs` and `clipEndMs` from the word boundaries.
+7. **User drags clip span.** Sidebar computes `clipStartMs` and `clipEndMs` from the word boundaries. The sidebar UI enforces the 90-second spec limit by capping the drag selection; the Convex `createAnnotation` mutation also validates `clipEndMs - clipStartMs ≤ 90000` and rejects the call if exceeded.
 8. **Slice audio (sidebar → Convex → worker).** Convex calls worker's `POST /slice-audio` with `{ audioUrl, startMs, endMs }`. Worker runs `ffmpeg -ss {start} -t {duration} -i {url} -acodec copy out.mp3`, uploads result to Convex file storage, returns the storage ID.
 9. **User adds commentary.** Text or recorded audio. Audio uploads directly to Convex storage.
 10. **Publish annotation (Convex mutation).** Insert into `annotations` table with `isPublic: true`. Convex real-time push notifies the feed subscribers.
@@ -108,9 +108,31 @@ Same shape but no Deepgram and no RSS resolution.
 | Spotify access token | Worker memory | 50 minutes (refresh before 1h expiry) |
 | Podcast Index auth header | Per request (cheap) | None |
 
+## Claim dispute flow
+
+When a user submits a "File a claim" form on an annotation landing page, a Convex mutation inserts a row into the `claims` table. A Convex action triggered by that insert calls the Resend API (`RESEND_API_KEY` in Convex env) to email Tarik with the claimant name, email, reason, and a link to the annotation. Manual review only in v1 — no moderation queue, no automated takedown.
+
+Every annotation landing page must display the source's `canonicalUrl` as a visible, clickable link back to the original content. This is a hard spec requirement ("all clipped content must link back to its original source URL").
+
 ## When something goes wrong
 
 - **yt-dlp breaks (YouTube changed internals).** Worker falls back to YouTube Data API for metadata + shows a "video clipping temporarily unavailable" message in sidebar. Update yt-dlp version.
 - **Deepgram down.** Sidebar shows "transcription unavailable — try again in a few minutes." Spec doesn't require a manual fallback for v1.
 - **Spotify episode is exclusive (no RSS).** Sidebar shows graceful "this episode can't be clipped" message with explanation. Documented non-goal.
 - **Convex rate limit.** Shouldn't happen at bounty traffic but if it does, add request-level batching in the worker.
+
+## Amplifiers
+
+The four competitive differentiators from BUILD-INTENT.md. Each builds on the base spec without adding new infrastructure.
+
+**1. Smart clip suggestions**
+When a transcript becomes `ready`, a Convex action runs a single pass over the word array scoring candidate spans: speaker-change density (diarization from Deepgram), named-entity density (simple regex for proper nouns and numbers), and paragraph boundaries. The top 3 spans (max 90s each) are written to a `suggestedClips` array on the `transcripts` row. The sidebar reads this array and renders three tap-to-select highlights in the transcript view. No ML model required — purely heuristic, runs in a Convex action.
+
+**2. Quote card export**
+The annotation landing page (Next.js) renders a hidden `<div>` at 1080×1080px containing the clip's selected text or transcript segment, source attribution, a static waveform visualization, and the Annotated watermark. `html2canvas` (or `@vercel/og` as a Vercel edge function) captures it as a PNG on demand when the user clicks "Export card." The PNG is served via a `/api/og/[annotationId]` route — shareable directly to X.
+
+**3. Speaker badges**
+Deepgram diarization assigns a `speaker` field to each word in the transcript. When rendering a transcript segment in the sidebar or on the landing page, group consecutive words by speaker and prepend the speaker label (e.g., "Speaker 0:" or a resolved name if the podcast has known hosts). Speaker names can be mapped manually in the source metadata if needed. No additional API calls — this is free output from the existing Deepgram payload.
+
+**4. Source-page badge**
+When the sidebar opens on a page that already has annotations in the `annotations` table (matched by `canonicalUrl`), a badge count appears in the sidebar header. Tapping it opens an inline list of existing annotations for that source. Implemented as a Convex query `getAnnotationsBySource(canonicalUrl)` — no new infrastructure, just a query and a UI panel.

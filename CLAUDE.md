@@ -28,6 +28,7 @@ A Chrome sidebar that captures 90-second clips from YouTube, podcasts, or news a
 | CSS framework | Tailwind CSS v4 | Required by HeroUI v3; install via `@heroui/styles` |
 | Transcription | Deepgram Nova-3 | Podcasts; word-level timestamps + speaker diarization |
 | Transcription | yt-dlp VTT | YouTube; no extra service needed |
+| Email | Resend | Claim dispute notifications to Tarik; triggered by Convex action on claims insert |
 | Package mgr | pnpm workspaces | Turborepo for task orchestration |
 
 ### UI conventions (HeroUI-specific)

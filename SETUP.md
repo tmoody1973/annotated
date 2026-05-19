@@ -19,6 +19,7 @@ Sign up for all of these before running scaffold commands. Collect the keys as y
 | YouTube Data API v3 | Free | API key | Google Cloud Console → new project → enable YouTube Data API v3 → credentials → API key. |
 | Podcast Index | Free | API key + secret | api.podcastindex.org → sign up. Free tier is plenty for v1. |
 | **HeroUI Pro** | Paid (license held) | Pro CLI access + MCP install command | heroui.pro dashboard → get the MCP install command for Claude Code; also grab the Pro CLI for installable blocks/templates. |
+| **Resend** | Free | API key | resend.com → sign up → API Keys → create key. Used to email Tarik when a claim is submitted. |
 
 ---
 
@@ -70,6 +71,9 @@ pnpm install
 # 9. HeroUI in the web app
 cd apps/web
 pnpm add @heroui/react @heroui/styles next-themes
+# @heroui/styles manages Tailwind CSS v4 configuration and takes precedence over
+# the Tailwind setup injected by create-next-app's --tailwind flag. No separate
+# tailwindcss install is needed — @heroui/styles brings it in as a dependency.
 # Then from HeroUI Pro dashboard, run the Pro CLI to add brutalism-themed blocks/templates
 cd ../..
 
@@ -151,6 +155,7 @@ Convex env vars (set via the Convex dashboard or `pnpm dlx convex env set`):
 CLERK_ISSUER_URL=     # from Clerk dashboard → JWT templates → Convex
 WORKER_URL=           # Fly.io app URL once deployed
 WORKER_AUTH_TOKEN=    # same as the worker's
+RESEND_API_KEY=       # from resend.com — used by Convex action on claims insert
 ```
 
 ---
@@ -171,6 +176,13 @@ The dependency chain. Ship in this order — each step has a working demo at the
 10. **File a claim form + email notification.** Spec-required.
 
 Steps 1-3 are foundational and need to land first. Steps 4-8 are independent feature deliverables. Steps 9-10 close the spec.
+
+**Phase 2 — Amplifiers (after spec is complete)**
+
+11. **Speaker badges.** Add speaker grouping to transcript rendering in sidebar and landing page. No new APIs — uses Deepgram diarization already in the transcript payload.
+12. **Smart clip suggestions.** Add heuristic scoring pass in the `transcriptReady` Convex action. Write top-3 spans to `transcripts.suggestedClips`. Render as tap-to-select highlights in the sidebar.
+13. **Source-page badge.** Query `annotations` by `canonicalUrl` on sidebar open. Show badge count + inline list panel if annotations exist.
+14. **Quote card export.** Add `/api/og/[annotationId]` Vercel edge route using `@vercel/og`. Render 1080×1080 card with quote, waveform, attribution, watermark. Add "Export card" button to annotation landing page.
 
 ---
 
