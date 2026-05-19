@@ -55,7 +55,7 @@ mkdir -p packages/backend && cd packages/backend
 pnpm init
 pnpm add convex
 pnpm dlx convex@latest dev --once
-# now drop schema.ts into ./convex/schema.ts
+# schema.ts is already at packages/backend/convex/schema.ts — push it in step 3
 cd ../..
 
 # 7. Shared package — types, Zod schemas, URL parsers
@@ -103,7 +103,7 @@ annotated/
 
 ## 3. Drop in the schema
 
-Copy `schema.ts` (the other file in this delivery) into `packages/backend/convex/schema.ts`. Then push it:
+The schema is already at `packages/backend/convex/schema.ts` in this repo. Push it to Convex:
 
 ```bash
 cd packages/backend
