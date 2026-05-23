@@ -20,7 +20,7 @@ Nobody else in the field has shipped that flow. It's fully spec-compliant — ev
 
 ## The stack, briefly
 
-Next.js 15 on Vercel for the web app, feed, and landing pages. Plasmo for the MV3 sidepanel because writing vanilla Chrome extensions in 2026 is unserious. Clerk for X + Google auth. Convex for real-time data. Deepgram Nova-3 for transcription — word-level timestamps and speaker diarization, which buys us free speaker badges on landing pages. A Fly.io worker handles ffmpeg, yt-dlp, and Deepgram callbacks. The iTunes Lookup API and Podcast Index resolve podcast page URLs to RSS feeds; the Spotify Web API handles metadata when users are on Spotify pages (we bounce to RSS for the actual audio, since Spotify's API only exposes 30-second previews). YouTube Data API for metadata, yt-dlp for video and captions.
+Next.js 16 on Vercel for the web app, feed, and landing pages. Plasmo for the MV3 sidepanel because writing vanilla Chrome extensions in 2026 is unserious. Clerk for X + Google auth. Convex for real-time data. Deepgram Nova-3 for transcription — word-level timestamps and speaker diarization, which buys us free speaker badges on landing pages. A Fly.io worker handles ffmpeg, yt-dlp, and Deepgram callbacks. The iTunes Lookup API and Podcast Index resolve podcast page URLs to RSS feeds; the Spotify Web API handles metadata when users are on Spotify pages (we bounce to RSS for the actual audio, since Spotify's API only exposes 30-second previews). YouTube Data API for metadata, yt-dlp for video and captions.
 
 The whole architecture exists to make one moment fast: drag across transcript words, see the audio clip appear.
 

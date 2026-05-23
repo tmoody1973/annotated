@@ -27,3 +27,6 @@ build/
 
 # TypeScript
 *.tsbuildinfo
+
+# graphify knowledge-graph output (regenerable)
+graphify-out/

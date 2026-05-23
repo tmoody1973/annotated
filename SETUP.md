@@ -35,7 +35,7 @@ cd annotated
 # 2. Strip the example apps + packages
 rm -rf apps/web apps/docs packages/ui packages/eslint-config packages/typescript-config
 
-# 3. Web app — Next.js 15
+# 3. Web app — Next.js (latest, currently 16.x)
 pnpm dlx create-next-app@latest apps/web \
   --typescript --tailwind --app --use-pnpm --no-git --no-import-alias
 
@@ -92,7 +92,7 @@ Final structure:
 ```
 annotated/
 ├── apps/
-│   ├── web/           Next.js 15 — feed, profiles, annotation landings
+│   ├── web/           Next.js 16 — feed, profiles, annotation landings
 │   ├── extension/     Plasmo MV3 side panel
 │   └── worker/        Fly.io Node service — ffmpeg, yt-dlp, transcription
 ├── packages/

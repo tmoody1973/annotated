@@ -18,7 +18,7 @@ A Chrome sidebar that captures 90-second clips from YouTube, podcasts, or news a
 
 | Layer | Tech | Notes |
 |---|---|---|
-| Web app | Next.js 15 App Router, Vercel | Feed, profiles, annotation landing pages |
+| Web app | Next.js 16 App Router, Vercel | Feed, profiles, annotation landing pages. Note: Next 16 renamed `middleware.ts` → `proxy.ts`. |
 | Extension | Plasmo MV3 side panel | React + TypeScript + Tailwind out of the box |
 | Worker | Fastify + Node, Fly.io | ffmpeg, yt-dlp, Deepgram webhook handler |
 | Backend | Convex | Real-time data, file storage, scheduled functions |
