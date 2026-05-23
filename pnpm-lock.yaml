@@ -17,12 +17,18 @@ importers:
 
   apps/extension:
     dependencies:
+      '@annotated/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@heroui/react':
         specifier: ^3.0.5
         version: 3.0.5(@react-spectrum/provider@3.11.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(@types/react-dom@19.2.3(@types/react@19.2.15))(@types/react@19.2.15)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(tailwindcss@4.3.0)
       '@heroui/styles':
         specifier: ^3.0.5
         version: 3.0.5(tailwind-merge@3.4.0)(tailwindcss@4.3.0)
+      convex:
+        specifier: ^1.39.1
+        version: 1.39.1(@clerk/react@6.6.6(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)
       plasmo:
         specifier: ^0.90.5
         version: 0.90.5(@swc/core@1.15.33(@swc/helpers@0.5.21))(@swc/helpers@0.5.21)(@types/node@20.19.41)(postcss@8.5.15)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -175,6 +181,9 @@ importers:
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
+      vitest:
+        specifier: ^4.1.7
+        version: 4.1.7(@types/node@20.19.41)(vite@8.0.14(@types/node@20.19.41)(esbuild@0.28.0)(jiti@2.7.0)(less@4.6.4)(sass@1.99.0)(tsx@4.22.3)(yaml@2.9.0))
 
 packages:
 

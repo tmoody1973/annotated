@@ -12,8 +12,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@annotated/shared": "workspace:*",
     "@heroui/react": "^3.0.5",
     "@heroui/styles": "^3.0.5",
+    "convex": "^1.39.1",
     "plasmo": "^0.90.5",
     "react": "^19.2.4",
     "react-dom": "^19.2.4"
