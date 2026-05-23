@@ -70,7 +70,7 @@ When tempted to add a feature, re-read this section first.
 
 Follow SETUP.md section 5 ("Build order"). Each step has a working demo at the end. Don't skip ahead — finish step N before starting step N+1. Update the marker below as we progress.
 
-**Current step: 4 (extension detects YouTube + Convex connection)** — Plasmo sidepanel detects a YouTube video in the active tab, extracts the ID (shared util), and runs a public Convex query (`sources.getByYoutubeId`) to report if it's a known source — verified in a real browser. Extension auth deferred (Clerk OAuth needs `syncHost`, not viable in a side panel). Steps 1–3 done (scaffold, Clerk web auth, Deepgram pipeline). Next: Step 5 (end-to-end YouTube clip → yt-dlp + ffmpeg → annotation → landing page).
+**Current step: 5 — in progress (5a done)** — Step 5 (end-to-end YouTube clip) is decomposed. **5a shipped:** worker `POST /clip-youtube` clips a YouTube span (system yt-dlp section download + ffmpeg → 240p, ≤90s mp4) into Convex file storage, returning a `storageId`; verified on a real video (ffprobe-confirmed h264/240p/duration) + negative paths. **Remaining:** 5b Convex `annotations`/`sources` + storage wiring (dev/seed author for now), 5c Next.js landing page (`/a/[id]` + source link + claim button), 5d extension clip-selection UI. Steps 1–4 done. Extension auth deferred (Clerk OAuth needs `syncHost`).
 
 ## Architecture orientation
 
