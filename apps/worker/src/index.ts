@@ -1,16 +1,26 @@
 import Fastify from "fastify";
+import { loadEnv } from "./env.js";
+import { createDeepgramClient } from "./deepgram-client.js";
+import { createTranscriptWriter } from "./convex-writer.js";
+import { registerTranscribeRoute } from "./routes/transcribe.js";
 
-const PORT = Number(process.env.PORT ?? 8080);
+const env = loadEnv();
 
-const fastify = Fastify({ logger: true });
+const app = Fastify({ logger: true });
 
-fastify.get("/health", async () => ({ status: "ok" }));
+app.get("/health", async () => ({ status: "ok" }));
+
+registerTranscribeRoute(app, {
+  deepgram: createDeepgramClient(env.DEEPGRAM_API_KEY),
+  writer: createTranscriptWriter(env.CONVEX_URL, env.WORKER_AUTH_TOKEN),
+  workerToken: env.WORKER_AUTH_TOKEN,
+});
 
 const start = async () => {
   try {
-    await fastify.listen({ port: PORT, host: "0.0.0.0" });
+    await app.listen({ port: env.PORT, host: "0.0.0.0" });
   } catch (err) {
-    fastify.log.error(err);
+    app.log.error(err);
     process.exit(1);
   }
 };

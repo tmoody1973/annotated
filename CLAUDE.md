@@ -70,7 +70,7 @@ When tempted to add a feature, re-read this section first.
 
 Follow SETUP.md section 5 ("Build order"). Each step has a working demo at the end. Don't skip ahead — finish step N before starting step N+1. Update the marker below as we progress.
 
-**Current step: 1 (schema deployed)** — monorepo scaffolded, Convex schema live at `dev:strong-eel-665`.
+**Current step: 3 (Deepgram transcribe pipeline live)** — worker `POST /transcribe` takes an MP3 URL, transcribes via Deepgram Nova-3 (diarized, word timestamps), and writes a `transcripts` row to Convex (`dev:strong-eel-665`). Standalone-tested end-to-end. Steps 1–2 (scaffold, Clerk auth) done.
 
 ## Architecture orientation
 
