@@ -70,7 +70,7 @@ When tempted to add a feature, re-read this section first.
 
 Follow SETUP.md section 5 ("Build order"). Each step has a working demo at the end. Don't skip ahead — finish step N before starting step N+1. Update the marker below as we progress.
 
-**Current step: 3 (Deepgram transcribe pipeline live)** — worker `POST /transcribe` takes an MP3 URL, transcribes via Deepgram Nova-3 (diarized, word timestamps), and writes a `transcripts` row to Convex (`dev:strong-eel-665`). Standalone-tested end-to-end. Steps 1–2 (scaffold, Clerk auth) done.
+**Current step: 4 (extension detects YouTube + Convex connection)** — Plasmo sidepanel detects a YouTube video in the active tab, extracts the ID (shared util), and runs a public Convex query (`sources.getByYoutubeId`) to report if it's a known source — verified in a real browser. Extension auth deferred (Clerk OAuth needs `syncHost`, not viable in a side panel). Steps 1–3 done (scaffold, Clerk web auth, Deepgram pipeline). Next: Step 5 (end-to-end YouTube clip → yt-dlp + ffmpeg → annotation → landing page).
 
 ## Architecture orientation
 
