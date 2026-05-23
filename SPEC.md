@@ -37,6 +37,7 @@ All clipped content — text, audio, or video — must link back to its original
 - [ ] Video downgraded to 240p
 - [ ] Every clip links to its original source URL
 - [ ] Visible "File a claim" button on every annotation page
+- [ ] Each clip generates a public landing page (source link + claim button)
 - [ ] Account creation via X or Google only
 - [ ] Public social feed with follow and comment
 - [ ] Commentary supports text and recorded audio
