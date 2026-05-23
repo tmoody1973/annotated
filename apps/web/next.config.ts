@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // @annotated/shared ships raw TypeScript (src/index.ts) — let Next transpile it.
+  transpilePackages: ["@annotated/shared"],
 };
 
 export default nextConfig;

@@ -1,2 +1,5 @@
-export { extractYoutubeVideoId } from "./extract-youtube-id.js";
-export { youtubeCanonicalUrl } from "./youtube-canonical-url.js";
+// Extensionless imports (this package uses Bundler resolution) so every consumer
+// bundler — vitest, Plasmo, tsc, and Next/Turbopack — resolves them.
+export { extractYoutubeVideoId } from "./extract-youtube-id";
+export { youtubeCanonicalUrl } from "./youtube-canonical-url";
+export { formatClipTimestamp } from "./format-clip-timestamp";

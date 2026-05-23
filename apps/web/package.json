@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@annotated/backend": "workspace:*",
+    "@annotated/shared": "workspace:*",
     "@clerk/nextjs": "^7.3.7",
     "@heroui/react": "^3.0.5",
     "@heroui/styles": "^3.0.5",
