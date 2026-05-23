@@ -70,7 +70,7 @@ When tempted to add a feature, re-read this section first.
 
 Follow SETUP.md section 5 ("Build order"). Each step has a working demo at the end. Don't skip ahead — finish step N before starting step N+1. Update the marker below as we progress.
 
-**Current step: 5 — in progress (5a done)** — Step 5 (end-to-end YouTube clip) is decomposed. **5a shipped:** worker `POST /clip-youtube` clips a YouTube span (system yt-dlp section download + ffmpeg → 240p, ≤90s mp4) into Convex file storage, returning a `storageId`; verified on a real video (ffprobe-confirmed h264/240p/duration) + negative paths. **Remaining:** 5b Convex `annotations`/`sources` + storage wiring (dev/seed author for now), 5c Next.js landing page (`/a/[id]` + source link + claim button), 5d extension clip-selection UI. Steps 1–4 done. Extension auth deferred (Clerk OAuth needs `syncHost`).
+**Current step: 5 — in progress (5a + 5b done)** — Step 5 (end-to-end YouTube clip) decomposed. **5a:** worker `POST /clip-youtube` → system yt-dlp section download + ffmpeg → 240p, ≤90s mp4 into Convex storage, returns `storageId` (ffprobe-verified). **5b:** Convex `sources.upsertYoutube` (dedup by videoId) + `annotations.create` (auth-derived author) + `getById` (joins clip URL + source attribution + author) + token-guarded `testing.seedAnnotation`; data layer E2E-verified (seed author for now). **Remaining:** 5c Next.js landing page (`/a/[id]` + source link + claim button), 5d extension clip-selection UI. **Known gap:** auth-gated mutation guards (commentary/span re-check) need a `convex-test` harness to unit-verify. Steps 1–4 done. Extension auth deferred (Clerk OAuth needs `syncHost`).
 
 ## Architecture orientation
 
