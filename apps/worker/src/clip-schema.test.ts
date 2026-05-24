@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { MAX_CLIP_MS, clipYoutubeBodySchema, evaluateClipSpan } from "./clip-schema.js";
+import {
+  MAX_CLIP_MS,
+  clipAudioBodySchema,
+  clipYoutubeBodySchema,
+  evaluateClipSpan,
+} from "./clip-schema.js";
 
 describe("evaluateClipSpan", () => {
   it("accepts a normal span and reports its duration", () => {
@@ -46,6 +51,35 @@ describe("clipYoutubeBodySchema", () => {
   it("rejects a non-integer endMs", () => {
     expect(
       clipYoutubeBodySchema.safeParse({ videoId: "x", startMs: 0, endMs: 3.5 }).success
+    ).toBe(false);
+  });
+});
+
+describe("clipAudioBodySchema", () => {
+  it("accepts a valid body with an mp3 url", () => {
+    expect(
+      clipAudioBodySchema.safeParse({
+        mp3Url: "https://dts.podtrac.com/redirect.mp3/x/default.mp3",
+        startMs: 0,
+        endMs: 30_000,
+      }).success
+    ).toBe(true);
+  });
+
+  it("rejects a non-url mp3Url", () => {
+    expect(
+      clipAudioBodySchema.safeParse({ mp3Url: "not a url", startMs: 0, endMs: 30_000 }).success
+    ).toBe(false);
+  });
+
+  it("rejects a missing mp3Url", () => {
+    expect(clipAudioBodySchema.safeParse({ startMs: 0, endMs: 30_000 }).success).toBe(false);
+  });
+
+  it("rejects a non-http(s) scheme (SSRF / local-file guard)", () => {
+    expect(
+      clipAudioBodySchema.safeParse({ mp3Url: "file:///etc/passwd", startMs: 0, endMs: 1000 })
+        .success
     ).toBe(false);
   });
 });

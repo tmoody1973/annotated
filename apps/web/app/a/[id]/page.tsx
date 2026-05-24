@@ -8,6 +8,7 @@ import { ClaimButton } from "./claim-button";
 interface AnnotationView {
   _id: string;
   commentaryText?: string;
+  selectedText?: string;
   clipStartMs?: number;
   clipEndMs?: number;
   clipUrl: string | null;
@@ -64,6 +65,8 @@ export default async function AnnotationPage({
       ? `${formatClipTimestamp(annotation.clipStartMs)}–${formatClipTimestamp(annotation.clipEndMs)}`
       : null;
 
+  const isPodcast = annotation.source?.type === "podcast";
+
   return (
     <main className="flex min-h-screen flex-col items-center bg-[#f4f1e8] px-4 py-10 text-[#111]">
       <div className="w-full max-w-2xl">
@@ -76,16 +79,18 @@ export default async function AnnotationPage({
 
         <article className="border-[3px] border-[#111] bg-white shadow-[8px_8px_0_0_#111]">
           <div className="border-b-[3px] border-[#111] bg-black">
-            {annotation.clipUrl ? (
+            {!annotation.clipUrl ? (
+              <p className="p-8 text-center font-mono text-sm text-white">
+                clip unavailable
+              </p>
+            ) : isPodcast ? (
+              <audio controls src={annotation.clipUrl} className="block w-full p-4" />
+            ) : (
               <video
                 controls
                 src={annotation.clipUrl}
                 className="block max-h-[60vh] w-full"
               />
-            ) : (
-              <p className="p-8 text-center font-mono text-sm text-white">
-                clip unavailable
-              </p>
             )}
           </div>
 
@@ -94,6 +99,12 @@ export default async function AnnotationPage({
               <span className="inline-block border-2 border-[#111] bg-[#ffe600] px-2 py-1 font-mono text-sm font-bold">
                 {range}
               </span>
+            )}
+
+            {annotation.selectedText && (
+              <blockquote className="mt-4 border-l-[6px] border-[#ffe600] pl-4 font-mono text-sm leading-relaxed text-[#333]">
+                “{annotation.selectedText}”
+              </blockquote>
             )}
 
             {annotation.commentaryText && (

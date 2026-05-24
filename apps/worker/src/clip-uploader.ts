@@ -9,13 +9,14 @@ const generateUploadUrlRef = makeFunctionReference<
 >("files:generateUploadUrl");
 
 export interface ClipUploader {
-  upload(filePath: string): Promise<string>;
+  upload(filePath: string, contentType?: string): Promise<string>;
 }
 
 /**
  * Uploads a local clip file to Convex file storage using the standard
  * generate-upload-url → POST flow, presenting the shared worker token to the
- * token-guarded mutation. Returns the resulting storage ID.
+ * token-guarded mutation. Content type defaults to mp4 (YouTube) but callers
+ * pass `audio/mpeg` for podcast clips. Returns the resulting storage ID.
  */
 export function createClipUploader(
   convexUrl: string,
@@ -24,13 +25,13 @@ export function createClipUploader(
   const client = new ConvexHttpClient(convexUrl);
 
   return {
-    async upload(filePath: string): Promise<string> {
+    async upload(filePath: string, contentType = "video/mp4"): Promise<string> {
       const uploadUrl = await client.mutation(generateUploadUrlRef, { workerToken });
       const bytes = await readFile(filePath);
 
       const response = await fetch(uploadUrl, {
         method: "POST",
-        headers: { "Content-Type": "video/mp4" },
+        headers: { "Content-Type": contentType },
         body: bytes,
       });
       if (!response.ok) {

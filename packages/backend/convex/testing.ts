@@ -117,3 +117,47 @@ export const publishYoutubeClipDev = mutation({
     });
   },
 });
+
+/**
+ * Dev publish path for podcast clips before syncHost auth exists. Token-guarded
+ * (the panel has no Clerk session) and attributed to the dev seed user. Reuses
+ * the podcast `sources` row created during Step 6 resolution (passed by id), and
+ * persists the transcript-derived quote alongside the span and commentary.
+ * DEBT: production must replace this with real auth + a server-side worker call.
+ */
+export const publishPodcastClipDev = mutation({
+  args: {
+    sourceId: v.id("sources"),
+    clipStorageId: v.id("_storage"),
+    clipStartMs: v.number(),
+    clipEndMs: v.number(),
+    selectedText: v.string(),
+    commentaryText: v.string(),
+    workerToken: v.string(),
+  },
+  returns: v.id("annotations"),
+  handler: async (ctx, args) => {
+    if (args.workerToken !== process.env.WORKER_AUTH_TOKEN) {
+      throw new Error("Unauthorized");
+    }
+    const source = await ctx.db.get(args.sourceId);
+    if (!source || source.type !== "podcast") {
+      throw new Error("Source is not a podcast");
+    }
+    if (args.selectedText.trim().length === 0) {
+      throw new Error("A transcript quote is required");
+    }
+    assertPublishable(args);
+
+    const authorId = await resolveSeedUser(ctx);
+    return await insertAnnotation(ctx, {
+      authorId,
+      sourceId: args.sourceId,
+      clipStorageId: args.clipStorageId,
+      clipStartMs: args.clipStartMs,
+      clipEndMs: args.clipEndMs,
+      selectedText: args.selectedText,
+      commentaryText: args.commentaryText,
+    });
+  },
+});

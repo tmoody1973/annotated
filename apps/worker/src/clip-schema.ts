@@ -12,6 +12,19 @@ export const clipYoutubeBodySchema = z.object({
 
 export type ClipYoutubeBody = z.infer<typeof clipYoutubeBodySchema>;
 
+/** Body of a POST /clip-audio request. mp3Url is the podcast enclosure (may be redirect-prefixed).
+ * Restricted to http(s) so the URL can't drive curl/ffmpeg at file:// or internal metadata IPs. */
+export const clipAudioBodySchema = z.object({
+  mp3Url: z
+    .string()
+    .url()
+    .refine((u) => /^https?:\/\//i.test(u), "mp3Url must be http(s)"),
+  startMs: z.number().int().nonnegative(),
+  endMs: z.number().int().positive(),
+});
+
+export type ClipAudioBody = z.infer<typeof clipAudioBodySchema>;
+
 export type ClipSpanResult =
   | { ok: true; durationMs: number }
   | { ok: false; error: string };

@@ -33,6 +33,7 @@ interface AnnotationInsert {
   clipStorageId?: Id<"_storage">;
   clipStartMs?: number;
   clipEndMs?: number;
+  selectedText?: string;
   commentaryText?: string;
 }
 
@@ -50,6 +51,7 @@ export async function insertAnnotation(
     clipStorageId: input.clipStorageId,
     clipStartMs: input.clipStartMs,
     clipEndMs: input.clipEndMs,
+    selectedText: input.selectedText,
     commentaryText: input.commentaryText,
     isPublic: true,
     publishedAt: Date.now(),

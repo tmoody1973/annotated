@@ -12,3 +12,5 @@ export { parseRssFeed } from "./rss-feed";
 export type { ParsedFeed, RssEpisode } from "./rss-feed";
 export { matchEpisode } from "./episode-match";
 export type { EpisodeCriteria } from "./episode-match";
+export { selectClipSpan } from "./transcript-selection";
+export type { TranscriptWord, TranscriptSelection } from "./transcript-selection";

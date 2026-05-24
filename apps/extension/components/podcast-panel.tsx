@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { useAction } from "convex/react";
 import { makeFunctionReference } from "convex/server";
 import type { PodcastDetection } from "../lib/use-active-tab-podcast";
-import { accent, ink, monoStack, muted } from "../lib/clip-styles";
+import { ink, monoStack, muted } from "../lib/clip-styles";
+import { PodcastClipper } from "./podcast-clipper";
 
 type ResolveArgs = {
   platform: "apple" | "spotify" | "generic";
@@ -141,19 +142,7 @@ export function PodcastPanel({ detection }: { detection: PodcastDetection }) {
         {result.episodeTitle}
       </h2>
       <p style={{ fontSize: 13, color: muted, margin: 0 }}>{result.podcastName}</p>
-      <p
-        style={{
-          fontFamily: monoStack,
-          fontSize: 11,
-          fontWeight: 700,
-          letterSpacing: "0.1em",
-          textTransform: "uppercase",
-          color: accent,
-          margin: "10px 0 0",
-        }}
-      >
-        Ready to clip
-      </p>
+      <PodcastClipper sourceId={result.sourceId} mp3Url={result.mp3Url} />
     </section>
   );
 }

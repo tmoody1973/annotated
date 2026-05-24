@@ -5,6 +5,7 @@ import { createTranscriptWriter } from "./convex-writer.js";
 import { createClipUploader } from "./clip-uploader.js";
 import { registerTranscribeRoute } from "./routes/transcribe.js";
 import { registerClipYoutubeRoute } from "./routes/clip-youtube.js";
+import { registerClipAudioRoute } from "./routes/clip-audio.js";
 
 const env = loadEnv();
 
@@ -19,6 +20,11 @@ registerTranscribeRoute(app, {
 });
 
 registerClipYoutubeRoute(app, {
+  uploader: createClipUploader(env.CONVEX_URL, env.WORKER_AUTH_TOKEN),
+  workerToken: env.WORKER_AUTH_TOKEN,
+});
+
+registerClipAudioRoute(app, {
   uploader: createClipUploader(env.CONVEX_URL, env.WORKER_AUTH_TOKEN),
   workerToken: env.WORKER_AUTH_TOKEN,
 });
