@@ -1,3 +1,4 @@
+import { cleanYoutubeTitle } from "@annotated/shared";
 import {
   GET_PLAYER_TIME,
   type GetPlayerTimeResponse,
@@ -29,8 +30,8 @@ export async function requestPlayerTimeMs(): Promise<number | null> {
   }
 }
 
-/** Active tab title with YouTube's " - YouTube" suffix stripped, for source attribution. */
+/** Active tab title cleaned of YouTube's badge/suffix chrome, for source attribution. */
 export async function getActiveVideoTitle(): Promise<string> {
   const tab = await getActiveTab();
-  return (tab?.title ?? "YouTube video").replace(/ - YouTube$/, "");
+  return cleanYoutubeTitle(tab?.title ?? "YouTube video");
 }
