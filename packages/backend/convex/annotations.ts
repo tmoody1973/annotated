@@ -4,7 +4,28 @@ import type { Id } from "./_generated/dataModel";
 import { upsertYoutubeSource } from "./sources";
 
 /** SPEC: clips are capped at 90 seconds. */
-const MAX_CLIP_MS = 90_000;
+export const MAX_CLIP_MS = 90_000;
+
+/**
+ * Validates the publish-time invariants shared by the authed `create` mutation
+ * and the dev seed publish: commentary is required and the clip span must be
+ * ordered and within the SPEC 90s cap. Throws with a readable reason.
+ */
+export function assertPublishable(input: {
+  commentaryText: string;
+  clipStartMs: number;
+  clipEndMs: number;
+}): void {
+  if (input.commentaryText.trim().length === 0) {
+    throw new Error("Commentary is required");
+  }
+  if (
+    input.clipEndMs <= input.clipStartMs ||
+    input.clipEndMs - input.clipStartMs > MAX_CLIP_MS
+  ) {
+    throw new Error("Invalid clip span");
+  }
+}
 
 interface AnnotationInsert {
   authorId: Id<"users">;
@@ -67,15 +88,7 @@ export const create = mutation({
     if (!user) {
       throw new Error("No user record for the current identity");
     }
-    if (args.commentaryText.trim().length === 0) {
-      throw new Error("Commentary is required");
-    }
-    if (
-      args.clipEndMs <= args.clipStartMs ||
-      args.clipEndMs - args.clipStartMs > MAX_CLIP_MS
-    ) {
-      throw new Error("Invalid clip span");
-    }
+    assertPublishable(args);
 
     const sourceId = await upsertYoutubeSource(ctx, args);
     return await insertAnnotation(ctx, {

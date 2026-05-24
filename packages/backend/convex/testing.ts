@@ -1,7 +1,30 @@
 import { v } from "convex/values";
-import { mutation } from "./_generated/server";
+import { mutation, type MutationCtx } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
 import { upsertYoutubeSource } from "./sources";
-import { insertAnnotation } from "./annotations";
+import { assertPublishable, insertAnnotation } from "./annotations";
+
+/** Clerk subject used for the dev seed author until extension auth ships. */
+const SEED_CLERK_ID = "seed-dev-user";
+
+/**
+ * Returns the dedicated dev seed user, creating it on first use. Lets the
+ * token-guarded seed/publish paths attribute annotations to a stable author
+ * before real extension (syncHost) auth exists.
+ */
+async function resolveSeedUser(ctx: MutationCtx): Promise<Id<"users">> {
+  const existing = await ctx.db
+    .query("users")
+    .withIndex("by_clerk_id", (q) => q.eq("clerkId", SEED_CLERK_ID))
+    .first();
+  if (existing) return existing._id;
+
+  return await ctx.db.insert("users", {
+    clerkId: SEED_CLERK_ID,
+    username: "dev",
+    displayName: "Dev Seed",
+  });
+}
 
 /**
  * Test-only: insert a minimal podcast source so the transcribe pipeline can be
@@ -37,18 +60,7 @@ export const seedAnnotation = mutation({
       throw new Error("Unauthorized");
     }
 
-    const existingUser = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", "seed-dev-user"))
-      .first();
-    const authorId =
-      existingUser?._id ??
-      (await ctx.db.insert("users", {
-        clerkId: "seed-dev-user",
-        username: "dev",
-        displayName: "Dev Seed",
-      }));
-
+    const authorId = await resolveSeedUser(ctx);
     const sourceId = await upsertYoutubeSource(ctx, {
       videoId: `seed-${Date.now()}`,
       title: "Seed YouTube Clip",
@@ -61,6 +73,47 @@ export const seedAnnotation = mutation({
       clipStartMs: 0,
       clipEndMs: 10_000,
       commentaryText: "Seed commentary",
+    });
+  },
+});
+
+/**
+ * Dev publish path for the extension before syncHost auth exists. Token-guarded
+ * (the panel has no Clerk session) and attributes the clip to the dev seed user.
+ * Accepts the real span, commentary, and source metadata the sidepanel collects,
+ * and enforces the same publish invariants as the authed `annotations.create`.
+ * DEBT: production must replace this with real auth + a server-side worker call.
+ */
+export const publishYoutubeClipDev = mutation({
+  args: {
+    videoId: v.string(),
+    title: v.string(),
+    author: v.optional(v.string()),
+    thumbnailUrl: v.optional(v.string()),
+    durationMs: v.optional(v.number()),
+    clipStorageId: v.id("_storage"),
+    clipStartMs: v.number(),
+    clipEndMs: v.number(),
+    commentaryText: v.string(),
+    workerToken: v.string(),
+  },
+  returns: v.id("annotations"),
+  handler: async (ctx, args) => {
+    if (args.workerToken !== process.env.WORKER_AUTH_TOKEN) {
+      throw new Error("Unauthorized");
+    }
+    assertPublishable(args);
+
+    const authorId = await resolveSeedUser(ctx);
+    const sourceId = await upsertYoutubeSource(ctx, args);
+
+    return await insertAnnotation(ctx, {
+      authorId,
+      sourceId,
+      clipStorageId: args.clipStorageId,
+      clipStartMs: args.clipStartMs,
+      clipEndMs: args.clipEndMs,
+      commentaryText: args.commentaryText,
     });
   },
 });

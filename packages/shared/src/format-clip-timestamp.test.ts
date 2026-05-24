@@ -21,4 +21,12 @@ describe("formatClipTimestamp", () => {
   it("floors sub-second milliseconds", () => {
     expect(formatClipTimestamp(10_750)).toBe("0:10");
   });
+
+  it("uses h:mm:ss past one hour so clockToMs can round-trip it", () => {
+    expect(formatClipTimestamp(3_723_000)).toBe("1:02:03");
+  });
+
+  it("zero-pads minutes only in the hour form", () => {
+    expect(formatClipTimestamp(3_600_000 + 5_000)).toBe("1:00:05");
+  });
 });
