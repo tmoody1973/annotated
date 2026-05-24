@@ -1,17 +1,21 @@
 import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Share_Tech_Mono, Anton } from "next/font/google";
 import { ConvexClientProvider } from "./ConvexClientProvider";
+import { Providers } from "./Providers";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// Brutalism theme fonts: Share Tech Mono for body, Anton for display headings.
+const shareTechMono = Share_Tech_Mono({
+  weight: "400",
   subsets: ["latin"],
+  variable: "--font-share-tech-mono",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const anton = Anton({
+  weight: "400",
   subsets: ["latin"],
+  variable: "--font-anton",
 });
 
 export const metadata: Metadata = {
@@ -28,10 +32,13 @@ export default function RootLayout({
     <ClerkProvider>
       <html
         lang="en"
-        className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+        suppressHydrationWarning
+        className={`${shareTechMono.variable} ${anton.variable} brutalism-light h-full antialiased`}
       >
-        <body className="min-h-full flex flex-col">
-          <ConvexClientProvider>{children}</ConvexClientProvider>
+        <body className="min-h-full flex flex-col bg-background text-foreground">
+          <Providers>
+            <ConvexClientProvider>{children}</ConvexClientProvider>
+          </Providers>
         </body>
       </html>
     </ClerkProvider>

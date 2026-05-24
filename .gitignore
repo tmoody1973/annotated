@@ -30,3 +30,6 @@ build/
 
 # graphify knowledge-graph output (regenerable)
 graphify-out/
+
+# npm registry auth (HeroUI Pro etc.) — never commit tokens
+.npmrc

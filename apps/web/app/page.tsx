@@ -1,39 +1,52 @@
 import { auth } from "@clerk/nextjs/server";
-import { SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
+import { SignInButton, UserButton } from "@clerk/nextjs";
+import { Button, Card } from "@heroui/react";
 import { CurrentUserPanel } from "./CurrentUserPanel";
+import { ThemeToggle } from "./ThemeToggle";
 
 export default async function Home() {
   const { userId } = await auth();
   const signedIn = userId !== null && userId !== undefined;
 
   return (
-    <main className="flex flex-1 flex-col items-center justify-center gap-8 p-8">
-      <header className="flex flex-col items-center gap-2">
-        <h1 className="text-3xl font-bold tracking-tight">Annotated</h1>
-        <p className="text-sm text-neutral-500">
-          Clip and annotate media from any web page.
-        </p>
+    <main className="flex flex-1 flex-col">
+      <header className="flex items-center justify-between border-b border-border px-6 py-4">
+        <h1 className="text-2xl">Annotated</h1>
+        <div className="flex items-center gap-3">
+          <ThemeToggle />
+          {signedIn ? (
+            <UserButton />
+          ) : (
+            <SignInButton mode="modal">
+              <Button size="sm">Sign in</Button>
+            </SignInButton>
+          )}
+        </div>
       </header>
 
-      {!signedIn ? (
-        <div className="flex gap-3">
-          <SignInButton mode="modal">
-            <button className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800">
-              Sign in
-            </button>
-          </SignInButton>
-          <SignUpButton mode="modal">
-            <button className="rounded-md border border-neutral-300 px-4 py-2 text-sm font-medium hover:bg-neutral-50">
-              Sign up
-            </button>
-          </SignUpButton>
-        </div>
-      ) : (
-        <div className="flex flex-col items-center gap-4">
-          <UserButton />
-          <CurrentUserPanel />
-        </div>
-      )}
+      <section className="mx-auto w-full max-w-2xl p-6">
+        <Card>
+          <Card.Header>
+            <Card.Title>Public feed</Card.Title>
+            <Card.Description>
+              Clips and annotations from across the web. The feed lands here next.
+            </Card.Description>
+          </Card.Header>
+          <Card.Content>
+            <p className="text-muted">
+              Design system standing up — HeroUI Pro, brutalism theme.
+            </p>
+          </Card.Content>
+          <Card.Footer>
+            <Button>Get started</Button>
+          </Card.Footer>
+        </Card>
+        {signedIn && (
+          <div className="mt-6">
+            <CurrentUserPanel />
+          </div>
+        )}
+      </section>
     </main>
   );
 }

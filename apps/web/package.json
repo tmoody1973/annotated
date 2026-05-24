@@ -12,6 +12,7 @@
     "@annotated/backend": "workspace:*",
     "@annotated/shared": "workspace:*",
     "@clerk/nextjs": "^7.3.7",
+    "@heroui-pro/react": "1.0.0-beta.4",
     "@heroui/react": "^3.0.5",
     "@heroui/styles": "^3.0.5",
     "convex": "^1.39.1",
