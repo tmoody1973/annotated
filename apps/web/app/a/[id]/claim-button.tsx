@@ -1,19 +1,47 @@
 "use client";
 
 import { useState } from "react";
+import { useMutation } from "convex/react";
+import { api } from "@annotated/backend/convex/_generated/api";
+import type { Id } from "@annotated/backend/convex/_generated/dataModel";
 
 const fieldClass =
-  "w-full border-2 border-[#111] bg-white px-3 py-2 text-sm outline-none focus:bg-[#fffce0]";
+  "w-full border-2 border-[#111] bg-white px-3 py-2 text-sm outline-none focus:bg-[#fffce0] disabled:opacity-60";
+
+type Status = "idle" | "submitting" | "success" | "error";
 
 /**
  * The SPEC-required "File a claim" button. Visible on every annotation page;
- * opens a fair-use dispute form. Submission (persisting the claim + emailing
- * the owner) is wired in Step 10 — for now it acknowledges without losing data
- * silently.
+ * opens a fair-use dispute form. Submitting persists a claim (public, no auth)
+ * and schedules an email to the site owner via Resend.
  */
-export function ClaimButton() {
+export function ClaimButton({ annotationId }: { annotationId: string }) {
   const [open, setOpen] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [reason, setReason] = useState("");
+  const [status, setStatus] = useState<Status>("idle");
+  const [error, setError] = useState("");
+
+  const submitClaim = useMutation(api.claims.submit);
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setStatus("submitting");
+    setError("");
+    try {
+      await submitClaim({
+        annotationId: annotationId as Id<"annotations">,
+        claimantName: name,
+        claimantEmail: email,
+        reason,
+      });
+      setStatus("success");
+    } catch {
+      setStatus("error");
+      setError("Couldn't file your claim. Check your details and try again.");
+    }
+  }
 
   return (
     <section>
@@ -28,32 +56,59 @@ export function ClaimButton() {
 
       {open && (
         <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            setSubmitted(true);
-          }}
+          onSubmit={handleSubmit}
           className="mt-4 border-[3px] border-[#111] bg-white p-5 shadow-[5px_5px_0_0_#111]"
         >
           <p className="mb-3 text-xs font-bold uppercase tracking-widest text-[#555]">
             Report a fair-use issue with this clip
           </p>
-          <div className="flex flex-col gap-3">
-            <input className={fieldClass} placeholder="Your name" required />
-            <input className={fieldClass} type="email" placeholder="Your email" required />
-            <textarea className={fieldClass} rows={3} placeholder="What's the issue?" required />
-            {submitted ? (
-              <p className="border-2 border-[#111] bg-[#ffe600] px-3 py-2 text-sm font-bold">
-                Thanks — claim handling goes live in the next build step.
-              </p>
-            ) : (
+
+          {status === "success" ? (
+            <p className="border-2 border-[#111] bg-[#ffe600] px-3 py-2 text-sm font-bold">
+              Thanks — your claim was filed. We&apos;ll review it and follow up by email.
+            </p>
+          ) : (
+            <div className="flex flex-col gap-3">
+              <input
+                className={fieldClass}
+                placeholder="Your name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                disabled={status === "submitting"}
+                required
+              />
+              <input
+                className={fieldClass}
+                type="email"
+                placeholder="Your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={status === "submitting"}
+                required
+              />
+              <textarea
+                className={fieldClass}
+                rows={3}
+                placeholder="What's the issue?"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                disabled={status === "submitting"}
+                required
+              />
+              {status === "error" && (
+                <p className="border-2 border-[#111] bg-[#ff5c00] px-3 py-2 text-sm font-bold text-white">
+                  {error}
+                </p>
+              )}
               <button
                 type="submit"
-                className="self-start border-[3px] border-[#111] bg-[#111] px-4 py-2 text-sm font-bold uppercase tracking-wide text-white hover:bg-[#333]"
+                disabled={status === "submitting"}
+                className="self-start border-[3px] border-[#111] bg-[#111] px-4 py-2 text-sm font-bold uppercase tracking-wide text-white hover:bg-[#333] disabled:opacity-60"
               >
-                Submit claim
+                {status === "submitting" ? "Filing…" : "Submit claim"}
               </button>
-            )}
-          </div>
+            </div>
+          )}
         </form>
       )}
     </section>

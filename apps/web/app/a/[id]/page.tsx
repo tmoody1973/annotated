@@ -172,7 +172,7 @@ export default async function AnnotationPage({
         <Comments annotationId={annotation._id} />
 
         <div className="mt-6">
-          <ClaimButton />
+          <ClaimButton annotationId={annotation._id} />
         </div>
 
         <footer className="mt-8 text-center font-mono text-xs text-[#555]">
