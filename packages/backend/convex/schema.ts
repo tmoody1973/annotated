@@ -47,6 +47,15 @@ export default defineSchema({
     fetchedAt: v.number(),
   }).index("by_feed_url", ["feedUrl"]),
 
+  // iTunes Lookup cache. One row per Apple podcast id, TTL 7 days.
+  // Stores the raw JSON response (podcast + episode list) so repeat opens of
+  // the same show skip the network round-trip.
+  itunesCache: defineTable({
+    appleId: v.string(),
+    json: v.string(),
+    fetchedAt: v.number(),
+  }).index("by_apple_id", ["appleId"]),
+
   // Word-level transcripts. Shared per source — computed once, reused forever.
   transcripts: defineTable({
     sourceId: v.id("sources"),

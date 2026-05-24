@@ -8,3 +8,7 @@ export type { PodcastRef } from "./podcast-url";
 export { formatClipTimestamp } from "./format-clip-timestamp";
 export { clockToMs, evaluateClipSpan, MAX_CLIP_MS } from "./clip-span";
 export type { ClipSpanResult } from "./clip-span";
+export { parseRssFeed } from "./rss-feed";
+export type { ParsedFeed, RssEpisode } from "./rss-feed";
+export { matchEpisode } from "./episode-match";
+export type { EpisodeCriteria } from "./episode-match";

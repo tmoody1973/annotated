@@ -1,7 +1,9 @@
 import { ConvexProvider, ConvexReactClient, useQuery } from "convex/react";
 import { makeFunctionReference } from "convex/server";
 import { useActiveTabYoutubeId } from "./lib/use-active-tab-youtube";
+import { useActiveTabPodcast } from "./lib/use-active-tab-podcast";
 import { ClipComposer } from "./components/clip-composer";
+import { PodcastPanel } from "./components/podcast-panel";
 import {
   accent,
   clipPanelCss,
@@ -55,6 +57,7 @@ function Header() {
 
 function Sidepanel() {
   const videoId = useActiveTabYoutubeId();
+  const podcast = useActiveTabPodcast();
 
   return (
     <ConvexProvider client={convex}>
@@ -81,9 +84,11 @@ function Sidepanel() {
             </section>
             <ClipComposer videoId={videoId} />
           </>
+        ) : podcast ? (
+          <PodcastPanel detection={podcast} />
         ) : (
           <p style={{ fontSize: 14, color: muted }}>
-            Open a YouTube video to clip it.
+            Open a YouTube video or podcast to clip it.
           </p>
         )}
       </main>

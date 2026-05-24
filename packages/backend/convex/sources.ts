@@ -1,5 +1,10 @@
 import { v } from "convex/values";
-import { mutation, query, type MutationCtx } from "./_generated/server";
+import {
+  internalMutation,
+  mutation,
+  query,
+  type MutationCtx,
+} from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 
 /**
@@ -66,5 +71,66 @@ export const upsertYoutube = mutation({
   returns: v.id("sources"),
   handler: async (ctx, args) => {
     return await upsertYoutubeSource(ctx, args);
+  },
+});
+
+interface PodcastSourceInput {
+  canonicalUrl: string;
+  title: string;
+  podcastName: string;
+  episodeGuid?: string;
+  mp3Url: string;
+}
+
+/**
+ * Inserts a podcast source, or returns the existing one. Dedup is by episode
+ * GUID when present (the same episode shares one row across users); feeds
+ * without GUIDs fall back to the canonical page URL.
+ */
+export async function upsertPodcastSource(
+  ctx: MutationCtx,
+  input: PodcastSourceInput
+): Promise<Id<"sources">> {
+  if (input.episodeGuid) {
+    const byGuid = await ctx.db
+      .query("sources")
+      .withIndex("by_podcast_guid", (q) =>
+        q.eq("podcastEpisodeGuid", input.episodeGuid)
+      )
+      .first();
+    if (byGuid) return byGuid._id;
+  } else {
+    const byUrl = await ctx.db
+      .query("sources")
+      .withIndex("by_canonical_url", (q) =>
+        q.eq("canonicalUrl", input.canonicalUrl)
+      )
+      .first();
+    if (byUrl) return byUrl._id;
+  }
+
+  return await ctx.db.insert("sources", {
+    type: "podcast",
+    canonicalUrl: input.canonicalUrl,
+    title: input.title,
+    podcastName: input.podcastName,
+    podcastEpisodeGuid: input.episodeGuid,
+    mp3Url: input.mp3Url,
+    cachedAt: Date.now(),
+  });
+}
+
+/** Internal idempotent upsert of a podcast source; called by the resolver action. */
+export const upsertPodcast = internalMutation({
+  args: {
+    canonicalUrl: v.string(),
+    title: v.string(),
+    podcastName: v.string(),
+    episodeGuid: v.optional(v.string()),
+    mp3Url: v.string(),
+  },
+  returns: v.id("sources"),
+  handler: async (ctx, args) => {
+    return await upsertPodcastSource(ctx, args);
   },
 });
