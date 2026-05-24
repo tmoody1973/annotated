@@ -23,3 +23,21 @@ export interface GetPodcastPageResponse {
   /** The page's document title, used to match the specific episode. */
   pageTitle: string | null;
 }
+
+export const GET_ARTICLE_PAGE = "GET_ARTICLE_PAGE" as const;
+
+export interface GetArticlePageRequest {
+  type: typeof GET_ARTICLE_PAGE;
+}
+
+export interface GetArticlePageResponse {
+  /**
+   * The page's full outerHTML when it looks like an article (so the worker runs
+   * Readability on exactly what the user sees — paywalls/JS resolved), else null.
+   */
+  html: string | null;
+  /** The page's document title. */
+  title: string | null;
+  /** The page's canonical/current URL. */
+  url: string;
+}

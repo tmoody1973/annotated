@@ -120,6 +120,40 @@ export async function upsertPodcastSource(
   });
 }
 
+interface ArticleSourceInput {
+  canonicalUrl: string;
+  title: string;
+  siteName?: string;
+  author?: string;
+}
+
+/**
+ * Inserts an article source, or returns the existing one for this canonical
+ * URL. Articles dedup on the page URL (no GUID, no video id) — two users
+ * annotating the same article share one source row, like the other types.
+ */
+export async function upsertArticleSource(
+  ctx: MutationCtx,
+  input: ArticleSourceInput
+): Promise<Id<"sources">> {
+  const existing = await ctx.db
+    .query("sources")
+    .withIndex("by_canonical_url", (q) =>
+      q.eq("canonicalUrl", input.canonicalUrl)
+    )
+    .first();
+  if (existing) return existing._id;
+
+  return await ctx.db.insert("sources", {
+    type: "article",
+    canonicalUrl: input.canonicalUrl,
+    title: input.title,
+    siteName: input.siteName,
+    author: input.author,
+    cachedAt: Date.now(),
+  });
+}
+
 /** Internal idempotent upsert of a podcast source; called by the resolver action. */
 export const upsertPodcast = internalMutation({
   args: {

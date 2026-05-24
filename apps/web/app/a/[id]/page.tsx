@@ -12,7 +12,13 @@ interface AnnotationView {
   clipStartMs?: number;
   clipEndMs?: number;
   clipUrl: string | null;
-  source: { canonicalUrl: string; title: string; type: string } | null;
+  source: {
+    canonicalUrl: string;
+    title: string;
+    type: string;
+    siteName?: string;
+    author?: string;
+  } | null;
   author: { username: string; displayName: string } | null;
 }
 
@@ -66,6 +72,7 @@ export default async function AnnotationPage({
       : null;
 
   const isPodcast = annotation.source?.type === "podcast";
+  const isArticle = annotation.source?.type === "article";
 
   return (
     <main className="flex min-h-screen flex-col items-center bg-[#f4f1e8] px-4 py-10 text-[#111]">
@@ -78,34 +85,47 @@ export default async function AnnotationPage({
         </header>
 
         <article className="border-[3px] border-[#111] bg-white shadow-[8px_8px_0_0_#111]">
-          <div className="border-b-[3px] border-[#111] bg-black">
-            {!annotation.clipUrl ? (
-              <p className="p-8 text-center font-mono text-sm text-white">
-                clip unavailable
-              </p>
-            ) : isPodcast ? (
-              <audio controls src={annotation.clipUrl} className="block w-full p-4" />
-            ) : (
-              <video
-                controls
-                src={annotation.clipUrl}
-                className="block max-h-[60vh] w-full"
-              />
-            )}
-          </div>
+          {!isArticle && (
+            <div className="border-b-[3px] border-[#111] bg-black">
+              {!annotation.clipUrl ? (
+                <p className="p-8 text-center font-mono text-sm text-white">
+                  clip unavailable
+                </p>
+              ) : isPodcast ? (
+                <audio controls src={annotation.clipUrl} className="block w-full p-4" />
+              ) : (
+                <video
+                  controls
+                  src={annotation.clipUrl}
+                  className="block max-h-[60vh] w-full"
+                />
+              )}
+            </div>
+          )}
 
           <div className="p-5 sm:p-6">
-            {range && (
+            {isArticle && (
+              <span className="inline-block border-2 border-[#111] bg-[#ffe600] px-2 py-1 font-mono text-xs font-bold uppercase tracking-widest">
+                Highlight
+              </span>
+            )}
+
+            {range && !isArticle && (
               <span className="inline-block border-2 border-[#111] bg-[#ffe600] px-2 py-1 font-mono text-sm font-bold">
                 {range}
               </span>
             )}
 
-            {annotation.selectedText && (
-              <blockquote className="mt-4 border-l-[6px] border-[#ffe600] pl-4 font-mono text-sm leading-relaxed text-[#333]">
-                “{annotation.selectedText}”
-              </blockquote>
-            )}
+            {annotation.selectedText &&
+              (isArticle ? (
+                <blockquote className="mt-4 border-l-[6px] border-[#ffe600] pl-5 text-2xl font-bold leading-snug text-[#111]">
+                  “{annotation.selectedText}”
+                </blockquote>
+              ) : (
+                <blockquote className="mt-4 border-l-[6px] border-[#ffe600] pl-4 font-mono text-sm leading-relaxed text-[#333]">
+                  “{annotation.selectedText}”
+                </blockquote>
+              ))}
 
             {annotation.commentaryText && (
               <p className="mt-4 border-l-[6px] border-[#111] pl-4 text-lg leading-relaxed">
@@ -122,7 +142,7 @@ export default async function AnnotationPage({
             {annotation.source && (
               <div className="mt-6 border-t-[3px] border-[#111] pt-4">
                 <p className="text-xs font-bold uppercase tracking-widest text-[#555]">
-                  Clipped from
+                  Clipped from{annotation.source.siteName ? ` · ${annotation.source.siteName}` : ""}
                 </p>
                 <p className="mt-1 font-bold">{annotation.source.title}</p>
                 <a

@@ -99,6 +99,52 @@ export async function clipAudio(
   return body.storageId;
 }
 
+export interface ExtractedArticle {
+  title: string;
+  textContent: string;
+  byline: string | null;
+  siteName: string | null;
+}
+
+/**
+ * Asks the worker to run Mozilla Readability over the page. Sends the live HTML
+ * grabbed by the content script (so the worker sees what the user sees), with the
+ * URL for the canonical source. CORS-free because the extension has the worker
+ * host permission. DEBT: the worker token is bundled (dev only).
+ */
+export async function extractArticle(
+  url: string,
+  html: string
+): Promise<ExtractedArticle> {
+  if (!workerUrl || !workerToken) {
+    throw new Error("Worker is not configured (PLASMO_PUBLIC_WORKER_URL/_TOKEN)");
+  }
+  const response = await fetch(`${workerUrl}/extract-article`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${workerToken}`,
+    },
+    body: JSON.stringify({ url, html }),
+  });
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    throw new Error(
+      `Extract failed (${response.status})${detail ? `: ${detail}` : ""}`
+    );
+  }
+  const body = (await response.json()) as Partial<ExtractedArticle>;
+  if (typeof body.title !== "string" || typeof body.textContent !== "string") {
+    throw new Error("Worker returned an unexpected article response");
+  }
+  return {
+    title: body.title,
+    textContent: body.textContent,
+    byline: body.byline ?? null,
+    siteName: body.siteName ?? null,
+  };
+}
+
 /** The dev worker token, passed to the token-guarded publish mutation. */
 export function getWorkerToken(): string {
   if (!workerToken) {

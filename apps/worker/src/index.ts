@@ -6,10 +6,14 @@ import { createClipUploader } from "./clip-uploader.js";
 import { registerTranscribeRoute } from "./routes/transcribe.js";
 import { registerClipYoutubeRoute } from "./routes/clip-youtube.js";
 import { registerClipAudioRoute } from "./routes/clip-audio.js";
+import { registerExtractArticleRoute } from "./routes/extract-article.js";
 
 const env = loadEnv();
 
-const app = Fastify({ logger: true });
+// The article path POSTs a page's full outerHTML (option B) as JSON — real news
+// pages routinely exceed Fastify's 1MB default and would 413 before the route
+// runs. Raise the cap so large articles extract instead of silently failing.
+const app = Fastify({ logger: true, bodyLimit: 16 * 1024 * 1024 });
 
 app.get("/health", async () => ({ status: "ok" }));
 
@@ -26,6 +30,10 @@ registerClipYoutubeRoute(app, {
 
 registerClipAudioRoute(app, {
   uploader: createClipUploader(env.CONVEX_URL, env.WORKER_AUTH_TOKEN),
+  workerToken: env.WORKER_AUTH_TOKEN,
+});
+
+registerExtractArticleRoute(app, {
   workerToken: env.WORKER_AUTH_TOKEN,
 });
 

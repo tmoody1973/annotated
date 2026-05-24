@@ -33,6 +33,8 @@ interface AnnotationInsert {
   clipStorageId?: Id<"_storage">;
   clipStartMs?: number;
   clipEndMs?: number;
+  textStart?: number;
+  textEnd?: number;
   selectedText?: string;
   commentaryText?: string;
 }
@@ -51,6 +53,8 @@ export async function insertAnnotation(
     clipStorageId: input.clipStorageId,
     clipStartMs: input.clipStartMs,
     clipEndMs: input.clipEndMs,
+    textStart: input.textStart,
+    textEnd: input.textEnd,
     selectedText: input.selectedText,
     commentaryText: input.commentaryText,
     isPublic: true,
@@ -124,7 +128,13 @@ export const getById = query({
       ...annotation,
       clipUrl,
       source: source
-        ? { canonicalUrl: source.canonicalUrl, title: source.title, type: source.type }
+        ? {
+            canonicalUrl: source.canonicalUrl,
+            title: source.title,
+            type: source.type,
+            siteName: source.siteName,
+            author: source.author,
+          }
         : null,
       author: author
         ? { username: author.username, displayName: author.displayName }

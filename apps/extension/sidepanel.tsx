@@ -2,8 +2,10 @@ import { ConvexProvider, ConvexReactClient, useQuery } from "convex/react";
 import { makeFunctionReference } from "convex/server";
 import { useActiveTabYoutubeId } from "./lib/use-active-tab-youtube";
 import { useActiveTabPodcast } from "./lib/use-active-tab-podcast";
+import { useActiveTabArticle } from "./lib/use-active-tab-article";
 import { ClipComposer } from "./components/clip-composer";
 import { PodcastPanel } from "./components/podcast-panel";
+import { ArticlePanel } from "./components/article-panel";
 import {
   accent,
   clipPanelCss,
@@ -58,6 +60,13 @@ function Header() {
 function Sidepanel() {
   const videoId = useActiveTabYoutubeId();
   const podcast = useActiveTabPodcast();
+  const article = useActiveTabArticle();
+
+  // Apple/Spotify podcast pages win outright. But many news articles also
+  // advertise a site RSS feed, which the generic podcast detector picks up — so
+  // a page declaring og:type=article is treated as an article even when it has
+  // an RSS link. A generic-RSS page with no article markup stays a podcast.
+  const explicitPodcast = podcast !== null && podcast.kind !== "generic";
 
   return (
     <ConvexProvider client={convex}>
@@ -84,11 +93,15 @@ function Sidepanel() {
             </section>
             <ClipComposer videoId={videoId} />
           </>
+        ) : explicitPodcast && podcast ? (
+          <PodcastPanel detection={podcast} />
+        ) : article ? (
+          <ArticlePanel detection={article} />
         ) : podcast ? (
           <PodcastPanel detection={podcast} />
         ) : (
           <p style={{ fontSize: 14, color: muted }}>
-            Open a YouTube video or podcast to clip it.
+            Open a YouTube video, podcast, or article to clip it.
           </p>
         )}
       </main>

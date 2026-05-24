@@ -1,11 +1,14 @@
 import { v } from "convex/values";
 import { mutation, type MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
-import { upsertYoutubeSource } from "./sources";
+import { upsertArticleSource, upsertYoutubeSource } from "./sources";
 import { assertPublishable, insertAnnotation } from "./annotations";
 
 /** Clerk subject used for the dev seed author until extension auth ships. */
 const SEED_CLERK_ID = "seed-dev-user";
+
+/** An article highlight is an excerpt — a few paragraphs at most, not a reprint. */
+const MAX_HIGHLIGHT_CHARS = 2000;
 
 /**
  * Returns the dedicated dev seed user, creating it on first use. Lets the
@@ -157,6 +160,71 @@ export const publishPodcastClipDev = mutation({
       clipStartMs: args.clipStartMs,
       clipEndMs: args.clipEndMs,
       selectedText: args.selectedText,
+      commentaryText: args.commentaryText,
+    });
+  },
+});
+
+/**
+ * Dev publish path for article clips before syncHost auth exists. Token-guarded
+ * and attributed to the dev seed user. An article has no media clip — the "clip"
+ * is the highlighted quote (`selectedText` + char offsets) plus commentary, so
+ * this does NOT use `assertPublishable` (which assumes an audio/video span) and
+ * instead requires both a non-empty quote and non-empty commentary directly.
+ * DEBT: production must replace this with real auth + a server-side worker call.
+ */
+export const publishArticleClipDev = mutation({
+  args: {
+    canonicalUrl: v.string(),
+    title: v.string(),
+    siteName: v.optional(v.string()),
+    author: v.optional(v.string()),
+    selectedText: v.string(),
+    textStart: v.number(),
+    textEnd: v.number(),
+    commentaryText: v.string(),
+    workerToken: v.string(),
+  },
+  returns: v.id("annotations"),
+  handler: async (ctx, args) => {
+    if (args.workerToken !== process.env.WORKER_AUTH_TOKEN) {
+      throw new Error("Unauthorized");
+    }
+    if (args.selectedText.trim().length === 0) {
+      throw new Error("A highlighted quote is required");
+    }
+    if (args.commentaryText.trim().length === 0) {
+      throw new Error("Commentary is required");
+    }
+    // Trust-boundary checks (the token is bundled = client-trusted): the offsets
+    // must be ordered, non-negative, and consistent with the quote, and the
+    // highlight is an excerpt — not a vehicle to republish a whole article.
+    if (
+      !Number.isInteger(args.textStart) ||
+      !Number.isInteger(args.textEnd) ||
+      args.textStart < 0 ||
+      args.selectedText.length !== args.textEnd - args.textStart
+    ) {
+      throw new Error("Highlight offsets are invalid");
+    }
+    if (args.selectedText.length > MAX_HIGHLIGHT_CHARS) {
+      throw new Error(`Highlight exceeds the ${MAX_HIGHLIGHT_CHARS}-character excerpt limit`);
+    }
+
+    const authorId = await resolveSeedUser(ctx);
+    const sourceId = await upsertArticleSource(ctx, {
+      canonicalUrl: args.canonicalUrl,
+      title: args.title,
+      siteName: args.siteName,
+      author: args.author,
+    });
+
+    return await insertAnnotation(ctx, {
+      authorId,
+      sourceId,
+      selectedText: args.selectedText,
+      textStart: args.textStart,
+      textEnd: args.textEnd,
       commentaryText: args.commentaryText,
     });
   },
