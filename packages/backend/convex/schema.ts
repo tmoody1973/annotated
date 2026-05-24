@@ -10,7 +10,9 @@ export default defineSchema({
     avatarUrl: v.optional(v.string()),
     bio: v.optional(v.string()),
     xHandle: v.optional(v.string()),
-  }).index("by_clerk_id", ["clerkId"]),
+  })
+    .index("by_clerk_id", ["clerkId"])
+    .index("by_username", ["username"]),
 
   // Podcast episodes, YouTube videos, and articles.
   // Shared across all users — two people clipping the same episode share one row.

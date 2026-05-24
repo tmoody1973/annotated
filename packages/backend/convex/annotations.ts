@@ -1,7 +1,51 @@
 import { v } from "convex/values";
-import { mutation, query, type MutationCtx } from "./_generated/server";
-import type { Id } from "./_generated/dataModel";
+import { paginationOptsValidator } from "convex/server";
+import {
+  mutation,
+  query,
+  type MutationCtx,
+  type QueryCtx,
+} from "./_generated/server";
+import type { Doc, Id } from "./_generated/dataModel";
 import { upsertYoutubeSource } from "./sources";
+
+/**
+ * Shapes an annotation into the feed/profile card view: resolves the clip URL
+ * and joins the source attribution + author. Shared by listFeed and listByAuthor.
+ */
+async function toFeedItem(ctx: QueryCtx, annotation: Doc<"annotations">) {
+  const source = await ctx.db.get(annotation.sourceId);
+  const author = await ctx.db.get(annotation.authorId);
+  const clipUrl = annotation.clipStorageId
+    ? await ctx.storage.getUrl(annotation.clipStorageId)
+    : null;
+  return {
+    _id: annotation._id,
+    publishedAt: annotation.publishedAt,
+    selectedText: annotation.selectedText,
+    commentaryText: annotation.commentaryText,
+    clipStartMs: annotation.clipStartMs,
+    clipEndMs: annotation.clipEndMs,
+    clipUrl,
+    commentCount: annotation.commentCount,
+    likeCount: annotation.likeCount,
+    source: source
+      ? {
+          type: source.type,
+          title: source.title,
+          canonicalUrl: source.canonicalUrl,
+          siteName: source.siteName,
+        }
+      : null,
+    author: author
+      ? {
+          username: author.username,
+          displayName: author.displayName,
+          avatarUrl: author.avatarUrl,
+        }
+      : null,
+  };
+}
 
 /** SPEC: clips are capped at 90 seconds. */
 export const MAX_CLIP_MS = 90_000;
@@ -105,6 +149,39 @@ export const create = mutation({
       clipEndMs: args.clipEndMs,
       commentaryText: args.commentaryText,
     });
+  },
+});
+
+/**
+ * The public feed: published annotations newest-first, paginated, each joined
+ * with author + source + clip URL. Real-time via the client's usePaginatedQuery.
+ */
+export const listFeed = query({
+  args: { paginationOpts: paginationOptsValidator },
+  handler: async (ctx, args) => {
+    const result = await ctx.db
+      .query("annotations")
+      .withIndex("by_feed", (q) => q.eq("isPublic", true))
+      .order("desc")
+      .paginate(args.paginationOpts);
+    return {
+      ...result,
+      page: await Promise.all(result.page.map((a) => toFeedItem(ctx, a))),
+    };
+  },
+});
+
+/** A user's published annotations, newest-first, shaped as feed cards. */
+export const listByAuthor = query({
+  args: { authorId: v.id("users") },
+  handler: async (ctx, args) => {
+    const rows = await ctx.db
+      .query("annotations")
+      .withIndex("by_author", (q) => q.eq("authorId", args.authorId))
+      .order("desc")
+      .collect();
+    const published = rows.filter((a) => a.isPublic);
+    return await Promise.all(published.map((a) => toFeedItem(ctx, a)));
   },
 });
 
