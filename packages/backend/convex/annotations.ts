@@ -214,7 +214,11 @@ export const getById = query({
           }
         : null,
       author: author
-        ? { username: author.username, displayName: author.displayName }
+        ? {
+            id: author._id,
+            username: author.username,
+            displayName: author.displayName,
+          }
         : null,
     };
   },

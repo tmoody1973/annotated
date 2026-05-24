@@ -4,6 +4,9 @@ import { ConvexHttpClient } from "convex/browser";
 import { makeFunctionReference } from "convex/server";
 import { formatClipTimestamp } from "@annotated/shared";
 import { ClaimButton } from "./claim-button";
+import { LikeButton } from "../../_components/like-button";
+import { FollowButton } from "../../_components/follow-button";
+import { Comments } from "../../_components/comments";
 
 interface AnnotationView {
   _id: string;
@@ -12,6 +15,7 @@ interface AnnotationView {
   clipStartMs?: number;
   clipEndMs?: number;
   clipUrl: string | null;
+  likeCount: number;
   source: {
     canonicalUrl: string;
     title: string;
@@ -19,7 +23,7 @@ interface AnnotationView {
     siteName?: string;
     author?: string;
   } | null;
-  author: { username: string; displayName: string } | null;
+  author: { id: string; username: string; displayName: string } | null;
 }
 
 const getById = makeFunctionReference<
@@ -157,6 +161,15 @@ export default async function AnnotationPage({
             )}
           </div>
         </article>
+
+        <div className="mt-6 flex items-center gap-3">
+          <LikeButton annotationId={annotation._id} likeCount={annotation.likeCount} />
+          {annotation.author && (
+            <FollowButton targetUserId={annotation.author.id} />
+          )}
+        </div>
+
+        <Comments annotationId={annotation._id} />
 
         <div className="mt-6">
           <ClaimButton />
