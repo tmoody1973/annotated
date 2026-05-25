@@ -52,16 +52,20 @@ export const MAX_CLIP_MS = 90_000;
 
 /**
  * Validates the publish-time invariants shared by the authed `create` mutation
- * and the dev seed publish: commentary is required and the clip span must be
- * ordered and within the SPEC 90s cap. Throws with a readable reason.
+ * and the dev seed publish: commentary must be present as text OR recorded audio
+ * (SPEC), and the clip span must be ordered and within the 90s cap. Throws with
+ * a readable reason.
  */
 export function assertPublishable(input: {
-  commentaryText: string;
+  commentaryText?: string;
+  commentaryAudioStorageId?: Id<"_storage">;
   clipStartMs: number;
   clipEndMs: number;
 }): void {
-  if (input.commentaryText.trim().length === 0) {
-    throw new Error("Commentary is required");
+  const hasText = (input.commentaryText ?? "").trim().length > 0;
+  const hasAudio = input.commentaryAudioStorageId !== undefined;
+  if (!hasText && !hasAudio) {
+    throw new Error("Commentary is required (text or recorded audio)");
   }
   if (
     input.clipEndMs <= input.clipStartMs ||
@@ -81,6 +85,7 @@ interface AnnotationInsert {
   textEnd?: number;
   selectedText?: string;
   commentaryText?: string;
+  commentaryAudioStorageId?: Id<"_storage">;
 }
 
 /**
@@ -101,6 +106,7 @@ export async function insertAnnotation(
     textEnd: input.textEnd,
     selectedText: input.selectedText,
     commentaryText: input.commentaryText,
+    commentaryAudioStorageId: input.commentaryAudioStorageId,
     isPublic: true,
     publishedAt: Date.now(),
     commentCount: 0,
@@ -200,10 +206,14 @@ export const getById = query({
     const clipUrl = annotation.clipStorageId
       ? await ctx.storage.getUrl(annotation.clipStorageId)
       : null;
+    const commentaryAudioUrl = annotation.commentaryAudioStorageId
+      ? await ctx.storage.getUrl(annotation.commentaryAudioStorageId)
+      : null;
 
     return {
       ...annotation,
       clipUrl,
+      commentaryAudioUrl,
       source: source
         ? {
             canonicalUrl: source.canonicalUrl,

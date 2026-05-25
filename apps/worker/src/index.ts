@@ -7,6 +7,7 @@ import { registerTranscribeRoute } from "./routes/transcribe.js";
 import { registerClipYoutubeRoute } from "./routes/clip-youtube.js";
 import { registerClipAudioRoute } from "./routes/clip-audio.js";
 import { registerExtractArticleRoute } from "./routes/extract-article.js";
+import { registerTranscodeCommentaryRoute } from "./routes/transcode-commentary.js";
 
 const env = loadEnv();
 
@@ -34,6 +35,11 @@ registerClipAudioRoute(app, {
 });
 
 registerExtractArticleRoute(app, {
+  workerToken: env.WORKER_AUTH_TOKEN,
+});
+
+registerTranscodeCommentaryRoute(app, {
+  uploader: createClipUploader(env.CONVEX_URL, env.WORKER_AUTH_TOKEN),
   workerToken: env.WORKER_AUTH_TOKEN,
 });
 

@@ -97,7 +97,8 @@ export const publishYoutubeClipDev = mutation({
     clipStorageId: v.id("_storage"),
     clipStartMs: v.number(),
     clipEndMs: v.number(),
-    commentaryText: v.string(),
+    commentaryText: v.optional(v.string()),
+    commentaryAudioStorageId: v.optional(v.id("_storage")),
     workerToken: v.string(),
   },
   returns: v.id("annotations"),
@@ -117,6 +118,7 @@ export const publishYoutubeClipDev = mutation({
       clipStartMs: args.clipStartMs,
       clipEndMs: args.clipEndMs,
       commentaryText: args.commentaryText,
+      commentaryAudioStorageId: args.commentaryAudioStorageId,
     });
   },
 });
@@ -135,7 +137,8 @@ export const publishPodcastClipDev = mutation({
     clipStartMs: v.number(),
     clipEndMs: v.number(),
     selectedText: v.string(),
-    commentaryText: v.string(),
+    commentaryText: v.optional(v.string()),
+    commentaryAudioStorageId: v.optional(v.id("_storage")),
     workerToken: v.string(),
   },
   returns: v.id("annotations"),
@@ -161,6 +164,7 @@ export const publishPodcastClipDev = mutation({
       clipEndMs: args.clipEndMs,
       selectedText: args.selectedText,
       commentaryText: args.commentaryText,
+      commentaryAudioStorageId: args.commentaryAudioStorageId,
     });
   },
 });
@@ -182,7 +186,8 @@ export const publishArticleClipDev = mutation({
     selectedText: v.string(),
     textStart: v.number(),
     textEnd: v.number(),
-    commentaryText: v.string(),
+    commentaryText: v.optional(v.string()),
+    commentaryAudioStorageId: v.optional(v.id("_storage")),
     workerToken: v.string(),
   },
   returns: v.id("annotations"),
@@ -193,8 +198,9 @@ export const publishArticleClipDev = mutation({
     if (args.selectedText.trim().length === 0) {
       throw new Error("A highlighted quote is required");
     }
-    if (args.commentaryText.trim().length === 0) {
-      throw new Error("Commentary is required");
+    const hasText = (args.commentaryText ?? "").trim().length > 0;
+    if (!hasText && args.commentaryAudioStorageId === undefined) {
+      throw new Error("Commentary is required (text or recorded audio)");
     }
     // Trust-boundary checks (the token is bundled = client-trusted): the offsets
     // must be ordered, non-negative, and consistent with the quote, and the
@@ -226,6 +232,7 @@ export const publishArticleClipDev = mutation({
       textStart: args.textStart,
       textEnd: args.textEnd,
       commentaryText: args.commentaryText,
+      commentaryAudioStorageId: args.commentaryAudioStorageId,
     });
   },
 });
