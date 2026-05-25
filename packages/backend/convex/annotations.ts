@@ -216,6 +216,9 @@ export const getById = query({
 
     return {
       ...annotation,
+      // Pre-§2 rows have no `downCount`; default to 0 so the vote control gets a
+      // number (mirrors the `listFeed` projection).
+      downCount: annotation.downCount ?? 0,
       clipUrl,
       commentaryAudioUrl,
       source: source
