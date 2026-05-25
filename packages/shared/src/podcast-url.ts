@@ -22,19 +22,19 @@ export function parsePodcastUrl(raw: string): PodcastRef | null {
   const host = url.hostname.replace(/^www\./, "");
 
   if (host === "podcasts.apple.com") {
-    const idMatch = url.pathname.match(/\/id(\d+)/);
-    if (!idMatch) return null;
+    const podcastId = url.pathname.match(/\/id(\d+)/)?.[1];
+    if (podcastId === undefined) return null;
     return {
       platform: "apple",
-      podcastId: idMatch[1],
+      podcastId,
       episodeId: url.searchParams.get("i"),
     };
   }
 
   if (host === "open.spotify.com") {
-    const episodeMatch = url.pathname.match(/^\/episode\/([A-Za-z0-9]+)/);
-    if (!episodeMatch) return null;
-    return { platform: "spotify", episodeId: episodeMatch[1] };
+    const episodeId = url.pathname.match(/^\/episode\/([A-Za-z0-9]+)/)?.[1];
+    if (episodeId === undefined) return null;
+    return { platform: "spotify", episodeId };
   }
 
   return null;

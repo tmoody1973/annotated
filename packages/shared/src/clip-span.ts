@@ -20,9 +20,10 @@ export function clockToMs(clock: string): number | null {
   if (!parts.every(isWholeNumber)) return null;
 
   const numbers = parts.map(Number);
-  const seconds = numbers[numbers.length - 1];
-  const minutes = numbers[numbers.length - 2];
-  const hours = numbers.length === 3 ? numbers[0] : 0;
+  // Indices are valid: parts.length is 2 or 3 and every part is a whole number.
+  const seconds = numbers[numbers.length - 1] ?? 0;
+  const minutes = numbers[numbers.length - 2] ?? 0;
+  const hours = numbers.length === 3 ? numbers[0] ?? 0 : 0;
 
   if (seconds >= SECONDS_PER_MINUTE) return null;
   if (minutes >= MINUTES_PER_HOUR) return null;

@@ -15,24 +15,24 @@ describe("parseRssFeed — real NPR feed", () => {
 
   it("reads each episode's <guid>", () => {
     const { episodes } = parseRssFeed(realFeed);
-    expect(episodes[0].guid).toBe("e75ae580-2c8a-4744-b76d-12a57b290516");
+    expect(episodes[0]?.guid).toBe("e75ae580-2c8a-4744-b76d-12a57b290516");
   });
 
   it("reads each episode's <title>", () => {
     const { episodes } = parseRssFeed(realFeed);
-    expect(episodes[0].title).toBe(
+    expect(episodes[0]?.title).toBe(
       "Trump is rolling back climate solutions. What can cities and states do?"
     );
   });
 
   it("reads each episode's <pubDate>", () => {
     const { episodes } = parseRssFeed(realFeed);
-    expect(episodes[0].pubDate).toBe("Sun, 24 May 2026 07:00:00 +0000");
+    expect(episodes[0]?.pubDate).toBe("Sun, 24 May 2026 07:00:00 +0000");
   });
 
   it("reads the <enclosure url> verbatim, redirect prefix intact", () => {
     const { episodes } = parseRssFeed(realFeed);
-    expect(episodes[0].enclosureUrl).toMatch(
+    expect(episodes[0]?.enclosureUrl).toMatch(
       /^https:\/\/prfx\.byspotify\.com\/e\/play\.podtrac\.com\/npr-510318\//
     );
   });
@@ -52,7 +52,7 @@ describe("parseRssFeed — edge cases", () => {
     </channel></rss>`;
     const { episodes } = parseRssFeed(xml);
     expect(episodes).toHaveLength(1);
-    expect(episodes[0].guid).toBe("g2");
+    expect(episodes[0]?.guid).toBe("g2");
   });
 
   it("returns an empty result for malformed / non-RSS input", () => {

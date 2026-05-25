@@ -36,8 +36,15 @@ export function selectClipSpan(
   const end = Math.max(clamp(indexA), clamp(indexB));
   const selected = words.slice(start, end + 1);
 
-  const clipStartMs = selected[0].startMs;
-  const clipEndMs = selected[selected.length - 1].endMs;
+  // start ≤ end and both are clamped in-bounds, so the slice is never empty.
+  const first = selected[0];
+  const last = selected[selected.length - 1];
+  if (first === undefined || last === undefined) {
+    return { clipStartMs: 0, clipEndMs: 0, durationMs: 0, quote: "", withinCap: false };
+  }
+
+  const clipStartMs = first.startMs;
+  const clipEndMs = last.endMs;
   const durationMs = clipEndMs - clipStartMs;
 
   return {

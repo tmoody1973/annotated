@@ -15,5 +15,8 @@
   },
   "engines": {
     "node": ">=20"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["heroui-pro", "@heroui-pro/react"]
   }
 }

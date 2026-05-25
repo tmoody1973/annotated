@@ -40,7 +40,7 @@ export function matchEpisode(
     const byTitle = episodes.filter(
       (episode) => normalizeTitle(episode.title) === target
     );
-    if (byTitle.length === 1) return byTitle[0];
+    if (byTitle.length === 1) return byTitle[0] ?? null;
     if (byTitle.length > 1 && criteria.pubDate) {
       const pubDate = criteria.pubDate;
       const byDate = byTitle.find((episode) => sameDay(episode.pubDate, pubDate));

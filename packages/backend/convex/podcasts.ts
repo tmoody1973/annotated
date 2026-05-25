@@ -252,6 +252,11 @@ async function resolveGeneric(
     ? matchEpisode(episodes, { title: pageTitle })
     : null;
   const chosen = matched ?? episodes[0];
+  // episodes is non-empty (checked above), so episodes[0] exists; guard anyway
+  // to narrow the type and stay graceful if that invariant ever changes.
+  if (!chosen) {
+    return { status: "not_found", reason: "No clippable episodes in this feed." };
+  }
 
   // parseRssFeed already drops null-enclosure episodes, but the type is
   // string|null — guard explicitly rather than cast, so a future loosening

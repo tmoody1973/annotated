@@ -33,12 +33,12 @@ All clipped content — text, audio, or video — must link back to its original
 
 ## Full Spec Checklist
 
-- [ ] Max clip size: 90 seconds
-- [ ] Video downgraded to 240p
-- [ ] Every clip links to its original source URL
-- [ ] Visible "File a claim" button on every annotation page
-- [ ] Each clip generates a public landing page (source link + claim button)
-- [ ] Account creation via X or Google only
-- [ ] Public social feed with follow and comment
-- [ ] Commentary supports text and recorded audio
-- [ ] Sidebar extension is the primary surface
+- [x] Max clip size: 90 seconds
+- [x] Video downgraded to 240p
+- [x] Every clip links to its original source URL
+- [x] Visible "File a claim" button on every annotation page
+- [x] Each clip generates a public landing page (source link + claim button)
+- [x] Account creation via X or Google only
+- [x] Public social feed with follow and comment
+- [x] Commentary supports text and recorded audio
+- [x] Sidebar extension is the primary surface
