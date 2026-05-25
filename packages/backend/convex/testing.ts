@@ -81,6 +81,49 @@ export const seedAnnotation = mutation({
 });
 
 /**
+ * Test-only: seed a thread of clips on a fresh podcast source as the dev seed
+ * user, so the /t/[id] thread page + feed head-collapse can be exercised before
+ * the extension "add another clip" flow (Phase B) exists. Token-guarded.
+ */
+export const seedThreadDev = mutation({
+  args: { quotes: v.array(v.string()), workerToken: v.string() },
+  returns: v.id("threads"),
+  handler: async (ctx, args) => {
+    if (args.workerToken !== process.env.WORKER_AUTH_TOKEN) {
+      throw new Error("Unauthorized");
+    }
+    if (args.quotes.length === 0) {
+      throw new Error("At least one quote is required");
+    }
+
+    const authorId = await resolveSeedUser(ctx);
+    const sourceId = await ctx.db.insert("sources", {
+      type: "podcast",
+      canonicalUrl: `test://thread/${Date.now()}`,
+      title: "Seed Thread Episode",
+      podcastName: "Seed Show",
+    });
+    const threadId = await ctx.db.insert("threads", {
+      authorId,
+      sourceId,
+      title: "A multi-clip thread",
+      createdAt: Date.now(),
+    });
+
+    for (const quote of args.quotes) {
+      await insertAnnotation(ctx, {
+        authorId,
+        sourceId,
+        selectedText: quote,
+        commentaryText: `Commentary on: ${quote}`,
+        threadId,
+      });
+    }
+    return threadId;
+  },
+});
+
+/**
  * Dev publish path for the extension before syncHost auth exists. Token-guarded
  * (the panel has no Clerk session) and attributes the clip to the dev seed user.
  * Accepts the real span, commentary, and source metadata the sidepanel collects,

@@ -110,10 +110,27 @@ export default defineSchema({
     // existing rows / the deployed build; an upvote === a "like").
     likeCount: v.number(),
     downCount: v.optional(v.number()),
+    // Threading (gap §1): a clip can belong to an ordered thread of clips from
+    // one source by one author. Optional so standalone clips / pre-§1 rows
+    // validate; `threadOrder` is the 0-based position within the thread.
+    threadId: v.optional(v.id("threads")),
+    threadOrder: v.optional(v.number()),
   })
     .index("by_author", ["authorId"])
     .index("by_source", ["sourceId"])
-    .index("by_feed", ["isPublic", "publishedAt"]),
+    .index("by_feed", ["isPublic", "publishedAt"])
+    .index("by_thread", ["threadId"]),
+
+  // Threads: an ordered series of annotations from one source by one author,
+  // addressable at /t/[id] (gap §1 — Jason's #1 demo flow).
+  threads: defineTable({
+    authorId: v.id("users"),
+    sourceId: v.id("sources"),
+    title: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_author", ["authorId"])
+    .index("by_source_and_author", ["sourceId", "authorId"]),
 
   // Comments on annotations. `parentId` threads a reply onto a top-level
   // comment; nesting is capped at one level (a reply to a reply flattens to

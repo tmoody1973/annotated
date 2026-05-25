@@ -19,6 +19,16 @@ async function toFeedItem(ctx: QueryCtx, annotation: Doc<"annotations">) {
   const clipUrl = annotation.clipStorageId
     ? await ctx.storage.getUrl(annotation.clipStorageId)
     : null;
+  // A thread head card carries the count of clips in its thread (badge);
+  // standalone clips count as 1.
+  const clipCount = annotation.threadId
+    ? (
+        await ctx.db
+          .query("annotations")
+          .withIndex("by_thread", (q) => q.eq("threadId", annotation.threadId))
+          .collect()
+      ).length
+    : 1;
   return {
     _id: annotation._id,
     publishedAt: annotation.publishedAt,
@@ -31,6 +41,8 @@ async function toFeedItem(ctx: QueryCtx, annotation: Doc<"annotations">) {
     commentCount: annotation.commentCount,
     likeCount: annotation.likeCount,
     downCount: annotation.downCount ?? 0,
+    threadId: annotation.threadId ?? null,
+    clipCount,
     source: source
       ? {
           type: source.type,
@@ -89,16 +101,37 @@ interface AnnotationInsert {
   commentaryText?: string;
   commentaryAudioStorageId?: Id<"_storage">;
   commentaryAudioTranscript?: string;
+  threadId?: Id<"threads">;
+}
+
+/**
+ * The 0-based position a new clip takes within a thread: the count of clips
+ * already in it. Sequential publishing keeps the order gap-free.
+ */
+async function nextThreadOrder(
+  ctx: MutationCtx,
+  threadId: Id<"threads">
+): Promise<number> {
+  const existing = await ctx.db
+    .query("annotations")
+    .withIndex("by_thread", (q) => q.eq("threadId", threadId))
+    .collect();
+  return existing.length;
 }
 
 /**
  * Inserts an annotation with publishing defaults. Shared by the authed `create`
- * mutation and the test seed so both exercise the same persistence path.
+ * mutation and the test seed so both exercise the same persistence path. When a
+ * `threadId` is given the clip is appended to that thread at the next order.
  */
 export async function insertAnnotation(
   ctx: MutationCtx,
   input: AnnotationInsert
 ): Promise<Id<"annotations">> {
+  const threadOrder =
+    input.threadId !== undefined
+      ? await nextThreadOrder(ctx, input.threadId)
+      : undefined;
   return await ctx.db.insert("annotations", {
     authorId: input.authorId,
     sourceId: input.sourceId,
@@ -111,6 +144,8 @@ export async function insertAnnotation(
     commentaryText: input.commentaryText,
     commentaryAudioStorageId: input.commentaryAudioStorageId,
     commentaryAudioTranscript: input.commentaryAudioTranscript,
+    threadId: input.threadId,
+    threadOrder,
     isPublic: true,
     publishedAt: Date.now(),
     commentCount: 0,
@@ -174,9 +209,14 @@ export const listFeed = query({
       .withIndex("by_feed", (q) => q.eq("isPublic", true))
       .order("desc")
       .paginate(args.paginationOpts);
+    // Collapse threads: show only the head (order 0); follow-on clips are
+    // represented by the head's "N clips" badge, not their own card.
+    const heads = result.page.filter(
+      (a) => a.threadId === undefined || a.threadOrder === 0
+    );
     return {
       ...result,
-      page: await Promise.all(result.page.map((a) => toFeedItem(ctx, a))),
+      page: await Promise.all(heads.map((a) => toFeedItem(ctx, a))),
     };
   },
 });
@@ -196,47 +236,61 @@ export const listByAuthor = query({
 });
 
 /**
+ * Shapes an annotation into the full landing view: the clip/audio URLs, the
+ * source attribution, and the author. Shared by `getById` and the thread page
+ * (`threads.getWithClips`) so a clip renders identically standalone or in a
+ * thread.
+ */
+export async function toLandingView(
+  ctx: QueryCtx,
+  annotation: Doc<"annotations">
+) {
+  const source = await ctx.db.get(annotation.sourceId);
+  const author = await ctx.db.get(annotation.authorId);
+  const clipUrl = annotation.clipStorageId
+    ? await ctx.storage.getUrl(annotation.clipStorageId)
+    : null;
+  const commentaryAudioUrl = annotation.commentaryAudioStorageId
+    ? await ctx.storage.getUrl(annotation.commentaryAudioStorageId)
+    : null;
+
+  return {
+    ...annotation,
+    // Pre-§2 rows have no `downCount`; default to 0 so the vote control gets a
+    // number (mirrors the `listFeed` projection).
+    downCount: annotation.downCount ?? 0,
+    clipUrl,
+    commentaryAudioUrl,
+    source: source
+      ? {
+          canonicalUrl: source.canonicalUrl,
+          title: source.title,
+          type: source.type,
+          siteName: source.siteName,
+          author: source.author,
+        }
+      : null,
+    author: author
+      ? {
+          id: author._id,
+          username: author.username,
+          displayName: author.displayName,
+        }
+      : null,
+  };
+}
+
+/**
  * Returns an annotation with the joined data the landing page renders: the clip
- * video URL, the source attribution, and the author. Null if not found.
+ * video URL, the source attribution, and the author. Null if not found. If the
+ * clip belongs to a thread, also returns its `threadId`/`threadOrder` (the page
+ * redirects threaded clips to /t/[threadId]).
  */
 export const getById = query({
   args: { annotationId: v.id("annotations") },
   handler: async (ctx, args) => {
     const annotation = await ctx.db.get(args.annotationId);
     if (!annotation) return null;
-
-    const source = await ctx.db.get(annotation.sourceId);
-    const author = await ctx.db.get(annotation.authorId);
-    const clipUrl = annotation.clipStorageId
-      ? await ctx.storage.getUrl(annotation.clipStorageId)
-      : null;
-    const commentaryAudioUrl = annotation.commentaryAudioStorageId
-      ? await ctx.storage.getUrl(annotation.commentaryAudioStorageId)
-      : null;
-
-    return {
-      ...annotation,
-      // Pre-§2 rows have no `downCount`; default to 0 so the vote control gets a
-      // number (mirrors the `listFeed` projection).
-      downCount: annotation.downCount ?? 0,
-      clipUrl,
-      commentaryAudioUrl,
-      source: source
-        ? {
-            canonicalUrl: source.canonicalUrl,
-            title: source.title,
-            type: source.type,
-            siteName: source.siteName,
-            author: source.author,
-          }
-        : null,
-      author: author
-        ? {
-            id: author._id,
-            username: author.username,
-            displayName: author.displayName,
-          }
-        : null,
-    };
+    return await toLandingView(ctx, annotation);
   },
 });

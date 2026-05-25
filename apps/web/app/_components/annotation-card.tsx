@@ -13,6 +13,8 @@ export interface FeedItem {
   commentCount: number;
   likeCount: number;
   downCount: number;
+  threadId?: string | null;
+  clipCount?: number;
   source: {
     type: string;
     title: string;
@@ -41,6 +43,8 @@ function initials(name: string): string {
 export function AnnotationCard({ item }: { item: FeedItem }) {
   const { source, author } = item;
   const isPodcast = source?.type === "podcast";
+  const isThread = item.threadId != null && (item.clipCount ?? 1) > 1;
+  const detailHref = isThread ? `/t/${item.threadId}` : `/a/${item._id}`;
 
   return (
     <Card className="w-full">
@@ -72,6 +76,15 @@ export function AnnotationCard({ item }: { item: FeedItem }) {
       </Card.Header>
 
       <Card.Content className="flex flex-col gap-3">
+        {isThread && (
+          <Link
+            href={detailHref}
+            className="inline-flex w-fit items-center gap-1 border border-border bg-accent/10 px-2 py-1 text-sm font-bold hover:bg-accent/20"
+          >
+            🧵 {item.clipCount} clips
+          </Link>
+        )}
+
         {item.clipUrl &&
           (isPodcast ? (
             <audio controls src={item.clipUrl} className="w-full" />
@@ -112,7 +125,7 @@ export function AnnotationCard({ item }: { item: FeedItem }) {
             downCount={item.downCount}
           />
           <Link
-            href={`/a/${item._id}`}
+            href={detailHref}
             className="inline-flex items-center gap-1 border border-border px-2 py-1 text-sm hover:bg-surface-secondary"
           >
             💬 {item.commentCount}
