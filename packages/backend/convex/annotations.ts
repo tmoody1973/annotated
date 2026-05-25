@@ -24,6 +24,7 @@ async function toFeedItem(ctx: QueryCtx, annotation: Doc<"annotations">) {
     publishedAt: annotation.publishedAt,
     selectedText: annotation.selectedText,
     commentaryText: annotation.commentaryText,
+    commentaryAudioTranscript: annotation.commentaryAudioTranscript,
     clipStartMs: annotation.clipStartMs,
     clipEndMs: annotation.clipEndMs,
     clipUrl,
@@ -86,6 +87,7 @@ interface AnnotationInsert {
   selectedText?: string;
   commentaryText?: string;
   commentaryAudioStorageId?: Id<"_storage">;
+  commentaryAudioTranscript?: string;
 }
 
 /**
@@ -107,6 +109,7 @@ export async function insertAnnotation(
     selectedText: input.selectedText,
     commentaryText: input.commentaryText,
     commentaryAudioStorageId: input.commentaryAudioStorageId,
+    commentaryAudioTranscript: input.commentaryAudioTranscript,
     isPublic: true,
     publishedAt: Date.now(),
     commentCount: 0,

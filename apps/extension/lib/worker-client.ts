@@ -161,7 +161,13 @@ async function blobToBase64(blob: Blob): Promise<string> {
  * transcodes it to mp3, stores it, and returns the Convex storageId. DEBT: the
  * worker token is bundled (dev only) — production routes this server-side.
  */
-export async function transcodeCommentary(blob: Blob): Promise<string> {
+export interface CommentaryResult {
+  storageId: string;
+  /** Best-effort Deepgram transcript of the voice note, or null. */
+  transcript: string | null;
+}
+
+export async function transcodeCommentary(blob: Blob): Promise<CommentaryResult> {
   if (!workerUrl || !workerToken) {
     throw new Error("Worker is not configured (PLASMO_PUBLIC_WORKER_URL/_TOKEN)");
   }
@@ -180,11 +186,14 @@ export async function transcodeCommentary(blob: Blob): Promise<string> {
       `Commentary transcode failed (${response.status})${detail ? `: ${detail}` : ""}`
     );
   }
-  const body = (await response.json()) as { storageId?: string };
+  const body = (await response.json()) as {
+    storageId?: string;
+    transcript?: string | null;
+  };
   if (typeof body.storageId !== "string") {
     throw new Error("Worker returned no storageId for the commentary audio");
   }
-  return body.storageId;
+  return { storageId: body.storageId, transcript: body.transcript ?? null };
 }
 
 /** The dev worker token, passed to the token-guarded publish mutation. */

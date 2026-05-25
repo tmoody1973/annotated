@@ -25,6 +25,7 @@ const publishArticleClip = makeFunctionReference<
     textEnd: number;
     commentaryText?: string;
     commentaryAudioStorageId?: string;
+    commentaryAudioTranscript?: string;
     workerToken: string;
   },
   string
@@ -129,9 +130,9 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
     setStatus("publishing");
     setError(null);
     try {
-      const commentaryAudioStorageId = audioBlob
+      const commentaryAudio = audioBlob
         ? await transcodeCommentary(audioBlob)
-        : undefined;
+        : null;
       const annotationId = await publish({
         canonicalUrl: detection.url,
         title: article.title || detection.title,
@@ -141,7 +142,8 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
         textStart: highlight.textStart,
         textEnd: highlight.textEnd,
         commentaryText: take.trim(),
-        commentaryAudioStorageId,
+        commentaryAudioStorageId: commentaryAudio?.storageId,
+        commentaryAudioTranscript: commentaryAudio?.transcript ?? undefined,
         workerToken: getWorkerToken(),
       });
       setLink(`${getWebUrl()}/a/${annotationId}`);

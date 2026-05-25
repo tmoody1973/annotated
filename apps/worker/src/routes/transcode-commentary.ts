@@ -1,10 +1,13 @@
+import { readFile } from "node:fs/promises";
 import type { FastifyInstance } from "fastify";
 import { transcodeCommentaryBodySchema } from "../transcode-commentary-schema.js";
 import { transcodeToMp3 } from "../commentary-transcoder.js";
 import type { ClipUploader } from "../clip-uploader.js";
+import type { DeepgramClient } from "../deepgram-client.js";
 
 export interface TranscodeCommentaryDeps {
   uploader: ClipUploader;
+  deepgram: DeepgramClient;
   workerToken: string;
 }
 
@@ -50,7 +53,17 @@ export function registerTranscodeCommentaryRoute(
 
     try {
       const storageId = await deps.uploader.upload(clip.filePath, "audio/mpeg");
-      return reply.code(200).send({ storageId });
+      // Transcription is best-effort: a Deepgram hiccup must not fail the publish,
+      // so a failure yields a null transcript rather than a 5xx.
+      let transcript: string | null = null;
+      try {
+        const mp3 = await readFile(clip.filePath);
+        const text = (await deps.deepgram.transcribeFile(mp3, "audio/mpeg")).trim();
+        transcript = text.length > 0 ? text : null;
+      } catch (transcribeErr) {
+        request.log.warn(transcribeErr, "Commentary transcription failed");
+      }
+      return reply.code(200).send({ storageId, transcript });
     } catch (err) {
       request.log.error(err);
       return reply.code(502).send({ error: "Commentary upload failed" });

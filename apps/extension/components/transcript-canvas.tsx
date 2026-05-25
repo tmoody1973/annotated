@@ -25,6 +25,7 @@ const publishPodcastClip = makeFunctionReference<
     selectedText: string;
     commentaryText?: string;
     commentaryAudioStorageId?: string;
+    commentaryAudioTranscript?: string;
     workerToken: string;
   },
   string
@@ -114,9 +115,9 @@ export function TranscriptCanvas({
         selection.clipStartMs,
         selection.clipEndMs
       );
-      const commentaryAudioStorageId = audioBlob
+      const commentaryAudio = audioBlob
         ? await transcodeCommentary(audioBlob)
-        : undefined;
+        : null;
       const annotationId = await publish({
         sourceId,
         clipStorageId,
@@ -124,7 +125,8 @@ export function TranscriptCanvas({
         clipEndMs: selection.clipEndMs,
         selectedText: selection.quote,
         commentaryText: take.trim(),
-        commentaryAudioStorageId,
+        commentaryAudioStorageId: commentaryAudio?.storageId,
+        commentaryAudioTranscript: commentaryAudio?.transcript ?? undefined,
         workerToken: getWorkerToken(),
       });
       setLink(`${getWebUrl()}/a/${annotationId}`);

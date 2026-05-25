@@ -98,6 +98,9 @@ export default defineSchema({
     // Commentary — at least one of these must be present.
     commentaryText: v.optional(v.string()),
     commentaryAudioStorageId: v.optional(v.id("_storage")),
+    // Deepgram transcript of the recorded commentary (best-effort; for captions
+    // + feed previews of audio-only annotations).
+    commentaryAudioTranscript: v.optional(v.string()),
     // Publishing
     isPublic: v.boolean(),
     publishedAt: v.optional(v.number()),

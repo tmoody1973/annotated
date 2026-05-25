@@ -8,6 +8,7 @@ export interface FeedItem {
   _id: string;
   selectedText?: string;
   commentaryText?: string;
+  commentaryAudioTranscript?: string;
   clipUrl: string | null;
   commentCount: number;
   likeCount: number;
@@ -83,7 +84,11 @@ export function AnnotationCard({ item }: { item: FeedItem }) {
           </blockquote>
         )}
 
-        {item.commentaryText && <p>{item.commentaryText}</p>}
+        {item.commentaryText ? (
+          <p>{item.commentaryText}</p>
+        ) : item.commentaryAudioTranscript ? (
+          <p className="text-muted italic">🎙 “{item.commentaryAudioTranscript}”</p>
+        ) : null}
 
         {source && (
           <a

@@ -40,6 +40,7 @@ registerExtractArticleRoute(app, {
 
 registerTranscodeCommentaryRoute(app, {
   uploader: createClipUploader(env.CONVEX_URL, env.WORKER_AUTH_TOKEN),
+  deepgram: createDeepgramClient(env.DEEPGRAM_API_KEY),
   workerToken: env.WORKER_AUTH_TOKEN,
 });
 

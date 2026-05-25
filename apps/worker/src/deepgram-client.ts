@@ -5,6 +5,8 @@ const MODEL = "nova-3";
 
 export interface DeepgramClient {
   transcribeUrl(mp3Url: string): Promise<SyncPrerecordedResponse>;
+  /** Transcribes local audio bytes (recorded voice commentary) to plain text. */
+  transcribeFile(audio: Buffer, mimetype: string): Promise<string>;
 }
 
 /**
@@ -31,6 +33,20 @@ export function createDeepgramClient(apiKey: string): DeepgramClient {
       }
 
       return result;
+    },
+
+    async transcribeFile(audio: Buffer, mimetype: string): Promise<string> {
+      const { result, error } = await deepgram.listen.prerecorded.transcribeFile(
+        audio,
+        { model: MODEL, smart_format: true, mimetype }
+      );
+      if (error) {
+        const message = error instanceof Error ? error.message : JSON.stringify(error);
+        throw new Error(`Deepgram transcription failed: ${message}`);
+      }
+      return (
+        result?.results?.channels?.[0]?.alternatives?.[0]?.transcript ?? ""
+      );
     },
   };
 }

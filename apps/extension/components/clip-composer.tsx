@@ -27,6 +27,7 @@ const publishYoutubeClipDev = makeFunctionReference<
     clipEndMs: number;
     commentaryText?: string;
     commentaryAudioStorageId?: string;
+    commentaryAudioTranscript?: string;
     workerToken: string;
   },
   string
@@ -123,9 +124,9 @@ export function ClipComposer({ videoId }: { videoId: string }) {
     try {
       const title = await getActiveVideoTitle();
       const { storageId } = await clipYoutube({ videoId, startMs, endMs });
-      const commentaryAudioStorageId = audioBlob
+      const commentaryAudio = audioBlob
         ? await transcodeCommentary(audioBlob)
-        : undefined;
+        : null;
       setStatus("publishing");
       const id = await publish({
         videoId,
@@ -134,7 +135,8 @@ export function ClipComposer({ videoId }: { videoId: string }) {
         clipStartMs: startMs,
         clipEndMs: endMs,
         commentaryText: commentary.trim(),
-        commentaryAudioStorageId,
+        commentaryAudioStorageId: commentaryAudio?.storageId,
+        commentaryAudioTranscript: commentaryAudio?.transcript ?? undefined,
         workerToken: getWorkerToken(),
       });
       setAnnotationId(id);

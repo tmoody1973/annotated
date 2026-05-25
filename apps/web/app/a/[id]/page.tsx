@@ -12,6 +12,7 @@ interface AnnotationView {
   _id: string;
   commentaryText?: string;
   commentaryAudioUrl?: string | null;
+  commentaryAudioTranscript?: string;
   selectedText?: string;
   clipStartMs?: number;
   clipEndMs?: number;
@@ -148,6 +149,11 @@ export default async function AnnotationPage({
                   src={annotation.commentaryAudioUrl}
                   className="w-full"
                 />
+                {annotation.commentaryAudioTranscript && (
+                  <p className="mt-2 text-sm italic leading-relaxed text-[#333]">
+                    “{annotation.commentaryAudioTranscript}”
+                  </p>
+                )}
               </div>
             )}
 
