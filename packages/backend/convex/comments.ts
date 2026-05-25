@@ -1,13 +1,23 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import type { QueryCtx } from "./_generated/server";
 import { requireCurrentUser } from "./users";
+import type { Id } from "./_generated/dataModel";
 
 /**
  * Adds a comment to an annotation as the signed-in user, and bumps the
  * denormalized `commentCount`. Empty/whitespace text is rejected.
+ *
+ * When `parentId` is given the comment is a reply. Nesting is capped at one
+ * level: replying to a reply re-targets the reply's own top-level parent, so
+ * the thread never grows deeper than comment → replies.
  */
 export const add = mutation({
-  args: { annotationId: v.id("annotations"), text: v.string() },
+  args: {
+    annotationId: v.id("annotations"),
+    text: v.string(),
+    parentId: v.optional(v.id("comments")),
+  },
   returns: v.id("comments"),
   handler: async (ctx, args) => {
     const user = await requireCurrentUser(ctx);
@@ -21,11 +31,18 @@ export const add = mutation({
       throw new Error("Annotation not found");
     }
 
+    const topLevelParentId = await resolveTopLevelParent(
+      ctx,
+      args.parentId,
+      args.annotationId
+    );
+
     const commentId = await ctx.db.insert("comments", {
       annotationId: args.annotationId,
       authorId: user._id,
       text,
       createdAt: Date.now(),
+      ...(topLevelParentId ? { parentId: topLevelParentId } : {}),
     });
     await ctx.db.patch(args.annotationId, {
       commentCount: annotation.commentCount + 1,
@@ -34,7 +51,29 @@ export const add = mutation({
   },
 });
 
-/** Comments on an annotation, oldest-first, joined with each author. */
+/**
+ * Resolves the supplied parent to a valid top-level comment id, or `null` for a
+ * top-level comment. Guards that the parent exists and belongs to the same
+ * annotation; flattens a reply's parent to its own top-level ancestor.
+ */
+async function resolveTopLevelParent(
+  ctx: QueryCtx,
+  parentId: Id<"comments"> | undefined,
+  annotationId: Id<"annotations">
+): Promise<Id<"comments"> | null> {
+  if (!parentId) return null;
+  const parent = await ctx.db.get(parentId);
+  if (!parent || parent.annotationId !== annotationId) {
+    throw new Error("Parent comment not found on this annotation");
+  }
+  return parent.parentId ?? parent._id;
+}
+
+/**
+ * Comments on an annotation as a one-level thread: top-level comments
+ * oldest-first, each with an ordered `replies[]`. Each entry is joined with its
+ * author.
+ */
 export const listByAnnotation = query({
   args: { annotationId: v.id("annotations") },
   handler: async (ctx, args) => {
@@ -43,11 +82,12 @@ export const listByAnnotation = query({
       .withIndex("by_annotation", (q) => q.eq("annotationId", args.annotationId))
       .collect();
 
-    return await Promise.all(
+    const withAuthors = await Promise.all(
       comments.map(async (comment) => {
         const author = await ctx.db.get(comment.authorId);
         return {
           _id: comment._id,
+          parentId: comment.parentId ?? null,
           text: comment.text,
           createdAt: comment.createdAt,
           author: author
@@ -60,5 +100,18 @@ export const listByAnnotation = query({
         };
       })
     );
+
+    const byCreatedAt = (a: { createdAt: number }, b: { createdAt: number }) =>
+      a.createdAt - b.createdAt;
+    const topLevel = withAuthors
+      .filter((c) => c.parentId === null)
+      .sort(byCreatedAt);
+
+    return topLevel.map((top) => ({
+      ...top,
+      replies: withAuthors
+        .filter((c) => c.parentId === top._id)
+        .sort(byCreatedAt),
+    }));
   },
 });

@@ -115,15 +115,19 @@ export default defineSchema({
     .index("by_source", ["sourceId"])
     .index("by_feed", ["isPublic", "publishedAt"]),
 
-  // Comments on annotations.
+  // Comments on annotations. `parentId` threads a reply onto a top-level
+  // comment; nesting is capped at one level (a reply to a reply flattens to
+  // the same top-level parent). Optional so pre-existing flat rows validate.
   comments: defineTable({
     annotationId: v.id("annotations"),
     authorId: v.id("users"),
     text: v.string(),
     createdAt: v.number(),
+    parentId: v.optional(v.id("comments")),
   })
     .index("by_annotation", ["annotationId"])
-    .index("by_author", ["authorId"]),
+    .index("by_author", ["authorId"])
+    .index("by_parent", ["parentId"]),
 
   // Follow relationships between users.
   follows: defineTable({
