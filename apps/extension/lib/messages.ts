@@ -22,6 +22,15 @@ export interface GetPodcastPageResponse {
   rssUrl: string | null;
   /** The page's document title, used to match the specific episode. */
   pageTitle: string | null;
+  /**
+   * A podcast episode audio URL found directly in the page (NPR `data-audio`,
+   * an `<audio>` element, or a known podcast-CDN link). Present on episode pages
+   * that are tagged like articles (og:type=article) — a stronger signal than a
+   * site RSS link, so the panel clips it directly without RSS resolution.
+   */
+  enclosureUrl: string | null;
+  /** Best-effort show name (og:site_name), or null. */
+  showName: string | null;
 }
 
 export const GET_ARTICLE_PAGE = "GET_ARTICLE_PAGE" as const;

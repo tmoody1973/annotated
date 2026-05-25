@@ -36,6 +36,23 @@ function byteLength(text: string): number {
 const SPOTIFY_REASON =
   "Spotify exclusives have no RSS feed and can't be clipped. Open the Apple Podcasts or web RSS version of this show.";
 
+/** Strips a trailing " — Site" / " | Site" / " : Site" suffix (surrounding spaces
+ * required, so a colon inside a real title like "Fire Escape: Worthy" is kept). */
+function cleanEpisodeTitle(title: string | undefined): string {
+  if (!title) return "";
+  const [head] = title.split(/\s+[|:–—-]\s+/);
+  return (head ?? title).trim();
+}
+
+/** Hostname (sans www) as a last-resort show name when the page gives none. */
+function hostnameLabel(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return "Podcast";
+  }
+}
+
 /** One episode resolved from iTunes, normalized to what the upsert needs. */
 interface ResolvedEpisode {
   title: string;
@@ -79,18 +96,48 @@ export const resolvePodcast = action({
     platform: v.union(
       v.literal("apple"),
       v.literal("spotify"),
-      v.literal("generic")
+      v.literal("generic"),
+      v.literal("enclosure")
     ),
     canonicalUrl: v.string(),
     podcastId: v.optional(v.string()),
     episodeId: v.optional(v.string()),
     rssUrl: v.optional(v.string()),
     pageTitle: v.optional(v.string()),
+    enclosureUrl: v.optional(v.string()),
+    showName: v.optional(v.string()),
   },
   returns: resolveResultValidator,
   handler: async (ctx, args): Promise<ResolveResult> => {
     if (args.platform === "spotify") {
       return { status: "unsupported" as const, reason: SPOTIFY_REASON };
+    }
+
+    // The page carried the episode audio directly (NPR/Snap Judgment/Audible —
+    // an episode tagged like an article). Clip it straight from the enclosure;
+    // no iTunes/RSS round-trip. The worker resolves the tracking redirect later.
+    if (args.platform === "enclosure") {
+      if (!args.enclosureUrl) {
+        return { status: "not_found" as const, reason: "No episode audio found on this page." };
+      }
+      const episodeTitle = cleanEpisodeTitle(args.pageTitle) || "Episode";
+      const podcastName = args.showName?.trim() || hostnameLabel(args.canonicalUrl);
+      const sourceId: Id<"sources"> = await ctx.runMutation(
+        internal.sources.upsertPodcast,
+        {
+          canonicalUrl: args.canonicalUrl,
+          title: episodeTitle,
+          podcastName,
+          mp3Url: args.enclosureUrl,
+        }
+      );
+      return {
+        status: "resolved" as const,
+        sourceId,
+        podcastName,
+        episodeTitle,
+        mp3Url: args.enclosureUrl,
+      };
     }
 
     const resolved =

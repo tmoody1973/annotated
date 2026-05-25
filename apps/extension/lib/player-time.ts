@@ -10,9 +10,11 @@ async function getActiveTab(): Promise<chrome.tabs.Tab | undefined> {
 }
 
 /**
- * Asks the active tab's content script for the player's current time in ms.
- * Returns null when the tab has no content script (not a watch page) or no
- * player was found — the caller treats null as "couldn't read playback".
+ * Reads the active tab's player position in ms. First asks the declarative
+ * content script; if the tab was opened before the extension loaded that script
+ * isn't present and `sendMessage` rejects, so we fall back to injecting a one-off
+ * reader via `chrome.scripting` — which works without a page reload. Returns null
+ * only when there is genuinely no player (not a watch page).
  */
 export async function requestPlayerTimeMs(): Promise<number | null> {
   const tab = await getActiveTab();
@@ -22,9 +24,23 @@ export async function requestPlayerTimeMs(): Promise<number | null> {
     const response = (await chrome.tabs.sendMessage(tab.id, {
       type: GET_PLAYER_TIME,
     })) as GetPlayerTimeResponse | undefined;
-    return typeof response?.currentTimeMs === "number"
-      ? response.currentTimeMs
-      : null;
+    if (typeof response?.currentTimeMs === "number") {
+      return response.currentTimeMs;
+    }
+  } catch {
+    // No content script in this tab yet — fall through to programmatic injection.
+  }
+
+  try {
+    const [injection] = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: () => {
+        const video =
+          document.querySelector<HTMLVideoElement>("video.html5-main-video");
+        return video ? Math.round(video.currentTime * 1000) : null;
+      },
+    });
+    return typeof injection?.result === "number" ? injection.result : null;
   } catch {
     return null;
   }

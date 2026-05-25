@@ -6,12 +6,14 @@ import { ink, monoStack, muted } from "../lib/clip-styles";
 import { PodcastClipper } from "./podcast-clipper";
 
 type ResolveArgs = {
-  platform: "apple" | "spotify" | "generic";
+  platform: "apple" | "spotify" | "generic" | "enclosure";
   canonicalUrl: string;
   podcastId?: string;
   episodeId?: string;
   rssUrl?: string;
   pageTitle?: string;
+  enclosureUrl?: string;
+  showName?: string;
 };
 
 type ResolveResult =
@@ -43,6 +45,15 @@ function toArgs(
       canonicalUrl: detection.canonicalUrl,
       podcastId: detection.podcastId,
       ...(detection.episodeId ? { episodeId: detection.episodeId } : {}),
+    };
+  }
+  if (detection.kind === "enclosure") {
+    return {
+      platform: "enclosure",
+      canonicalUrl: detection.canonicalUrl,
+      enclosureUrl: detection.enclosureUrl,
+      pageTitle: detection.pageTitle,
+      showName: detection.showName,
     };
   }
   return {
@@ -89,7 +100,8 @@ export function PodcastPanel({ detection }: { detection: PodcastDetection }) {
     (detection.kind === "apple" ? `:${detection.episodeId ?? ""}` : "") +
     (detection.kind === "generic"
       ? `:${detection.rssUrl}:${detection.pageTitle}`
-      : "");
+      : "") +
+    (detection.kind === "enclosure" ? `:${detection.enclosureUrl}` : "");
 
   useEffect(() => {
     if (detection.kind === "spotify") return;

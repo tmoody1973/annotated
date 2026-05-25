@@ -9,6 +9,13 @@ import {
 export type PodcastDetection =
   | { kind: "apple"; canonicalUrl: string; podcastId: string; episodeId: string | null }
   | { kind: "spotify"; canonicalUrl: string }
+  | {
+      kind: "enclosure";
+      canonicalUrl: string;
+      enclosureUrl: string;
+      pageTitle: string;
+      showName: string;
+    }
   | { kind: "generic"; canonicalUrl: string; rssUrl: string; pageTitle: string };
 
 interface ActiveTab {
@@ -50,6 +57,19 @@ async function detect(tab: ActiveTab): Promise<PodcastDetection | null> {
 
   if (tab.id === null) return null;
   const feed = await readPageFeed(tab.id);
+
+  // An in-page episode enclosure is the strongest signal — it means this page IS
+  // an episode (NPR/Snap Judgment/Audible publish them tagged like articles), so
+  // it wins over both a site RSS link and og:type=article.
+  if (feed?.enclosureUrl) {
+    return {
+      kind: "enclosure",
+      canonicalUrl: tab.url,
+      enclosureUrl: feed.enclosureUrl,
+      pageTitle: feed.pageTitle ?? "",
+      showName: feed.showName ?? "",
+    };
+  }
   if (feed?.rssUrl) {
     return {
       kind: "generic",
