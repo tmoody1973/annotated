@@ -6,8 +6,14 @@ import {
   formatClipTimestamp,
   type TranscriptWord,
 } from "@annotated/shared";
-import { clipAudio, getWorkerToken, getWebUrl } from "../lib/worker-client";
+import {
+  clipAudio,
+  getWorkerToken,
+  getWebUrl,
+  transcodeCommentary,
+} from "../lib/worker-client";
 import { accent, ink, monoStack, muted } from "../lib/clip-styles";
+import { CommentaryComposer } from "./commentary-composer";
 
 const publishPodcastClip = makeFunctionReference<
   "mutation",
@@ -17,7 +23,8 @@ const publishPodcastClip = makeFunctionReference<
     clipStartMs: number;
     clipEndMs: number;
     selectedText: string;
-    commentaryText: string;
+    commentaryText?: string;
+    commentaryAudioStorageId?: string;
     workerToken: string;
   },
   string
@@ -61,6 +68,7 @@ export function TranscriptCanvas({
   const [anchor, setAnchor] = useState<number | null>(null);
   const [focus, setFocus] = useState<number | null>(null);
   const [take, setTake] = useState("");
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [status, setStatus] = useState<"idle" | "publishing" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
   const [link, setLink] = useState<string | null>(null);
@@ -92,7 +100,7 @@ export function TranscriptCanvas({
   const canPublish =
     selection !== null &&
     selection.withinCap &&
-    take.trim().length > 0 &&
+    (take.trim().length > 0 || audioBlob !== null) &&
     status !== "publishing";
 
   const onPublish = async (): Promise<void> => {
@@ -106,6 +114,9 @@ export function TranscriptCanvas({
         selection.clipStartMs,
         selection.clipEndMs
       );
+      const commentaryAudioStorageId = audioBlob
+        ? await transcodeCommentary(audioBlob)
+        : undefined;
       const annotationId = await publish({
         sourceId,
         clipStorageId,
@@ -113,6 +124,7 @@ export function TranscriptCanvas({
         clipEndMs: selection.clipEndMs,
         selectedText: selection.quote,
         commentaryText: take.trim(),
+        commentaryAudioStorageId,
         workerToken: getWorkerToken(),
       });
       setLink(`${getWebUrl()}/a/${annotationId}`);
@@ -211,22 +223,14 @@ export function TranscriptCanvas({
         </div>
       )}
 
-      <textarea
-        className="ann-take"
-        value={take}
-        onChange={(e) => setTake(e.target.value)}
-        placeholder="Your take — why does this clip matter?"
-        style={{
-          width: "100%",
-          marginTop: 10,
-          minHeight: 64,
-          fontFamily: "inherit",
-          fontSize: 13,
-          border: `2px solid ${ink}`,
-          padding: 8,
-          boxSizing: "border-box",
-        }}
-      />
+      <div style={{ marginTop: 10 }}>
+        <CommentaryComposer
+          text={take}
+          onTextChange={setTake}
+          onAudioChange={setAudioBlob}
+          disabled={status === "publishing"}
+        />
+      </div>
 
       {error && (
         <p style={{ color: "#c00", fontSize: 12, margin: "6px 0 0" }}>{error}</p>

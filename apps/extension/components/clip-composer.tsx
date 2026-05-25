@@ -8,8 +8,14 @@ import {
   type ClipSpanResult,
 } from "@annotated/shared";
 import { requestPlayerTimeMs, getActiveVideoTitle } from "../lib/player-time";
-import { clipYoutube, getWorkerToken, getWebUrl } from "../lib/worker-client";
+import {
+  clipYoutube,
+  getWorkerToken,
+  getWebUrl,
+  transcodeCommentary,
+} from "../lib/worker-client";
 import { accent, ink, muted, monoStack, valid } from "../lib/clip-styles";
+import { CommentaryComposer } from "./commentary-composer";
 
 const publishYoutubeClipDev = makeFunctionReference<
   "mutation",
@@ -19,7 +25,8 @@ const publishYoutubeClipDev = makeFunctionReference<
     clipStorageId: string;
     clipStartMs: number;
     clipEndMs: number;
-    commentaryText: string;
+    commentaryText?: string;
+    commentaryAudioStorageId?: string;
     workerToken: string;
   },
   string
@@ -84,6 +91,7 @@ export function ClipComposer({ videoId }: { videoId: string }) {
   const [startInput, setStartInput] = useState("");
   const [endInput, setEndInput] = useState("");
   const [commentary, setCommentary] = useState("");
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [status, setStatus] = useState<Status>("idle");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [annotationId, setAnnotationId] = useState<string | null>(null);
@@ -92,7 +100,7 @@ export function ClipComposer({ videoId }: { videoId: string }) {
   const startMs = clockToMs(startInput);
   const endMs = clockToMs(endInput);
   const span = startMs !== null && endMs !== null ? evaluateClipSpan(startMs, endMs) : null;
-  const commentaryOk = commentary.trim().length > 0;
+  const commentaryOk = commentary.trim().length > 0 || audioBlob !== null;
   const busy = status === "clipping" || status === "publishing";
   const canPublish = (span?.ok ?? false) && commentaryOk && !busy;
 
@@ -115,6 +123,9 @@ export function ClipComposer({ videoId }: { videoId: string }) {
     try {
       const title = await getActiveVideoTitle();
       const { storageId } = await clipYoutube({ videoId, startMs, endMs });
+      const commentaryAudioStorageId = audioBlob
+        ? await transcodeCommentary(audioBlob)
+        : undefined;
       setStatus("publishing");
       const id = await publish({
         videoId,
@@ -123,6 +134,7 @@ export function ClipComposer({ videoId }: { videoId: string }) {
         clipStartMs: startMs,
         clipEndMs: endMs,
         commentaryText: commentary.trim(),
+        commentaryAudioStorageId,
         workerToken: getWorkerToken(),
       });
       setAnnotationId(id);
@@ -149,6 +161,7 @@ export function ClipComposer({ videoId }: { videoId: string }) {
             setStartInput("");
             setEndInput("");
             setCommentary("");
+            setAudioBlob(null);
             setAnnotationId(null);
           }}
         >
@@ -179,12 +192,11 @@ export function ClipComposer({ videoId }: { videoId: string }) {
       })()}
 
       <div style={{ marginTop: 16 }}>
-        <div style={label}>Commentary</div>
-        <textarea
-          className="ann-textarea ann-shadow"
-          value={commentary}
-          placeholder="Why does this clip matter?"
-          onChange={(e) => setCommentary(e.target.value)}
+        <CommentaryComposer
+          text={commentary}
+          onTextChange={setCommentary}
+          onAudioChange={setAudioBlob}
+          disabled={busy}
         />
       </div>
 

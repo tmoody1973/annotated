@@ -11,6 +11,7 @@ import { Comments } from "../../_components/comments";
 interface AnnotationView {
   _id: string;
   commentaryText?: string;
+  commentaryAudioUrl?: string | null;
   selectedText?: string;
   clipStartMs?: number;
   clipEndMs?: number;
@@ -135,6 +136,19 @@ export default async function AnnotationPage({
               <p className="mt-4 border-l-[6px] border-[#111] pl-4 text-lg leading-relaxed">
                 {annotation.commentaryText}
               </p>
+            )}
+
+            {annotation.commentaryAudioUrl && (
+              <div className="mt-4 border-l-[6px] border-[#ff5c00] pl-4">
+                <p className="mb-2 font-mono text-xs font-bold uppercase tracking-widest text-[#555]">
+                  Voice commentary
+                </p>
+                <audio
+                  controls
+                  src={annotation.commentaryAudioUrl}
+                  className="w-full"
+                />
+              </div>
             )}
 
             {annotation.author && (

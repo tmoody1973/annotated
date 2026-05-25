@@ -7,9 +7,11 @@ import {
   extractArticle,
   getWebUrl,
   getWorkerToken,
+  transcodeCommentary,
   type ExtractedArticle,
 } from "../lib/worker-client";
 import { accent, ink, monoStack, muted } from "../lib/clip-styles";
+import { CommentaryComposer } from "./commentary-composer";
 
 const publishArticleClip = makeFunctionReference<
   "mutation",
@@ -21,7 +23,8 @@ const publishArticleClip = makeFunctionReference<
     selectedText: string;
     textStart: number;
     textEnd: number;
-    commentaryText: string;
+    commentaryText?: string;
+    commentaryAudioStorageId?: string;
     workerToken: string;
   },
   string
@@ -71,6 +74,7 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
   const [extractError, setExtractError] = useState<string | null>(null);
   const [highlight, setHighlight] = useState<ArticleHighlight | null>(null);
   const [take, setTake] = useState("");
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [status, setStatus] = useState<"idle" | "publishing" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
   const [link, setLink] = useState<string | null>(null);
@@ -116,7 +120,7 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
   const canPublish =
     highlight !== null &&
     highlight.valid &&
-    take.trim().length > 0 &&
+    (take.trim().length > 0 || audioBlob !== null) &&
     status !== "publishing";
 
   const onPublish = async (): Promise<void> => {
@@ -125,6 +129,9 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
     setStatus("publishing");
     setError(null);
     try {
+      const commentaryAudioStorageId = audioBlob
+        ? await transcodeCommentary(audioBlob)
+        : undefined;
       const annotationId = await publish({
         canonicalUrl: detection.url,
         title: article.title || detection.title,
@@ -134,6 +141,7 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
         textStart: highlight.textStart,
         textEnd: highlight.textEnd,
         commentaryText: take.trim(),
+        commentaryAudioStorageId,
         workerToken: getWorkerToken(),
       });
       setLink(`${getWebUrl()}/a/${annotationId}`);
@@ -240,22 +248,14 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
         </p>
       )}
 
-      <textarea
-        className="ann-take"
-        value={take}
-        onChange={(e) => setTake(e.target.value)}
-        placeholder="Your take — why does this passage matter?"
-        style={{
-          width: "100%",
-          marginTop: 10,
-          minHeight: 64,
-          fontFamily: "inherit",
-          fontSize: 13,
-          border: `2px solid ${ink}`,
-          padding: 8,
-          boxSizing: "border-box",
-        }}
-      />
+      <div style={{ marginTop: 10 }}>
+        <CommentaryComposer
+          text={take}
+          onTextChange={setTake}
+          onAudioChange={setAudioBlob}
+          disabled={status === "publishing"}
+        />
+      </div>
 
       {error && (
         <p style={{ color: "#c00", fontSize: 12, margin: "6px 0 0" }}>{error}</p>

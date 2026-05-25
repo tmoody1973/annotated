@@ -145,6 +145,48 @@ export async function extractArticle(
   };
 }
 
+/** Encodes a recorded audio blob to base64 (no data-URL prefix) for JSON transport. */
+async function blobToBase64(blob: Blob): Promise<string> {
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  let binary = "";
+  const CHUNK = 0x8000;
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(binary);
+}
+
+/**
+ * Uploads a recorded voice-commentary blob (webm/opus) to the worker, which
+ * transcodes it to mp3, stores it, and returns the Convex storageId. DEBT: the
+ * worker token is bundled (dev only) — production routes this server-side.
+ */
+export async function transcodeCommentary(blob: Blob): Promise<string> {
+  if (!workerUrl || !workerToken) {
+    throw new Error("Worker is not configured (PLASMO_PUBLIC_WORKER_URL/_TOKEN)");
+  }
+  const audioBase64 = await blobToBase64(blob);
+  const response = await fetch(`${workerUrl}/transcode-commentary`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${workerToken}`,
+    },
+    body: JSON.stringify({ audioBase64, mimeType: blob.type || "audio/webm" }),
+  });
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    throw new Error(
+      `Commentary transcode failed (${response.status})${detail ? `: ${detail}` : ""}`
+    );
+  }
+  const body = (await response.json()) as { storageId?: string };
+  if (typeof body.storageId !== "string") {
+    throw new Error("Worker returned no storageId for the commentary audio");
+  }
+  return body.storageId;
+}
+
 /** The dev worker token, passed to the token-guarded publish mutation. */
 export function getWorkerToken(): string {
   if (!workerToken) {
