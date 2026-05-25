@@ -12,12 +12,14 @@ async function syncLikeCount(
   ctx: MutationCtx,
   annotationId: Id<"annotations">
 ): Promise<number> {
-  const likes = await ctx.db
+  const rows = await ctx.db
     .query("likes")
     .withIndex("by_annotation", (q) => q.eq("annotationId", annotationId))
     .collect();
-  await ctx.db.patch(annotationId, { likeCount: likes.length });
-  return likes.length;
+  // Count upvotes only (value !== -1); a missing value predates voting = upvote.
+  const likeCount = rows.filter((r) => r.value !== -1).length;
+  await ctx.db.patch(annotationId, { likeCount });
+  return likeCount;
 }
 
 /**

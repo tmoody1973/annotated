@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Avatar, Card } from "@heroui/react";
-import { LikeButton } from "./like-button";
+import { VoteButtons } from "./vote-buttons";
 
 export interface FeedItem {
   _id: string;
@@ -12,6 +12,7 @@ export interface FeedItem {
   clipUrl: string | null;
   commentCount: number;
   likeCount: number;
+  downCount: number;
   source: {
     type: string;
     title: string;
@@ -105,7 +106,11 @@ export function AnnotationCard({ item }: { item: FeedItem }) {
 
       <Card.Footer>
         <div className="flex w-full items-center gap-2">
-          <LikeButton annotationId={item._id} likeCount={item.likeCount} />
+          <VoteButtons
+            annotationId={item._id}
+            upCount={item.likeCount}
+            downCount={item.downCount}
+          />
           <Link
             href={`/a/${item._id}`}
             className="inline-flex items-center gap-1 border border-border px-2 py-1 text-sm hover:bg-surface-secondary"

@@ -106,7 +106,10 @@ export default defineSchema({
     publishedAt: v.optional(v.number()),
     // Denormalized counts for feed rendering without extra queries.
     commentCount: v.number(),
+    // Upvote count (kept the name `likeCount` for backward compatibility with
+    // existing rows / the deployed build; an upvote === a "like").
     likeCount: v.number(),
+    downCount: v.optional(v.number()),
   })
     .index("by_author", ["authorId"])
     .index("by_source", ["sourceId"])
@@ -130,10 +133,13 @@ export default defineSchema({
     .index("by_follower", ["followerId"])
     .index("by_following", ["followingId"]),
 
-  // Likes on annotations.
+  // Votes on annotations. `value` is the direction: +1 = "brilliant" (upvote, a
+  // "like"), -1 = "BS" (downvote). Optional so pre-existing like rows (no value)
+  // validate and read as upvotes.
   likes: defineTable({
     annotationId: v.id("annotations"),
     userId: v.id("users"),
+    value: v.optional(v.union(v.literal(1), v.literal(-1))),
   })
     .index("by_annotation", ["annotationId"])
     .index("by_user", ["userId"])

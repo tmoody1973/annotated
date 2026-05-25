@@ -30,6 +30,7 @@ async function toFeedItem(ctx: QueryCtx, annotation: Doc<"annotations">) {
     clipUrl,
     commentCount: annotation.commentCount,
     likeCount: annotation.likeCount,
+    downCount: annotation.downCount ?? 0,
     source: source
       ? {
           type: source.type,
