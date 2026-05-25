@@ -1,12 +1,15 @@
 import type { Metadata } from "next";
-import { notFound, redirect } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { ConvexHttpClient } from "convex/browser";
 import { makeFunctionReference } from "convex/server";
+import { slugId, splitSlugId } from "@annotated/shared";
 import { ClaimButton } from "./claim-button";
 import { VoteButtons } from "../../_components/vote-buttons";
 import { FollowButton } from "../../_components/follow-button";
 import { Comments } from "../../_components/comments";
 import { ClipArticle } from "../../_components/clip-article";
+import { JsonLd } from "../../_components/json-ld";
+import { absoluteUrl, clipPath, threadPath } from "../../_lib/urls";
 
 interface AnnotationView {
   _id: string;
@@ -57,12 +60,24 @@ export async function generateMetadata({
 }: {
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
-  const { id } = await params;
+  const { id: param } = await params;
+  const { id } = splitSlugId(param);
   const annotation = await fetchAnnotation(id);
   if (!annotation) return { title: "Not found — Annotated" };
+  const title = `${annotation.source?.title ?? "Clip"} — Annotated`;
+  const description =
+    annotation.commentaryText ??
+    annotation.commentaryAudioTranscript ??
+    "A clip annotated on Annotated.";
+  const canonical = absoluteUrl(
+    clipPath(annotation.source?.title ?? "clip", annotation._id)
+  );
   return {
-    title: `${annotation.source?.title ?? "Clip"} — Annotated`,
-    description: annotation.commentaryText ?? "A clip annotated on Annotated.",
+    title,
+    description,
+    alternates: { canonical },
+    openGraph: { title, description, url: canonical, type: "article" },
+    twitter: { card: "summary_large_image", title, description },
   };
 }
 
@@ -71,17 +86,48 @@ export default async function AnnotationPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
+  const { id: param } = await params;
+  const { id } = splitSlugId(param);
   const annotation = await fetchAnnotation(id);
   if (!annotation) notFound();
 
   // A threaded clip lives on its thread page; deep-link to its position.
   if (annotation.threadId) {
-    redirect(`/t/${annotation.threadId}#clip-${annotation.threadOrder ?? 0}`);
+    permanentRedirect(
+      `${threadPath(annotation.source?.title ?? "thread", annotation.threadId)}#clip-${annotation.threadOrder ?? 0}`
+    );
   }
+
+  // Canonicalize the URL: redirect any non-canonical slug to /a/[slug]-[id].
+  const canonicalParam = slugId(annotation.source?.title ?? "clip", annotation._id);
+  if (param !== canonicalParam) {
+    permanentRedirect(clipPath(annotation.source?.title ?? "clip", annotation._id));
+  }
+
+  // Structured data: the commentary is the original work; it cites the source.
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "CreativeWork",
+    url: absoluteUrl(`/a/${canonicalParam}`),
+    headline: annotation.commentaryText ?? annotation.selectedText ?? "Clip",
+    ...(annotation.commentaryText ? { text: annotation.commentaryText } : {}),
+    ...(annotation.author
+      ? { author: { "@type": "Person", name: annotation.author.displayName } }
+      : {}),
+    ...(annotation.source
+      ? {
+          citation: {
+            "@type": "CreativeWork",
+            name: annotation.source.title,
+            url: annotation.source.canonicalUrl,
+          },
+        }
+      : {}),
+  };
 
   return (
     <main className="flex min-h-screen flex-col items-center bg-[#f4f1e8] px-4 py-10 text-[#111]">
+      <JsonLd data={jsonLd} />
       <div className="w-full max-w-2xl">
         <header className="mb-6 flex items-center justify-between">
           <span className="text-lg font-black uppercase tracking-tight">Annotated</span>

@@ -3,6 +3,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { Share_Tech_Mono, Anton } from "next/font/google";
 import { ConvexClientProvider } from "./ConvexClientProvider";
 import { Providers } from "./Providers";
+import { SITE_URL } from "./_lib/urls";
 import "./globals.css";
 
 // Brutalism theme fonts: Share Tech Mono for body, Anton for display headings.
@@ -19,6 +20,7 @@ const anton = Anton({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: "Annotated",
   description: "Clip and annotate media from any web page.",
 };

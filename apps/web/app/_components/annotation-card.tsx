@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Avatar, Card } from "@heroui/react";
+import { slugId } from "@annotated/shared";
 import { VoteButtons } from "./vote-buttons";
 
 export interface FeedItem {
@@ -44,7 +45,10 @@ export function AnnotationCard({ item }: { item: FeedItem }) {
   const { source, author } = item;
   const isPodcast = source?.type === "podcast";
   const isThread = item.threadId != null && (item.clipCount ?? 1) > 1;
-  const detailHref = isThread ? `/t/${item.threadId}` : `/a/${item._id}`;
+  const detailHref =
+    isThread && item.threadId
+      ? `/t/${slugId(source?.title ?? "thread", item.threadId)}`
+      : `/a/${slugId(source?.title ?? "clip", item._id)}`;
 
   return (
     <Card className="w-full">

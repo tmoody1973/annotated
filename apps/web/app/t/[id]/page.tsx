@@ -1,12 +1,15 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { ConvexHttpClient } from "convex/browser";
 import { makeFunctionReference } from "convex/server";
+import { slugId, splitSlugId } from "@annotated/shared";
 import { ClaimButton } from "../../a/[id]/claim-button";
 import { VoteButtons } from "../../_components/vote-buttons";
 import { FollowButton } from "../../_components/follow-button";
 import { Comments } from "../../_components/comments";
 import { ClipArticle } from "../../_components/clip-article";
+import { JsonLd } from "../../_components/json-ld";
+import { absoluteUrl, threadPath } from "../../_lib/urls";
 
 interface ThreadClip {
   _id: string;
@@ -61,13 +64,22 @@ export async function generateMetadata({
 }: {
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
-  const { id } = await params;
+  const { id: param } = await params;
+  const { id } = splitSlugId(param);
   const thread = await fetchThread(id);
   if (!thread) return { title: "Not found — Annotated" };
-  const title = thread.source?.title ?? "Thread";
+  const sourceTitle = thread.source?.title ?? "Thread";
+  const title = `${sourceTitle} — ${thread.clips.length} clips — Annotated`;
+  const description = `A ${thread.clips.length}-clip thread on Annotated.`;
+  const canonical = absoluteUrl(
+    threadPath(thread.title ?? sourceTitle, thread._id)
+  );
   return {
-    title: `${title} — ${thread.clips.length} clips — Annotated`,
-    description: `A ${thread.clips.length}-clip thread on Annotated.`,
+    title,
+    description,
+    alternates: { canonical },
+    openGraph: { title, description, url: canonical, type: "article" },
+    twitter: { card: "summary_large_image", title, description },
   };
 }
 
@@ -76,12 +88,44 @@ export default async function ThreadPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
+  const { id: param } = await params;
+  const { id } = splitSlugId(param);
   const thread = await fetchThread(id);
   if (!thread) notFound();
 
+  // Canonicalize the URL: redirect any non-canonical slug to /t/[slug]-[id].
+  const canonicalParam = slugId(thread.title ?? thread.source?.title ?? "thread", thread._id);
+  if (param !== canonicalParam) {
+    permanentRedirect(threadPath(thread.title ?? thread.source?.title ?? "thread", thread._id));
+  }
+
+  // Structured data: a thread is a collection citing one source.
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "CreativeWork",
+    url: absoluteUrl(`/t/${canonicalParam}`),
+    headline: thread.title ?? thread.source?.title ?? "Thread",
+    ...(thread.author
+      ? { author: { "@type": "Person", name: thread.author.displayName } }
+      : {}),
+    ...(thread.source
+      ? {
+          citation: {
+            "@type": "CreativeWork",
+            name: thread.source.title,
+            url: thread.source.canonicalUrl,
+          },
+        }
+      : {}),
+    hasPart: thread.clips.map((clip) => ({
+      "@type": "CreativeWork",
+      text: clip.commentaryText ?? clip.selectedText ?? "",
+    })),
+  };
+
   return (
     <main className="flex min-h-screen flex-col items-center bg-[#f4f1e8] px-4 py-10 text-[#111]">
+      <JsonLd data={jsonLd} />
       <div className="w-full max-w-2xl">
         <header className="mb-6 flex items-center justify-between">
           <span className="text-lg font-black uppercase tracking-tight">Annotated</span>
