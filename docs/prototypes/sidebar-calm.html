@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Annotated — calm sidebar prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.17.0/dist/tabler-icons.min.css" />
+<style>
+  :root {
+    /* Refined editorial palette — ink on warm paper, one restrained accent */
+    --paper: #f3f1ea;
+    --panel: #fdfcf9;
+    --surface: #f6f4ee;
+    --surface-2: #ece9e0;
+    --ink: #1b1a17;
+    --ink-2: #6c6962;
+    --ink-3: #9c988e;
+    --hair: #e4e0d6;
+    --accent: #2f5d8a;        /* serious editorial blue, used sparingly */
+    --accent-tint: #2f5d8a1f; /* selection wash */
+    --danger: #9a3b2f;
+    --radius: 10px;
+    --radius-sm: 7px;
+    --font-ui: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+    --font-serif: "Newsreader", Georgia, serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background:
+      radial-gradient(120% 80% at 50% -10%, #fbfaf6 0%, var(--paper) 55%) fixed;
+    color: var(--ink);
+    font-family: var(--font-ui);
+    -webkit-font-smoothing: antialiased;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+    padding: 28px 16px 64px;
+    min-height: 100%;
+  }
+
+  /* ---- state switcher ---- */
+  .switcher {
+    display: flex;
+    gap: 4px;
+    padding: 4px;
+    background: var(--panel);
+    border: 1px solid var(--hair);
+    border-radius: 999px;
+    box-shadow: 0 1px 2px #1b1a1708;
+  }
+  .switcher button {
+    font-family: var(--font-ui);
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--ink-2);
+    background: transparent;
+    border: none;
+    padding: 7px 15px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background .15s, color .15s;
+    letter-spacing: .01em;
+  }
+  .switcher button:hover { color: var(--ink); }
+  .switcher button.active { background: var(--ink); color: var(--panel); }
+  .caption {
+    font-size: 12px;
+    color: var(--ink-3);
+    max-width: 420px;
+    text-align: center;
+    line-height: 1.5;
+  }
+
+  /* ---- the panel (chrome side panel ≈ 400px) ---- */
+  .panel {
+    width: 400px;
+    background: var(--panel);
+    border: 1px solid var(--hair);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: 0 1px 2px #1b1a1710, 0 22px 48px -28px #1b1a1738;
+  }
+  .state { display: none; }
+  .state.active { display: block; }
+
+  .row { display: flex; align-items: center; }
+  .between { justify-content: space-between; }
+  .sec {
+    padding: 15px 16px;
+    border-bottom: 1px solid var(--hair);
+  }
+  .label {
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .muted { color: var(--ink-2); }
+  .mono { font-family: var(--font-mono); }
+  .serif { font-family: var(--font-serif); }
+
+  /* header */
+  .hdr { padding: 12px 16px; }
+  .brand { display: flex; align-items: center; gap: 9px; }
+  .mark {
+    width: 24px; height: 24px; border-radius: 6px;
+    background: var(--ink); color: var(--panel);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 600; font-size: 13px;
+  }
+  .brand b { font-weight: 600; font-size: 14.5px; letter-spacing: -0.01em; }
+  .hdr i { color: var(--ink-3); font-size: 18px; cursor: pointer; }
+  .avatar {
+    width: 27px; height: 27px; border-radius: 50%;
+    background: var(--accent-tint); color: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600;
+  }
+
+  /* source */
+  .src { display: flex; gap: 11px; align-items: flex-start; }
+  .thumb {
+    width: 66px; height: 42px; border-radius: var(--radius-sm);
+    background: var(--surface-2); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ink-3); font-size: 19px;
+  }
+  .src .title { font-size: 13px; font-weight: 500; line-height: 1.35; }
+  .src .link {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 12px; color: var(--accent); margin-top: 4px;
+  }
+
+  /* scrubber */
+  .scrub {
+    position: relative; height: 36px; border-radius: var(--radius-sm);
+    background: var(--surface); overflow: hidden; margin: 10px 0;
+    border: 1px solid var(--hair);
+  }
+  .scrub .wave { position: absolute; inset: 0; display: flex; align-items: center; gap: 2px; padding: 0 6px; opacity: .35; }
+  .scrub .wave span { flex: 1; background: var(--ink-3); border-radius: 2px; }
+  .scrub .sel { position: absolute; top: 0; bottom: 0; left: 22%; width: 35%; background: var(--accent-tint); border-left: 2px solid var(--accent); border-right: 2px solid var(--accent); }
+  .ctl { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--ink-2); }
+  .ctl strong { color: var(--ink); font-weight: 500; }
+
+  .btn {
+    font-family: var(--font-ui); font-size: 12.5px; font-weight: 500;
+    border: 1px solid var(--hair); background: var(--panel); color: var(--ink);
+    padding: 7px 13px; border-radius: var(--radius-sm); cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+    transition: background .15s, border-color .15s;
+  }
+  .btn:hover { background: var(--surface); }
+  .btn.primary { background: var(--ink); color: var(--panel); border-color: var(--ink); }
+  .btn.primary:hover { background: #000; }
+  .btn.ghost { border-color: transparent; }
+  .btn.block { width: 100%; justify-content: center; padding: 11px; font-size: 14px; }
+
+  .hint { display: flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--ink-3); margin-top: 12px; }
+  .hint i { font-size: 14px; }
+
+  /* take */
+  .seg { display: flex; border: 1px solid var(--hair); border-radius: var(--radius-sm); overflow: hidden; }
+  .seg span { padding: 5px 12px; font-size: 12px; color: var(--ink-2); cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+  .seg span.on { background: var(--surface); color: var(--ink); font-weight: 500; }
+  textarea {
+    width: 100%; min-height: 86px; margin-top: 11px; padding: 11px 12px;
+    font-family: var(--font-serif); font-size: 15px; line-height: 1.5; color: var(--ink);
+    border: 1px solid var(--hair); border-radius: var(--radius-sm); resize: vertical;
+    background: var(--panel); box-sizing: border-box;
+  }
+  textarea:focus { outline: none; border-color: var(--accent); }
+  .meta { display: flex; justify-content: space-between; font-size: 11px; color: var(--ink-3); margin-top: 6px; }
+
+  /* toggles */
+  .toggle { display: flex; align-items: center; justify-content: space-between; cursor: pointer; font-size: 13px; }
+  .toggle .lhs { display: flex; align-items: center; gap: 9px; }
+  .toggle i { color: var(--ink-2); font-size: 16px; }
+  .pill { font-size: 10.5px; font-weight: 600; letter-spacing: .04em; color: var(--ink-3); padding: 3px 10px; border: 1px solid var(--hair); border-radius: 999px; text-transform: uppercase; }
+  .pill.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  /* transcript */
+  .speaker { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .04em; text-transform: uppercase; color: var(--accent); margin: 13px 0 5px; }
+  .speaker:first-child { margin-top: 0; }
+  .transcript { font-family: var(--font-serif); font-size: 15px; line-height: 1.62; color: var(--ink); max-height: 230px; overflow-y: auto; padding-right: 4px; }
+  .transcript w { cursor: pointer; border-radius: 3px; padding: 0 1px; transition: background .08s; }
+  .transcript w:hover { background: var(--surface-2); }
+  .transcript w.sel { background: var(--accent-tint); box-shadow: inset 0 -2px 0 var(--accent); }
+
+  /* processing */
+  .proc { padding: 30px 22px; text-align: center; }
+  .proc .ic { width: 46px; height: 46px; border-radius: 50%; background: var(--surface); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; color: var(--accent); font-size: 22px; }
+  .spin { animation: spin 1.1s linear infinite; display: inline-flex; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .proc h3 { margin: 0 0 4px; font-size: 16px; font-weight: 600; }
+  .proc p { margin: 0; font-size: 12.5px; color: var(--ink-2); }
+  .bar { height: 6px; border-radius: 999px; background: var(--surface-2); overflow: hidden; margin: 20px 0 9px; }
+  .bar > div { height: 100%; width: 38%; background: var(--accent); border-radius: 999px; transition: width .9s ease; }
+  .eta { display: flex; justify-content: space-between; font-size: 11px; color: var(--ink-3); }
+
+  /* published */
+  .done { padding: 26px 20px; }
+  .done .check { width: 44px; height: 44px; border-radius: 50%; background: #2f7d4f12; color: #2f7d4f; display: flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 14px; }
+  .done h3 { margin: 0 0 3px; font-size: 17px; font-weight: 600; }
+  .done .sub { font-size: 12.5px; color: var(--ink-2); margin: 0 0 18px; }
+  .urlbox { display: flex; align-items: center; gap: 8px; border: 1px solid var(--hair); border-radius: var(--radius-sm); padding: 9px 11px; background: var(--surface); }
+  .urlbox .u { flex: 1; font-family: var(--font-mono); font-size: 12px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .actions { display: flex; gap: 8px; margin-top: 12px; }
+  .preview-card { margin-top: 18px; border: 1px solid var(--hair); border-radius: var(--radius-sm); overflow: hidden; }
+  .preview-card .ph { height: 116px; background: linear-gradient(110deg, var(--surface) 0%, var(--surface-2) 100%); border-bottom: 1px solid var(--hair); display: flex; align-items: center; justify-content: center; }
+  .preview-card .ph .q { font-family: var(--font-serif); font-size: 17px; font-weight: 500; color: var(--ink); padding: 0 18px; text-align: center; line-height: 1.25; }
+  .preview-card .cap { display: flex; justify-content: space-between; padding: 9px 12px; font-size: 11px; color: var(--ink-3); }
+  .footer-actions { padding: 14px 16px; display: flex; gap: 8px; }
+</style>
+</head>
+<body>
+
+  <div class="switcher" role="tablist">
+    <button class="active" data-go="youtube">YouTube clip</button>
+    <button data-go="podcast">Podcast transcript</button>
+    <button data-go="processing">Processing</button>
+    <button data-go="published">Published</button>
+  </div>
+  <div class="caption" id="caption">The same calm, type-forward language across every clipping state. Click a tab — or press Publish — to move through the flow.</div>
+
+  <!-- ============ YOUTUBE CLIP ============ -->
+  <div class="panel state active" data-state="youtube">
+    <div class="sec hdr row between">
+      <div class="brand"><div class="mark">A</div><b>annotated</b></div>
+      <div class="row" style="gap:11px">
+        <i class="ti ti-bell" title="Notifications"></i>
+        <div class="avatar">JC</div>
+        <i class="ti ti-x" title="Close"></i>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="label" style="margin-bottom:8px">Source</div>
+      <div class="src">
+        <div class="thumb"><i class="ti ti-brand-youtube"></i></div>
+        <div style="min-width:0">
+          <div class="title">All-In Podcast E168: AI's existential bet, Apple's $3B fine</div>
+          <a class="link">youtube.com <i class="ti ti-external-link" style="font-size:12px"></i></a>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="row between" style="margin-bottom:9px">
+        <div class="label">Your clip</div>
+        <div class="mono" style="font-size:11px;color:var(--ink-2)">0:53 of 1:30 max</div>
+      </div>
+      <div class="scrub">
+        <div class="wave" id="wave-yt"></div>
+        <div class="sel"></div>
+      </div>
+      <div class="ctl">
+        <span>In <strong class="mono">22:14</strong></span>
+        <button class="btn"><i class="ti ti-player-play"></i> Preview</button>
+        <span>Out <strong class="mono">23:07</strong></span>
+      </div>
+      <div class="hint"><i class="ti ti-info-circle"></i> Clip up to 90 seconds, downscaled to 240p — fair use.</div>
+    </div>
+
+    <div class="sec take-sec"></div>
+
+    <div class="sec options-sec"></div>
+
+    <div class="footer-actions">
+      <button class="btn primary block" data-publish>Publish</button>
+      <button class="btn">Cancel</button>
+    </div>
+  </div>
+
+  <!-- ============ PODCAST TRANSCRIPT ============ -->
+  <div class="panel state" data-state="podcast">
+    <div class="sec hdr row between">
+      <div class="brand"><div class="mark">A</div><b>annotated</b></div>
+      <div class="row" style="gap:11px">
+        <i class="ti ti-bell"></i>
+        <div class="avatar">JC</div>
+        <i class="ti ti-x"></i>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="label" style="margin-bottom:8px">Source</div>
+      <div class="src">
+        <div class="thumb"><i class="ti ti-microphone-2"></i></div>
+        <div style="min-width:0">
+          <div class="title">The Daily — The Sceptics Who Tried to Stop AI</div>
+          <a class="link">nytimes.com/the-daily <i class="ti ti-external-link" style="font-size:12px"></i></a>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="row between" style="margin-bottom:6px">
+        <div class="label">Drag across the transcript to clip</div>
+        <div class="mono" style="font-size:11px;color:var(--accent)" id="pod-sel-len">0:53 selected</div>
+      </div>
+      <div class="transcript" id="transcript">
+        <div class="speaker">Kevin Roose · 21:58</div>
+        <p id="seg1"></p>
+        <div class="speaker">Casey Newton · 22:31</div>
+        <p id="seg2"></p>
+      </div>
+      <div class="ctl" style="margin-top:11px">
+        <span>In <strong class="mono" id="pod-in">22:14</strong></span>
+        <button class="btn"><i class="ti ti-player-play"></i> Preview clip</button>
+        <span>Out <strong class="mono" id="pod-out">23:07</strong></span>
+      </div>
+      <div class="hint"><i class="ti ti-info-circle"></i> The matched audio segment, capped at 90 seconds — fair use.</div>
+    </div>
+
+    <div class="sec take-sec"></div>
+    <div class="sec options-sec"></div>
+
+    <div class="footer-actions">
+      <button class="btn primary block" data-publish>Publish</button>
+      <button class="btn">Cancel</button>
+    </div>
+  </div>
+
+  <!-- ============ PROCESSING ============ -->
+  <div class="panel state" data-state="processing">
+    <div class="sec hdr row between">
+      <div class="brand"><div class="mark">A</div><b>annotated</b></div>
+      <i class="ti ti-x"></i>
+    </div>
+    <div class="proc">
+      <div class="ic"><span class="spin"><i class="ti ti-loader-2"></i></span></div>
+      <h3>Slicing your clip…</h3>
+      <p>Trimming to 90s and downscaling to 240p.</p>
+      <div class="bar"><div id="proc-fill"></div></div>
+      <div class="eta"><span class="mono" id="proc-elapsed">0:01 elapsed</span><span class="mono" id="proc-eta">~2s remaining</span></div>
+    </div>
+  </div>
+
+  <!-- ============ PUBLISHED ============ -->
+  <div class="panel state" data-state="published">
+    <div class="sec hdr row between">
+      <div class="brand"><div class="mark">A</div><b>annotated</b></div>
+      <i class="ti ti-x"></i>
+    </div>
+    <div class="done">
+      <div class="check"><i class="ti ti-check"></i></div>
+      <h3>Published.</h3>
+      <p class="sub">Your annotation is live with a clean, shareable link.</p>
+
+      <div class="urlbox">
+        <i class="ti ti-link" style="color:var(--ink-3)"></i>
+        <span class="u">annotated.com/a/all-in-ai-existential-bet-j57ar4d3</span>
+        <button class="btn" style="padding:6px 10px"><i class="ti ti-copy"></i></button>
+      </div>
+      <div class="actions">
+        <button class="btn primary" style="flex:1;justify-content:center"><i class="ti ti-brand-x"></i> Share on X</button>
+        <button class="btn" style="flex:1;justify-content:center"><i class="ti ti-external-link"></i> View</button>
+      </div>
+
+      <div class="preview-card" title="How the link unfurls on X">
+        <div class="ph"><div class="q">“The unit economics don't pencil.”</div></div>
+        <div class="cap"><span>— JC · All-In E168</span><span>annotated.com</span></div>
+      </div>
+
+      <button class="btn block" style="margin-top:16px"><i class="ti ti-link"></i> Add another clip to this thread</button>
+    </div>
+  </div>
+
+<script>
+  // ---- waveform bars ----
+  const wave = document.getElementById('wave-yt');
+  if (wave) {
+    for (let i = 0; i < 90; i++) {
+      const s = document.createElement('span');
+      s.style.height = (18 + Math.abs(Math.sin(i * 0.7)) * 60) + '%';
+      wave.appendChild(s);
+    }
+  }
+
+  // ---- shared "take" + "options" sections, injected into each clip state ----
+  const takeHTML = `
+    <div class="row between" style="margin-bottom:2px">
+      <div class="label">Your take</div>
+      <div class="seg">
+        <span class="on" data-seg="text">Text</span>
+        <span data-seg="audio"><i class="ti ti-microphone"></i>Audio</span>
+      </div>
+    </div>
+    <textarea>Three things going on here. Chamath frames this as inevitable, but the unit economics don't pencil — even at 90% margin compression you're bleeding cash on inference for years.</textarea>
+    <div class="meta"><span>Markdown supported</span><span>187 chars</span></div>`;
+  const optHTML = `
+    <div class="toggle" data-toggle><span class="lhs"><i class="ti ti-link"></i> Add to thread</span><span class="pill">Off</span></div>
+    <div class="toggle" data-toggle style="margin-top:11px"><span class="lhs"><i class="ti ti-eye-off"></i> Post anonymously</span><span class="pill">Off</span></div>`;
+  document.querySelectorAll('.take-sec').forEach(el => el.innerHTML = takeHTML);
+  document.querySelectorAll('.options-sec').forEach(el => el.innerHTML = optHTML);
+
+  // segmented Text/Audio
+  document.addEventListener('click', e => {
+    const seg = e.target.closest('[data-seg]');
+    if (seg) { seg.parentElement.querySelectorAll('span').forEach(s => s.classList.remove('on')); seg.classList.add('on'); }
+    const tog = e.target.closest('[data-toggle]');
+    if (tog) { const p = tog.querySelector('.pill'); const on = p.classList.toggle('on'); p.textContent = on ? 'On' : 'Off'; }
+  });
+
+  // ---- state switching ----
+  const states = document.querySelectorAll('.state');
+  const tabs = document.querySelectorAll('.switcher button');
+  const captions = {
+    youtube: 'YouTube clipping — set in/out on the timeline, fair-use ceiling shown inline (§8).',
+    podcast: 'The differentiator: drag across transcript words → the matching ≤90s audio segment. Click two words to set the range.',
+    processing: 'Honest progress — a determinate bar with seconds-remaining, never an infinite spinner (§6).',
+    published: 'Closes the loop: the clean SEO share URL (§5), an X unfurl preview, and "add another clip to this thread" (§1).'
+  };
+  function go(name) {
+    states.forEach(s => s.classList.toggle('active', s.dataset.state === name));
+    tabs.forEach(t => t.classList.toggle('active', t.dataset.go === name));
+    document.getElementById('caption').textContent = captions[name];
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  tabs.forEach(t => t.addEventListener('click', () => go(t.dataset.go)));
+
+  // ---- Publish → processing → published mini-flow ----
+  document.querySelectorAll('[data-publish]').forEach(b => b.addEventListener('click', () => {
+    go('processing');
+    const fill = document.getElementById('proc-fill');
+    const elapsed = document.getElementById('proc-elapsed');
+    const eta = document.getElementById('proc-eta');
+    let t = 0; fill.style.width = '8%';
+    const iv = setInterval(() => {
+      t += 0.5; fill.style.width = Math.min(95, 8 + t * 45) + '%';
+      elapsed.textContent = `0:0${Math.min(9, Math.round(t))} elapsed`;
+      eta.textContent = `~${Math.max(0, Math.ceil(2 - t))}s remaining`;
+    }, 500);
+    setTimeout(() => { clearInterval(iv); fill.style.width = '100%'; go('published'); }, 2100);
+  }));
+
+  // ---- transcript drag-to-select (click start word, click end word) ----
+  const seg1 = "I think the thing people miss is that the sceptics were never anti-technology. They were anti-hype. And what we are watching right now is the single largest bet ever placed on a single technology, with almost no margin of safety if the thesis is wrong.";
+  const seg2 = "Right, and that's the part that keeps me up at night — not that it fails, but that it half-works.";
+  function paint(el, text) {
+    el.innerHTML = text.split(' ').map((w, i) => `<w data-i="${i}">${w}</w>`).join(' ');
+  }
+  paint(document.getElementById('seg1'), seg1);
+  paint(document.getElementById('seg2'), seg2);
+  // preselect a range for first paint
+  const words = () => [...document.querySelectorAll('#seg1 w')];
+  let anchor = null;
+  function applySel(a, b) {
+    const ws = words(); const lo = Math.min(a, b), hi = Math.max(a, b);
+    ws.forEach((w, i) => w.classList.toggle('sel', i >= lo && i <= hi));
+    const secs = Math.min(90, Math.round((hi - lo + 1) * 1.7));
+    const fmt = (total) => `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+    document.getElementById('pod-sel-len').textContent = `${fmt(secs)} selected`;
+    const IN_SECONDS = 22 * 60 + 14; // In = 22:14
+    document.getElementById('pod-out').textContent = fmt(IN_SECONDS + secs);
+  }
+  applySel(0, 27);
+  document.getElementById('transcript').addEventListener('click', e => {
+    const w = e.target.closest('w'); if (!w || w.closest('p').id !== 'seg1') return;
+    const i = +w.dataset.i;
+    if (anchor === null) { anchor = i; applySel(i, i); }
+    else { applySel(anchor, i); anchor = null; }
+  });
+</script>
+</body>
+</html>
