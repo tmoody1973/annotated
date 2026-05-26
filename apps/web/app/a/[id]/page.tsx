@@ -126,12 +126,12 @@ export default async function AnnotationPage({
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center bg-[#f4f1e8] px-4 py-10 text-[#111]">
+    <main className="flex min-h-screen flex-col items-center bg-[color:var(--calm-paper)] px-4 py-10 text-[color:var(--calm-ink)]">
       <JsonLd data={jsonLd} />
       <div className="w-full max-w-2xl">
         <header className="mb-6 flex items-center justify-between">
-          <span className="text-lg font-black uppercase tracking-tight">Annotated</span>
-          <span className="border-2 border-[#111] px-2 py-0.5 text-xs font-bold uppercase">
+          <span className="text-lg font-semibold tracking-tight">Annotated</span>
+          <span className="rounded-full border border-[color:var(--calm-hair)] px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-wide text-[color:var(--calm-ink-3)]">
             Clip
           </span>
         </header>
@@ -168,7 +168,7 @@ export default async function AnnotationPage({
           <ClaimButton annotationId={annotation._id} />
         </div>
 
-        <footer className="mt-8 text-center font-mono text-xs text-[#555]">
+        <footer className="mt-8 text-center font-mono text-xs text-[color:var(--calm-ink-3)]">
           annotated.com
         </footer>
       </div>

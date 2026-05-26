@@ -5,12 +5,60 @@
 @import "@heroui-pro/react/css";
 @import "@heroui-pro/react/themes/brutalism";
 
-/* The brutalism theme references the literal families "Share Tech Mono" / "Anton".
-   We load them with next/font and re-point the theme's font variables at the
-   generated CSS variables (self-hosted, no external blocking request). */
+/* Register the type-forward families so font-sans / font-serif / font-mono
+   Tailwind utilities resolve to them. */
+@theme inline {
+  --font-sans: var(--font-ibm-plex-sans), system-ui, sans-serif;
+  --font-serif: var(--font-newsreader), Georgia, serif;
+  --font-mono: var(--font-ibm-plex-mono), ui-monospace, monospace;
+}
+
+/* Type-forward "news-app" direction (gap §10): clean sans UI, serif reserved for
+   quotes/commentary (applied explicitly), mono scoped to timestamps. We repoint
+   the theme's font variables at the next/font families (self-hosted). */
 .brutalism-light,
 .brutalism-dark {
-  --brutalism-font-body: var(--font-share-tech-mono), monospace;
-  --brutalism-font-display: var(--font-anton), sans-serif;
-  --font-sans: var(--font-share-tech-mono), monospace;
+  --brutalism-font-body: var(--font-ibm-plex-sans), system-ui, sans-serif;
+  --brutalism-font-display: var(--font-ibm-plex-sans), system-ui, sans-serif;
+  --font-sans: var(--font-ibm-plex-sans), system-ui, sans-serif;
+  --font-mono: var(--font-ibm-plex-mono), ui-monospace, monospace;
+
+}
+
+/* Calm the brutalism tokens (gap §10): a restrained blue accent instead of
+   pure-black, softened corners, and a subtle surface shadow instead of none.
+   Uses html.<class> + !important to win over the theme's layered token rules. */
+html.brutalism-light,
+html.brutalism-dark {
+  --accent: var(--calm-accent) !important;
+  --accent-foreground: #ffffff !important;
+  --radius: 8px !important;
+  --field-radius: 7px !important;
+  --surface-shadow:
+    0px 1px 2px rgba(27, 26, 23, 0.06),
+    0px 12px 28px -18px rgba(27, 26, 23, 0.2) !important;
+}
+
+/* Drop the brutalism display treatment on headings (uppercase, heavy, spaced)
+   — type-forward news-app reads as sentence-case, not a shouting marquee. */
+html.brutalism-light :is(h1, h2, h3, h4, h5, h6),
+html.brutalism-dark :is(h1, h2, h3, h4, h5, h6) {
+  text-transform: none !important;
+  letter-spacing: -0.005em !important;
+  font-weight: 600 !important;
+}
+
+/* Calm editorial palette for the landing + thread pages (ink on warm paper,
+   hairline borders, one restrained accent). Mirrors the sidebar prototype. */
+:root {
+  --calm-paper: #f3f1ea;
+  --calm-panel: #fdfcf9;
+  --calm-surface: #f6f4ee;
+  --calm-surface-2: #ece9e0;
+  --calm-ink: #1b1a17;
+  --calm-ink-2: #6c6962;
+  --calm-ink-3: #9c988e;
+  --calm-hair: #e4e0d6;
+  --calm-accent: #2f5d8a;
+  --calm-accent-tint: #2f5d8a1f;
 }

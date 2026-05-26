@@ -124,27 +124,27 @@ export default async function ThreadPage({
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center bg-[#f4f1e8] px-4 py-10 text-[#111]">
+    <main className="flex min-h-screen flex-col items-center bg-[color:var(--calm-paper)] px-4 py-10 text-[color:var(--calm-ink)]">
       <JsonLd data={jsonLd} />
       <div className="w-full max-w-2xl">
         <header className="mb-6 flex items-center justify-between">
-          <span className="text-lg font-black uppercase tracking-tight">Annotated</span>
-          <span className="border-2 border-[#111] bg-[#ffe600] px-2 py-0.5 text-xs font-bold uppercase">
+          <span className="text-lg font-semibold tracking-tight">Annotated</span>
+          <span className="rounded-full border border-[color:var(--calm-accent)] bg-[color:var(--calm-accent-tint)] px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-wide text-[color:var(--calm-accent)]">
             🧵 {thread.clips.length} clips
           </span>
         </header>
 
         {thread.source && (
-          <div className="mb-6 border-[3px] border-[#111] bg-white p-5 shadow-[8px_8px_0_0_#111]">
-            <p className="text-xs font-bold uppercase tracking-widest text-[#555]">
+          <div className="mb-6 rounded-[10px] border border-[color:var(--calm-hair)] bg-[color:var(--calm-panel)] p-5 shadow-[0_1px_2px_rgba(27,26,23,0.06),0_22px_48px_-28px_rgba(27,26,23,0.22)]">
+            <p className="text-[11px] font-medium uppercase tracking-widest text-[color:var(--calm-ink-3)]">
               Thread{thread.source.siteName ? ` · ${thread.source.siteName}` : ""}
             </p>
-            <p className="mt-1 text-xl font-black leading-tight">
+            <p className="mt-1 font-serif text-2xl font-medium leading-tight text-[color:var(--calm-ink)]">
               {thread.source.title}
             </p>
             <div className="mt-3 flex items-center gap-3">
               {thread.author && (
-                <span className="text-sm font-bold uppercase tracking-wide text-[#555]">
+                <span className="text-sm font-medium uppercase tracking-wide text-[color:var(--calm-ink-2)]">
                   — {thread.author.displayName}
                 </span>
               )}
@@ -154,7 +154,7 @@ export default async function ThreadPage({
               href={thread.source.canonicalUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-3 inline-block border-2 border-[#111] bg-white px-3 py-1.5 text-sm font-bold underline decoration-2 hover:bg-[#ffe600]"
+              className="mt-3 inline-flex items-center gap-1 rounded-[7px] border border-[color:var(--calm-hair)] bg-[color:var(--calm-panel)] px-3 py-1.5 text-sm font-medium text-[color:var(--calm-accent)] hover:bg-[color:var(--calm-surface)]"
             >
               View original ↗
             </a>
@@ -168,7 +168,7 @@ export default async function ThreadPage({
               id={`clip-${clip.threadOrder ?? index}`}
               className="scroll-mt-6"
             >
-              <p className="mb-2 font-mono text-xs font-bold uppercase tracking-widest text-[#555]">
+              <p className="mb-2 font-mono text-[11px] font-medium uppercase tracking-widest text-[color:var(--calm-ink-3)]">
                 Clip {index + 1} / {thread.clips.length}
               </p>
               <ClipArticle
@@ -198,7 +198,7 @@ export default async function ThreadPage({
           ))}
         </ol>
 
-        <footer className="mt-10 text-center font-mono text-xs text-[#555]">
+        <footer className="mt-10 text-center font-mono text-xs text-[color:var(--calm-ink-3)]">
           annotated.com
         </footer>
       </div>

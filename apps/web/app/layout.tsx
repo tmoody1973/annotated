@@ -1,22 +1,29 @@
 import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
-import { Share_Tech_Mono, Anton } from "next/font/google";
+import { IBM_Plex_Sans, IBM_Plex_Mono, Newsreader } from "next/font/google";
 import { ConvexClientProvider } from "./ConvexClientProvider";
 import { Providers } from "./Providers";
 import { SITE_URL } from "./_lib/urls";
 import "./globals.css";
 
-// Brutalism theme fonts: Share Tech Mono for body, Anton for display headings.
-const shareTechMono = Share_Tech_Mono({
-  weight: "400",
+// Type-forward "news-app" pairing: IBM Plex Sans for UI, Newsreader (serif) for
+// quotes + commentary, IBM Plex Mono scoped to timestamps.
+const plexSans = IBM_Plex_Sans({
+  weight: ["400", "500", "600"],
   subsets: ["latin"],
-  variable: "--font-share-tech-mono",
+  variable: "--font-ibm-plex-sans",
 });
 
-const anton = Anton({
-  weight: "400",
+const newsreader = Newsreader({
+  weight: ["400", "500", "600"],
   subsets: ["latin"],
-  variable: "--font-anton",
+  variable: "--font-newsreader",
+});
+
+const plexMono = IBM_Plex_Mono({
+  weight: ["400", "500"],
+  subsets: ["latin"],
+  variable: "--font-ibm-plex-mono",
 });
 
 export const metadata: Metadata = {
@@ -35,7 +42,7 @@ export default function RootLayout({
       <html
         lang="en"
         suppressHydrationWarning
-        className={`${shareTechMono.variable} ${anton.variable} brutalism-light h-full antialiased`}
+        className={`${plexSans.variable} ${newsreader.variable} ${plexMono.variable} brutalism-light h-full antialiased`}
       >
         <body className="min-h-full flex flex-col bg-background text-foreground">
           <Providers>

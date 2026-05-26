@@ -34,11 +34,11 @@ export function ClipArticle({ data }: { data: ClipArticleData }) {
       : null;
 
   return (
-    <article className="border-[3px] border-[#111] bg-white shadow-[8px_8px_0_0_#111]">
+    <article className="overflow-hidden rounded-[10px] border border-[color:var(--calm-hair)] bg-[color:var(--calm-panel)] shadow-[0_1px_2px_rgba(27,26,23,0.06),0_22px_48px_-28px_rgba(27,26,23,0.22)]">
       {!isArticle && (
-        <div className="border-b-[3px] border-[#111] bg-black">
+        <div className="border-b border-[color:var(--calm-hair)] bg-[color:var(--calm-surface)]">
           {!data.clipUrl ? (
-            <p className="p-8 text-center font-mono text-sm text-white">
+            <p className="p-8 text-center font-mono text-sm text-[color:var(--calm-ink-3)]">
               clip unavailable
             </p>
           ) : isPodcast ? (
@@ -47,7 +47,7 @@ export function ClipArticle({ data }: { data: ClipArticleData }) {
             <video
               controls
               src={data.clipUrl}
-              className="block max-h-[60vh] w-full"
+              className="block max-h-[60vh] w-full bg-[#1b1a17]"
             />
           )}
         </div>
@@ -55,42 +55,41 @@ export function ClipArticle({ data }: { data: ClipArticleData }) {
 
       <div className="p-5 sm:p-6">
         {isArticle && (
-          <span className="inline-block border-2 border-[#111] bg-[#ffe600] px-2 py-1 font-mono text-xs font-bold uppercase tracking-widest">
+          <span className="inline-block rounded-[6px] border border-[color:var(--calm-accent)] bg-[color:var(--calm-accent-tint)] px-2 py-1 font-mono text-[11px] font-medium uppercase tracking-widest text-[color:var(--calm-accent)]">
             Highlight
           </span>
         )}
 
         {range && !isArticle && (
-          <span className="inline-block border-2 border-[#111] bg-[#ffe600] px-2 py-1 font-mono text-sm font-bold">
+          <span className="inline-block rounded-[6px] border border-[color:var(--calm-hair)] bg-[color:var(--calm-surface)] px-2 py-1 font-mono text-sm font-medium text-[color:var(--calm-ink-2)]">
             {range}
           </span>
         )}
 
-        {data.selectedText &&
-          (isArticle ? (
-            <blockquote className="mt-4 border-l-[6px] border-[#ffe600] pl-5 text-2xl font-bold leading-snug text-[#111]">
-              “{data.selectedText}”
-            </blockquote>
-          ) : (
-            <blockquote className="mt-4 border-l-[6px] border-[#ffe600] pl-4 font-mono text-sm leading-relaxed text-[#333]">
-              “{data.selectedText}”
-            </blockquote>
-          ))}
+        {data.selectedText && (
+          <blockquote
+            className={`mt-4 border-l-2 border-[color:var(--calm-accent)] pl-5 font-serif leading-snug text-[color:var(--calm-ink)] ${
+              isArticle ? "text-2xl font-medium" : "text-lg"
+            }`}
+          >
+            “{data.selectedText}”
+          </blockquote>
+        )}
 
         {data.commentaryText && (
-          <p className="mt-4 border-l-[6px] border-[#111] pl-4 text-lg leading-relaxed">
+          <p className="mt-4 border-l-2 border-[color:var(--calm-hair)] pl-4 font-serif text-lg leading-relaxed text-[color:var(--calm-ink)]">
             {data.commentaryText}
           </p>
         )}
 
         {data.commentaryAudioUrl && (
-          <div className="mt-4 border-l-[6px] border-[#ff5c00] pl-4">
-            <p className="mb-2 font-mono text-xs font-bold uppercase tracking-widest text-[#555]">
+          <div className="mt-4 border-l-2 border-[color:var(--calm-accent)] pl-4">
+            <p className="mb-2 font-mono text-[11px] font-medium uppercase tracking-widest text-[color:var(--calm-ink-3)]">
               Voice commentary
             </p>
             <audio controls src={data.commentaryAudioUrl} className="w-full" />
             {data.commentaryAudioTranscript && (
-              <p className="mt-2 text-sm italic leading-relaxed text-[#333]">
+              <p className="mt-2 font-serif text-base italic leading-relaxed text-[color:var(--calm-ink-2)]">
                 “{data.commentaryAudioTranscript}”
               </p>
             )}
@@ -98,23 +97,25 @@ export function ClipArticle({ data }: { data: ClipArticleData }) {
         )}
 
         {data.authorName && (
-          <p className="mt-3 text-sm font-bold uppercase tracking-wide text-[#555]">
+          <p className="mt-3 text-sm font-medium uppercase tracking-wide text-[color:var(--calm-ink-2)]">
             — {data.authorName}
           </p>
         )}
 
         {data.source && (
-          <div className="mt-6 border-t-[3px] border-[#111] pt-4">
-            <p className="text-xs font-bold uppercase tracking-widest text-[#555]">
+          <div className="mt-6 border-t border-[color:var(--calm-hair)] pt-4">
+            <p className="text-[11px] font-medium uppercase tracking-widest text-[color:var(--calm-ink-3)]">
               Clipped from
               {data.source.siteName ? ` · ${data.source.siteName}` : ""}
             </p>
-            <p className="mt-1 font-bold">{data.source.title}</p>
+            <p className="mt-1 font-medium text-[color:var(--calm-ink)]">
+              {data.source.title}
+            </p>
             <a
               href={data.source.canonicalUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-2 inline-block border-2 border-[#111] bg-white px-3 py-1.5 text-sm font-bold underline decoration-2 hover:bg-[#ffe600]"
+              className="mt-2 inline-flex items-center gap-1 rounded-[7px] border border-[color:var(--calm-hair)] bg-[color:var(--calm-panel)] px-3 py-1.5 text-sm font-medium text-[color:var(--calm-accent)] hover:bg-[color:var(--calm-surface)]"
             >
               View original ↗
             </a>

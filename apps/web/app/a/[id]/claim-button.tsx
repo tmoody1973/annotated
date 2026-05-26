@@ -6,7 +6,7 @@ import { api } from "@annotated/backend/convex/_generated/api";
 import type { Id } from "@annotated/backend/convex/_generated/dataModel";
 
 const fieldClass =
-  "w-full border-2 border-[#111] bg-white px-3 py-2 text-sm outline-none focus:bg-[#fffce0] disabled:opacity-60";
+  "w-full rounded-[7px] border border-[color:var(--calm-hair)] bg-[color:var(--calm-panel)] px-3 py-2 text-sm text-[color:var(--calm-ink)] outline-none focus:border-[color:var(--calm-accent)] disabled:opacity-60";
 
 type Status = "idle" | "submitting" | "success" | "error";
 
@@ -49,7 +49,7 @@ export function ClaimButton({ annotationId }: { annotationId: string }) {
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="border-[3px] border-[#111] bg-[#ff5c00] px-5 py-2.5 text-sm font-black uppercase tracking-wide text-white shadow-[5px_5px_0_0_#111] transition-transform hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[3px_3px_0_0_#111]"
+        className="rounded-[7px] border border-[color:var(--calm-hair)] bg-[color:var(--calm-panel)] px-4 py-2 text-sm font-medium text-[color:var(--calm-ink-2)] hover:bg-[color:var(--calm-surface)]"
       >
         File a claim
       </button>
@@ -57,14 +57,14 @@ export function ClaimButton({ annotationId }: { annotationId: string }) {
       {open && (
         <form
           onSubmit={handleSubmit}
-          className="mt-4 border-[3px] border-[#111] bg-white p-5 shadow-[5px_5px_0_0_#111]"
+          className="mt-4 rounded-[10px] border border-[color:var(--calm-hair)] bg-[color:var(--calm-panel)] p-5 shadow-[0_1px_2px_rgba(27,26,23,0.06),0_18px_40px_-26px_rgba(27,26,23,0.22)]"
         >
-          <p className="mb-3 text-xs font-bold uppercase tracking-widest text-[#555]">
+          <p className="mb-3 text-[11px] font-medium uppercase tracking-widest text-[color:var(--calm-ink-3)]">
             Report a fair-use issue with this clip
           </p>
 
           {status === "success" ? (
-            <p className="border-2 border-[#111] bg-[#ffe600] px-3 py-2 text-sm font-bold">
+            <p className="rounded-[7px] border border-[color:var(--calm-accent)] bg-[color:var(--calm-accent-tint)] px-3 py-2 text-sm text-[color:var(--calm-ink)]">
               Thanks — your claim was filed. We&apos;ll review it and follow up by email.
             </p>
           ) : (
@@ -96,14 +96,14 @@ export function ClaimButton({ annotationId }: { annotationId: string }) {
                 required
               />
               {status === "error" && (
-                <p className="border-2 border-[#111] bg-[#ff5c00] px-3 py-2 text-sm font-bold text-white">
+                <p className="rounded-[7px] border border-[#9a3b2f] bg-[#9a3b2f12] px-3 py-2 text-sm text-[#9a3b2f]">
                   {error}
                 </p>
               )}
               <button
                 type="submit"
                 disabled={status === "submitting"}
-                className="self-start border-[3px] border-[#111] bg-[#111] px-4 py-2 text-sm font-bold uppercase tracking-wide text-white hover:bg-[#333] disabled:opacity-60"
+                className="self-start rounded-[7px] bg-[color:var(--calm-ink)] px-4 py-2 text-sm font-medium text-[color:var(--calm-panel)] hover:bg-black disabled:opacity-60"
               >
                 {status === "submitting" ? "Filing…" : "Submit claim"}
               </button>
