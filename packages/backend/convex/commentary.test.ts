@@ -52,6 +52,31 @@ test("article publish: text-only lands, audio-only lands, neither is rejected", 
   ).rejects.toThrow();
 });
 
+test("article publish: a quote over the 100-word fair-use ceiling is rejected", async () => {
+  const t = convexTest(schema, modules);
+  const overLimit = Array.from({ length: 101 }, (_, i) => `w${i}`).join(" ");
+  await expect(
+    t.mutation(api.testing.publishArticleClipDev, {
+      ...articleBase,
+      selectedText: overLimit,
+      textStart: 0,
+      textEnd: overLimit.length,
+      commentaryText: "too long",
+    })
+  ).rejects.toThrow(/fair-use/);
+
+  // Exactly at the ceiling is allowed.
+  const atLimit = Array.from({ length: 100 }, (_, i) => `w${i}`).join(" ");
+  const id = await t.mutation(api.testing.publishArticleClipDev, {
+    ...articleBase,
+    selectedText: atLimit,
+    textStart: 0,
+    textEnd: atLimit.length,
+    commentaryText: "ok",
+  });
+  expect(id).toBeTruthy();
+});
+
 test("youtube publish: audio-only lands via assertPublishable, neither is rejected", async () => {
   const t = convexTest(schema, modules);
   const clipStorageId = await t.run((ctx) =>

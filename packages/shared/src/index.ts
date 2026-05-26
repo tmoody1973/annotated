@@ -14,7 +14,11 @@ export { matchEpisode } from "./episode-match";
 export type { EpisodeCriteria } from "./episode-match";
 export { selectClipSpan } from "./transcript-selection";
 export type { TranscriptWord, TranscriptSelection } from "./transcript-selection";
-export { selectArticleHighlight } from "./article-selection";
+export {
+  selectArticleHighlight,
+  countWords,
+  MAX_QUOTE_WORDS,
+} from "./article-selection";
 export type { ArticleHighlight } from "./article-selection";
 export { slugify, splitSlugId, slugId } from "./slug-url";
 export { progressFraction } from "./progress-fraction";

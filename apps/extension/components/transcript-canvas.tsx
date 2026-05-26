@@ -168,7 +168,9 @@ export function TranscriptCanvas({
 
   return (
     <section style={{ marginTop: 14 }}>
-      <div style={labelStyle}>Tap a word, then another, to clip the span</div>
+      <div style={labelStyle}>
+        Tap a word, then another, to clip the span · up to 90s (fair use)
+      </div>
 
       <div
         className="ann-transcript"

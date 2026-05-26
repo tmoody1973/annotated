@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { countWords, MAX_QUOTE_WORDS } from "@annotated/shared";
 import { mutation, type MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { upsertArticleSource, upsertYoutubeSource } from "./sources";
@@ -264,6 +265,11 @@ export const publishArticleClipDev = mutation({
     }
     if (args.selectedText.length > MAX_HIGHLIGHT_CHARS) {
       throw new Error(`Highlight exceeds the ${MAX_HIGHLIGHT_CHARS}-character excerpt limit`);
+    }
+    // Fair-use ceiling, aligned with the UI clamp (a non-UI client can't bypass
+    // it by sending a >100-word quote that fits under the char cap).
+    if (countWords(args.selectedText) > MAX_QUOTE_WORDS) {
+      throw new Error(`Highlight exceeds the ${MAX_QUOTE_WORDS}-word fair-use limit`);
     }
 
     const authorId = await resolveSeedUser(ctx);

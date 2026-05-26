@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation } from "convex/react";
 import { makeFunctionReference } from "convex/server";
-import { selectArticleHighlight, type ArticleHighlight } from "@annotated/shared";
+import {
+  selectArticleHighlight,
+  MAX_QUOTE_WORDS,
+  type ArticleHighlight,
+} from "@annotated/shared";
 import type { ArticleDetection } from "../lib/use-active-tab-article";
 import {
   extractArticle,
@@ -240,7 +244,9 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
         </p>
       )}
 
-      <div style={{ ...label, marginTop: 8 }}>Highlight a sentence to clip it</div>
+      <div style={{ ...label, marginTop: 8 }}>
+        Highlight a sentence to clip it · up to ~{MAX_QUOTE_WORDS} words (fair use)
+      </div>
       <div
         ref={textRef}
         className="ann-article-text"
@@ -261,18 +267,32 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
       </div>
 
       {highlight && (
-        <p
-          className="ann-quote"
-          style={{
-            fontFamily: monoStack,
-            fontSize: 13,
-            borderLeft: `3px solid ${accent}`,
-            paddingLeft: 8,
-            margin: "10px 0 0",
-          }}
-        >
-          “{highlight.selectedText}”
-        </p>
+        <>
+          <p
+            className="ann-quote"
+            style={{
+              fontFamily: monoStack,
+              fontSize: 13,
+              borderLeft: `3px solid ${accent}`,
+              paddingLeft: 8,
+              margin: "10px 0 0",
+            }}
+          >
+            “{highlight.selectedText}”
+          </p>
+          {highlight.clamped && (
+            <p
+              style={{
+                fontFamily: monoStack,
+                fontSize: 11,
+                color: muted,
+                margin: "4px 0 0",
+              }}
+            >
+              Clipped to ~{MAX_QUOTE_WORDS} words (fair use)
+            </p>
+          )}
+        </>
       )}
 
       <div style={{ marginTop: 10 }}>

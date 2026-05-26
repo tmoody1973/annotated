@@ -184,6 +184,10 @@ export function ClipComposer({ videoId }: { videoId: string }) {
         <p style={{ fontSize: 12, color: accent, marginTop: 8 }}>{captureHint}</p>
       )}
 
+      <div style={{ ...label, marginTop: 10, marginBottom: 0 }}>
+        Clip up to 90 seconds (fair use)
+      </div>
+
       {(() => {
         const s = describeSpan(span);
         return (
