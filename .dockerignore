@@ -1,0 +1,17 @@
+# Docker build context (repo root) for the Fly worker. Keep source + manifests;
+# drop installed deps, build outputs, and secrets so the image installs fresh
+# (Linux yt-dlp binary) and never ships local .env.
+**/node_modules
+**/dist
+**/build
+**/.next
+**/.turbo
+**/.vercel
+**/.plasmo
+**/.env
+**/.env.*
+.git
+.DS_Store
+**/*.log
+.playwright-mcp
+docs/prototypes
