@@ -20,6 +20,7 @@ interface AnnotationView {
   clipStartMs?: number;
   clipEndMs?: number;
   clipUrl: string | null;
+  screenshotUrl?: string | null;
   likeCount: number;
   downCount: number;
   threadId?: string | null;
@@ -145,6 +146,7 @@ export default async function AnnotationPage({
             clipStartMs: annotation.clipStartMs,
             clipEndMs: annotation.clipEndMs,
             clipUrl: annotation.clipUrl,
+            screenshotUrl: annotation.screenshotUrl,
             sourceType: annotation.source?.type,
             authorName: annotation.author?.displayName,
             source: annotation.source,

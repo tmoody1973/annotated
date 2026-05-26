@@ -11,6 +11,11 @@ import {
   type ExtractedArticle,
 } from "../lib/worker-client";
 import { accent, ink, monoStack, muted } from "../lib/clip-styles";
+import {
+  captureVisibleArticle,
+  generateUploadUrlRef,
+  uploadToConvexStorage,
+} from "../lib/screenshot";
 import { CommentaryComposer } from "./commentary-composer";
 
 const publishArticleClip = makeFunctionReference<
@@ -26,6 +31,7 @@ const publishArticleClip = makeFunctionReference<
     commentaryText?: string;
     commentaryAudioStorageId?: string;
     commentaryAudioTranscript?: string;
+    screenshotStorageId?: string;
     workerToken: string;
   },
   string
@@ -68,6 +74,7 @@ function readSelectionOffsets(
  */
 export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
   const publish = useMutation(publishArticleClip);
+  const generateUploadUrl = useMutation(generateUploadUrlRef);
   const textRef = useRef<HTMLDivElement | null>(null);
   const publishing = useRef(false);
 
@@ -118,6 +125,22 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
     setHighlight(next.valid ? next : null);
   };
 
+  /**
+   * Captures the source page and uploads it to Convex storage, returning its
+   * storageId. Best-effort: any failure (capture blocked, upload error) resolves
+   * to undefined so a missing screenshot never blocks publishing the clip.
+   */
+  const captureSourceScreenshot = async (): Promise<string | undefined> => {
+    try {
+      const blob = await captureVisibleArticle();
+      if (!blob) return undefined;
+      const uploadUrl = await generateUploadUrl({ workerToken: getWorkerToken() });
+      return await uploadToConvexStorage(uploadUrl, blob);
+    } catch {
+      return undefined;
+    }
+  };
+
   const canPublish =
     highlight !== null &&
     highlight.valid &&
@@ -133,6 +156,7 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
       const commentaryAudio = audioBlob
         ? await transcodeCommentary(audioBlob)
         : null;
+      const screenshotStorageId = await captureSourceScreenshot();
       const annotationId = await publish({
         canonicalUrl: detection.url,
         title: article.title || detection.title,
@@ -144,6 +168,7 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
         commentaryText: take.trim(),
         commentaryAudioStorageId: commentaryAudio?.storageId,
         commentaryAudioTranscript: commentaryAudio?.transcript ?? undefined,
+        ...(screenshotStorageId ? { screenshotStorageId } : {}),
         workerToken: getWorkerToken(),
       });
       setLink(`${getWebUrl()}/a/${annotationId}`);

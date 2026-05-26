@@ -236,6 +236,7 @@ export const publishArticleClipDev = mutation({
     commentaryText: v.optional(v.string()),
     commentaryAudioStorageId: v.optional(v.id("_storage")),
     commentaryAudioTranscript: v.optional(v.string()),
+    screenshotStorageId: v.optional(v.id("_storage")),
     workerToken: v.string(),
   },
   returns: v.id("annotations"),
@@ -282,6 +283,7 @@ export const publishArticleClipDev = mutation({
       commentaryText: args.commentaryText,
       commentaryAudioStorageId: args.commentaryAudioStorageId,
       commentaryAudioTranscript: args.commentaryAudioTranscript,
+      screenshotStorageId: args.screenshotStorageId,
     });
   },
 });

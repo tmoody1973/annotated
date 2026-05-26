@@ -101,6 +101,12 @@ export default defineSchema({
     // Deepgram transcript of the recorded commentary (best-effort; for captions
     // + feed previews of audio-only annotations).
     commentaryAudioTranscript: v.optional(v.string()),
+    // Source screenshot (gap §4): a capture of the original page taken in the
+    // extension at clip time, so an article landing reads as a citation ("we
+    // point at it, we don't replace it") rather than a bare quote. Per-annotation
+    // because it's a moment-in-time of what that clipper saw. Optional so clips
+    // without a capture (and all pre-§4 rows) validate.
+    screenshotStorageId: v.optional(v.id("_storage")),
     // Publishing
     isPublic: v.boolean(),
     publishedAt: v.optional(v.number()),

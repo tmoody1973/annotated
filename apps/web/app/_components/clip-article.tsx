@@ -1,5 +1,33 @@
 import { formatClipTimestamp } from "@annotated/shared";
 
+/**
+ * The source screenshot, capped in height and top-anchored so the head of the
+ * page shows. Wrapped in a link to the original when the source URL is known
+ * (omitted on thread pages), reinforcing "click through to the real thing".
+ */
+function SourceVisual({
+  screenshotUrl,
+  href,
+}: {
+  screenshotUrl: string;
+  href?: string;
+}) {
+  const image = (
+    // eslint-disable-next-line @next/next/no-img-element -- signed Convex storage URL, not a static asset
+    <img
+      src={screenshotUrl}
+      alt="Screenshot of the original source page"
+      className="block max-h-[340px] w-full object-cover object-top"
+    />
+  );
+  if (!href) return image;
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer" className="block">
+      {image}
+    </a>
+  );
+}
+
 export interface ClipArticleData {
   selectedText?: string;
   commentaryText?: string;
@@ -8,6 +36,9 @@ export interface ClipArticleData {
   clipStartMs?: number;
   clipEndMs?: number;
   clipUrl: string | null;
+  // A capture of the original article page (gap §4), shown as the citation
+  // visual so the clip reads as "pointing at" the source, not replacing it.
+  screenshotUrl?: string | null;
   sourceType?: string;
   authorName?: string;
   // When present, renders the "Clipped from" attribution block inside the card.
@@ -51,6 +82,18 @@ export function ClipArticle({ data }: { data: ClipArticleData }) {
             />
           )}
         </div>
+      )}
+
+      {isArticle && data.screenshotUrl && (
+        <figure className="border-b border-[color:var(--calm-hair)] bg-[color:var(--calm-surface)]">
+          <SourceVisual
+            screenshotUrl={data.screenshotUrl}
+            href={data.source?.canonicalUrl}
+          />
+          <figcaption className="px-5 py-2.5 font-mono text-[11px] font-medium uppercase tracking-widest text-[color:var(--calm-ink-3)]">
+            Original — Annotated points at it, doesn&rsquo;t replace it
+          </figcaption>
+        </figure>
       )}
 
       <div className="p-5 sm:p-6">

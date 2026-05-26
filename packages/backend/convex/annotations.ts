@@ -101,6 +101,7 @@ interface AnnotationInsert {
   commentaryText?: string;
   commentaryAudioStorageId?: Id<"_storage">;
   commentaryAudioTranscript?: string;
+  screenshotStorageId?: Id<"_storage">;
   threadId?: Id<"threads">;
 }
 
@@ -144,6 +145,7 @@ export async function insertAnnotation(
     commentaryText: input.commentaryText,
     commentaryAudioStorageId: input.commentaryAudioStorageId,
     commentaryAudioTranscript: input.commentaryAudioTranscript,
+    screenshotStorageId: input.screenshotStorageId,
     threadId: input.threadId,
     threadOrder,
     isPublic: true,
@@ -253,6 +255,9 @@ export async function toLandingView(
   const commentaryAudioUrl = annotation.commentaryAudioStorageId
     ? await ctx.storage.getUrl(annotation.commentaryAudioStorageId)
     : null;
+  const screenshotUrl = annotation.screenshotStorageId
+    ? await ctx.storage.getUrl(annotation.screenshotStorageId)
+    : null;
 
   return {
     ...annotation,
@@ -261,6 +266,7 @@ export async function toLandingView(
     downCount: annotation.downCount ?? 0,
     clipUrl,
     commentaryAudioUrl,
+    screenshotUrl,
     source: source
       ? {
           canonicalUrl: source.canonicalUrl,
