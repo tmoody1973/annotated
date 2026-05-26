@@ -121,6 +121,15 @@ Every annotation landing page must display the source's `canonicalUrl` as a visi
 - **Spotify episode is exclusive (no RSS).** Sidebar shows graceful "this episode can't be clipped" message with explanation. Documented non-goal.
 - **Convex rate limit.** Shouldn't happen at bounty traffic but if it does, add request-level batching in the worker.
 
+## Sidebar surface: native side panel vs. overlay (deliberate)
+
+We ship Chrome's **native side panel** (`chrome.sidePanel`) as the primary surface. The side panel inherently **resizes the page** (the viewport narrows when it opens) rather than floating over content — there is no overlay mode for the official side panel API. This push is a deliberate, spec-driven choice, not an oversight:
+
+- The SPEC asks for a **Chrome sidebar**, and the native side panel *is* that sidebar — it reads as a first-class, OS-level surface to a judge, persists across tabs, and needs no per-page injection.
+- The push is inherent to the platform. Trading it away means giving up the native side panel entirely.
+
+**Deferred alternative (only if the push proves to bother users in testing):** an injected **floating overlay panel** — a fixed-position content-script iframe that floats over the page without resizing it. This is real work: re-host the panel UI inside a content script, message-bridge it to the worker/Convex, and manage z-index/focus against arbitrary host pages — and it risks reading as *less* like a first-class "sidebar." We document it as an option and defer it; the native side panel stays the primary surface for v1.
+
 ## Amplifiers
 
 The four competitive differentiators from BUILD-INTENT.md. Each builds on the base spec without adding new infrastructure.
