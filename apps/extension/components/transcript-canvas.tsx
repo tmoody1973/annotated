@@ -15,6 +15,7 @@ import {
 import { accent, ink, monoStack, muted } from "../lib/clip-styles";
 import { CommentaryComposer } from "./commentary-composer";
 import { AnonymousToggle } from "./anonymous-toggle";
+import { useThread } from "../lib/use-thread";
 
 const publishPodcastClip = makeFunctionReference<
   "mutation",
@@ -28,6 +29,7 @@ const publishPodcastClip = makeFunctionReference<
     commentaryAudioStorageId?: string;
     commentaryAudioTranscript?: string;
     isAnonymous?: boolean;
+    threadId?: string;
     workerToken: string;
   },
   string
@@ -68,6 +70,7 @@ export function TranscriptCanvas({
   words: TranscriptWord[];
 }) {
   const publish = useMutation(publishPodcastClip);
+  const thread = useThread();
   const [anchor, setAnchor] = useState<number | null>(null);
   const [focus, setFocus] = useState<number | null>(null);
   const [take, setTake] = useState("");
@@ -79,6 +82,7 @@ export function TranscriptCanvas({
   const [phase, setPhase] = useState<"slicing" | "saving" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [link, setLink] = useState<string | null>(null);
+  const [publishedId, setPublishedId] = useState<string | null>(null);
   // Synchronous re-entrancy lock — React state alone can't prevent a double-click
   // from firing two publishes (and creating two clips) before the re-render.
   const publishing = useRef(false);
@@ -136,8 +140,10 @@ export function TranscriptCanvas({
         commentaryAudioStorageId: commentaryAudio?.storageId,
         commentaryAudioTranscript: commentaryAudio?.transcript ?? undefined,
         isAnonymous,
+        threadId: thread.threadId ?? undefined,
         workerToken: getWorkerToken(),
       });
+      setPublishedId(annotationId);
       setLink(`${getWebUrl()}/a/${annotationId}`);
       setStatus("idle");
       setPhase(null);
@@ -149,6 +155,22 @@ export function TranscriptCanvas({
     }
   };
 
+  const addAnotherToThread = (): void => {
+    if (!publishedId) return;
+    void thread.continueThread(publishedId).then(() => {
+      // Return to the canvas on the same episode; keep words/source, drop the
+      // last selection + take so the next clip starts fresh.
+      setAnchor(null);
+      setFocus(null);
+      setTake("");
+      setAudioBlob(null);
+      setLink(null);
+      setPublishedId(null);
+      setStatus("idle");
+      publishing.current = false;
+    });
+  };
+
   if (link) {
     return (
       <section style={{ marginTop: 14 }}>
@@ -157,6 +179,26 @@ export function TranscriptCanvas({
            style={{ fontFamily: monoStack, fontWeight: 800, color: ink }}>
           View annotation →
         </a>
+        <button
+          type="button"
+          className="ann-publish"
+          onClick={addAnotherToThread}
+          style={{
+            marginTop: 12,
+            width: "100%",
+            padding: "10px 0",
+            fontFamily: monoStack,
+            fontWeight: 800,
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+            background: ink,
+            color: "#fff",
+            border: "none",
+            cursor: "pointer",
+          }}
+        >
+          + Add another clip to this thread
+        </button>
       </section>
     );
   }

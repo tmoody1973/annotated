@@ -145,6 +145,7 @@ export const publishYoutubeClipDev = mutation({
     commentaryAudioStorageId: v.optional(v.id("_storage")),
     commentaryAudioTranscript: v.optional(v.string()),
     isAnonymous: v.optional(v.boolean()),
+    threadId: v.optional(v.id("threads")),
     workerToken: v.string(),
   },
   returns: v.id("annotations"),
@@ -167,6 +168,7 @@ export const publishYoutubeClipDev = mutation({
       commentaryAudioStorageId: args.commentaryAudioStorageId,
       commentaryAudioTranscript: args.commentaryAudioTranscript,
       isAnonymous: args.isAnonymous,
+      threadId: args.threadId,
     });
   },
 });
@@ -189,6 +191,7 @@ export const publishPodcastClipDev = mutation({
     commentaryAudioStorageId: v.optional(v.id("_storage")),
     commentaryAudioTranscript: v.optional(v.string()),
     isAnonymous: v.optional(v.boolean()),
+    threadId: v.optional(v.id("threads")),
     workerToken: v.string(),
   },
   returns: v.id("annotations"),
@@ -217,6 +220,7 @@ export const publishPodcastClipDev = mutation({
       commentaryAudioStorageId: args.commentaryAudioStorageId,
       commentaryAudioTranscript: args.commentaryAudioTranscript,
       isAnonymous: args.isAnonymous,
+      threadId: args.threadId,
     });
   },
 });
@@ -243,6 +247,7 @@ export const publishArticleClipDev = mutation({
     commentaryAudioTranscript: v.optional(v.string()),
     screenshotStorageId: v.optional(v.id("_storage")),
     isAnonymous: v.optional(v.boolean()),
+    threadId: v.optional(v.id("threads")),
     workerToken: v.string(),
   },
   returns: v.id("annotations"),
@@ -296,6 +301,40 @@ export const publishArticleClipDev = mutation({
       commentaryAudioTranscript: args.commentaryAudioTranscript,
       screenshotStorageId: args.screenshotStorageId,
       isAnonymous: args.isAnonymous,
+      threadId: args.threadId,
     });
+  },
+});
+
+/**
+ * Dev path for §1 Phase B ("Add another clip to this thread"). Lazily threads an
+ * existing standalone clip: creates a thread on that clip's source + author and
+ * attaches the clip as order 0, returning the threadId. Idempotent — if the clip
+ * is already threaded, returns its existing threadId. Token-guarded; attributed
+ * via the clip's own authorId (the seed dev user). The extension then passes the
+ * returned threadId to the next publish so follow-on clips append in order.
+ * DEBT: production must replace this with the real authed `threads.create`.
+ */
+export const startThreadDev = mutation({
+  args: { annotationId: v.id("annotations"), workerToken: v.string() },
+  returns: v.id("threads"),
+  handler: async (ctx, args) => {
+    if (args.workerToken !== process.env.WORKER_AUTH_TOKEN) {
+      throw new Error("Unauthorized");
+    }
+    const annotation = await ctx.db.get(args.annotationId);
+    if (!annotation) {
+      throw new Error("Annotation not found");
+    }
+    if (annotation.threadId) {
+      return annotation.threadId;
+    }
+    const threadId = await ctx.db.insert("threads", {
+      authorId: annotation.authorId,
+      sourceId: annotation.sourceId,
+      createdAt: Date.now(),
+    });
+    await ctx.db.patch(args.annotationId, { threadId, threadOrder: 0 });
+    return threadId;
   },
 });

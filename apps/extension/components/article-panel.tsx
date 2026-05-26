@@ -22,6 +22,7 @@ import {
 } from "../lib/screenshot";
 import { CommentaryComposer } from "./commentary-composer";
 import { AnonymousToggle } from "./anonymous-toggle";
+import { useThread } from "../lib/use-thread";
 
 const publishArticleClip = makeFunctionReference<
   "mutation",
@@ -38,6 +39,7 @@ const publishArticleClip = makeFunctionReference<
     commentaryAudioTranscript?: string;
     screenshotStorageId?: string;
     isAnonymous?: boolean;
+    threadId?: string;
     workerToken: string;
   },
   string
@@ -81,6 +83,7 @@ function readSelectionOffsets(
 export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
   const publish = useMutation(publishArticleClip);
   const generateUploadUrl = useMutation(generateUploadUrlRef);
+  const thread = useThread();
   const textRef = useRef<HTMLDivElement | null>(null);
   const publishing = useRef(false);
 
@@ -93,6 +96,7 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
   const [status, setStatus] = useState<"idle" | "publishing" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
   const [link, setLink] = useState<string | null>(null);
+  const [publishedId, setPublishedId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -177,8 +181,10 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
         commentaryAudioTranscript: commentaryAudio?.transcript ?? undefined,
         ...(screenshotStorageId ? { screenshotStorageId } : {}),
         isAnonymous,
+        threadId: thread.threadId ?? undefined,
         workerToken: getWorkerToken(),
       });
+      setPublishedId(annotationId);
       setLink(`${getWebUrl()}/a/${annotationId}`);
       setStatus("idle");
     } catch (e) {
@@ -186,6 +192,22 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
       setStatus("error");
       setError(e instanceof Error ? e.message : "Publish failed");
     }
+  };
+
+  const addAnotherToThread = (): void => {
+    if (!publishedId) return;
+    void thread.continueThread(publishedId).then(() => {
+      // Return to the same extracted article; drop the last highlight + take so
+      // the next clip starts fresh, keeping the thread + source.
+      setHighlight(null);
+      setTake("");
+      setAudioBlob(null);
+      setIsAnonymous(false);
+      setLink(null);
+      setPublishedId(null);
+      setStatus("idle");
+      publishing.current = false;
+    });
   };
 
   if (link) {
@@ -201,6 +223,26 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
         >
           View annotation →
         </a>
+        <button
+          type="button"
+          className="ann-publish"
+          onClick={addAnotherToThread}
+          style={{
+            marginTop: 12,
+            width: "100%",
+            padding: "10px 0",
+            fontFamily: monoStack,
+            fontWeight: 800,
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+            background: ink,
+            color: "#fff",
+            border: "none",
+            cursor: "pointer",
+          }}
+        >
+          + Add another clip to this thread
+        </button>
       </section>
     );
   }

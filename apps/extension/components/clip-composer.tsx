@@ -17,6 +17,7 @@ import {
 import { accent, ink, muted, monoStack, valid } from "../lib/clip-styles";
 import { CommentaryComposer } from "./commentary-composer";
 import { AnonymousToggle } from "./anonymous-toggle";
+import { useThread } from "../lib/use-thread";
 
 const publishYoutubeClipDev = makeFunctionReference<
   "mutation",
@@ -30,6 +31,7 @@ const publishYoutubeClipDev = makeFunctionReference<
     commentaryAudioStorageId?: string;
     commentaryAudioTranscript?: string;
     isAnonymous?: boolean;
+    threadId?: string;
     workerToken: string;
   },
   string
@@ -91,6 +93,7 @@ function TimeColumn({
 
 export function ClipComposer({ videoId }: { videoId: string }) {
   const publish = useMutation(publishYoutubeClipDev);
+  const thread = useThread();
   const [startInput, setStartInput] = useState("");
   const [endInput, setEndInput] = useState("");
   const [commentary, setCommentary] = useState("");
@@ -141,6 +144,7 @@ export function ClipComposer({ videoId }: { videoId: string }) {
         commentaryAudioStorageId: commentaryAudio?.storageId,
         commentaryAudioTranscript: commentaryAudio?.transcript ?? undefined,
         isAnonymous,
+        threadId: thread.threadId ?? undefined,
         workerToken: getWorkerToken(),
       });
       setAnnotationId(id);
@@ -151,25 +155,41 @@ export function ClipComposer({ videoId }: { videoId: string }) {
     }
   }
 
+  const clearClipFields = (): void => {
+    setStatus("idle");
+    setStartInput("");
+    setEndInput("");
+    setCommentary("");
+    setAudioBlob(null);
+    setIsAnonymous(false);
+    setAnnotationId(null);
+  };
+
   if (status === "done" && annotationId) {
+    const publishedId = annotationId;
     return (
       <section className="ann-shadow" style={{ border: `3px solid ${ink}`, background: "#EAFBF0", padding: 16 }}>
         <div style={{ ...label, color: valid }}>Published</div>
-        <a className="ann-link" href={`${getWebUrl()}/a/${annotationId}`} target="_blank" rel="noreferrer">
+        <a className="ann-link" href={`${getWebUrl()}/a/${publishedId}`} target="_blank" rel="noreferrer">
           View annotation ⟶
         </a>
         <button
           type="button"
-          className="ann-capture ann-press"
-          style={{ width: "100%", marginTop: 14, padding: "10px" }}
+          className="ann-publish ann-press ann-shadow"
+          style={{ marginTop: 14 }}
           onClick={() => {
-            setStatus("idle");
-            setStartInput("");
-            setEndInput("");
-            setCommentary("");
-            setAudioBlob(null);
-            setIsAnonymous(false);
-            setAnnotationId(null);
+            void thread.continueThread(publishedId).then(clearClipFields);
+          }}
+        >
+          + Add another clip to this thread
+        </button>
+        <button
+          type="button"
+          className="ann-capture ann-press"
+          style={{ width: "100%", marginTop: 10, padding: "10px" }}
+          onClick={() => {
+            thread.reset();
+            clearClipFields();
           }}
         >
           New clip
