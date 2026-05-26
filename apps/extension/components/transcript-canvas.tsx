@@ -71,6 +71,9 @@ export function TranscriptCanvas({
   const [take, setTake] = useState("");
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [status, setStatus] = useState<"idle" | "publishing" | "error">("idle");
+  // The current step of a publish, so the button names what's happening: cutting
+  // the audio on the worker (~2s) vs. writing the annotation. No bar — too fast.
+  const [phase, setPhase] = useState<"slicing" | "saving" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [link, setLink] = useState<string | null>(null);
   // Synchronous re-entrancy lock — React state alone can't prevent a double-click
@@ -108,6 +111,7 @@ export function TranscriptCanvas({
     if (!selection || publishing.current) return;
     publishing.current = true;
     setStatus("publishing");
+    setPhase("slicing");
     setError(null);
     try {
       const clipStorageId = await clipAudio(
@@ -118,6 +122,7 @@ export function TranscriptCanvas({
       const commentaryAudio = audioBlob
         ? await transcodeCommentary(audioBlob)
         : null;
+      setPhase("saving");
       const annotationId = await publish({
         sourceId,
         clipStorageId,
@@ -131,9 +136,11 @@ export function TranscriptCanvas({
       });
       setLink(`${getWebUrl()}/a/${annotationId}`);
       setStatus("idle");
+      setPhase(null);
     } catch (e) {
       publishing.current = false;
       setStatus("error");
+      setPhase(null);
       setError(e instanceof Error ? e.message : "Publish failed");
     }
   };
@@ -256,7 +263,11 @@ export function TranscriptCanvas({
           cursor: canPublish ? "pointer" : "not-allowed",
         }}
       >
-        {status === "publishing" ? "Publishing…" : "Publish clip"}
+        {status === "publishing"
+          ? phase === "slicing"
+            ? "Slicing clip… (~2s)"
+            : "Saving annotation…"
+          : "Publish clip"}
       </button>
     </section>
   );

@@ -17,3 +17,4 @@ export type { TranscriptWord, TranscriptSelection } from "./transcript-selection
 export { selectArticleHighlight } from "./article-selection";
 export type { ArticleHighlight } from "./article-selection";
 export { slugify, splitSlugId, slugId } from "./slug-url";
+export { progressFraction } from "./progress-fraction";

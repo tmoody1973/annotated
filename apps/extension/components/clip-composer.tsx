@@ -209,7 +209,7 @@ export function ClipComposer({ videoId }: { videoId: string }) {
         disabled={!canPublish}
         onClick={handlePublish}
       >
-        {status === "clipping" ? "Clipping…" : status === "publishing" ? "Publishing…" : "Publish clip →"}
+        {status === "clipping" ? "Clipping… (~2s)" : status === "publishing" ? "Saving annotation…" : "Publish clip →"}
       </button>
 
       {status === "error" && errorMsg && (
