@@ -3,10 +3,14 @@
 #   fly deploy --config apps/worker/fly.toml --dockerfile apps/worker/Dockerfile .
 FROM node:22-slim
 
-# ffmpeg for clip/transcode; ca-certificates for HTTPS fetches. yt-dlp is the
-# standalone Linux binary downloaded by yt-dlp-exec's postinstall (no Python).
+# ffmpeg for clip/transcode; the worker spawns a bare `yt-dlp` (youtube-clipper.ts),
+# so install it on PATH. Use the arch-independent python zipapp (works on amd64
+# and arm64 Fly machines) rather than the amd64-only standalone binary.
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends ffmpeg ca-certificates \
+  && apt-get install -y --no-install-recommends ffmpeg ca-certificates python3 curl \
+  && curl -fsSL https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp \
+       -o /usr/local/bin/yt-dlp \
+  && chmod a+rx /usr/local/bin/yt-dlp \
   && rm -rf /var/lib/apt/lists/*
 
 RUN corepack enable
