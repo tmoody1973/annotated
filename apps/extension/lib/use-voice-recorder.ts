@@ -10,6 +10,8 @@ export interface VoiceRecorder {
   blob: Blob | null;
   previewUrl: string | null;
   elapsedMs: number;
+  /** How many takes have been recorded this session (he redoes 2–3×). */
+  takeCount: number;
   error: string | null;
   start: () => Promise<void>;
   stop: () => Promise<void>;
@@ -37,6 +39,7 @@ export function useVoiceRecorder(): VoiceRecorder {
   const [blob, setBlob] = useState<Blob | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [elapsedMs, setElapsedMs] = useState(0);
+  const [takeCount, setTakeCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -112,6 +115,7 @@ export function useVoiceRecorder(): VoiceRecorder {
           return URL.createObjectURL(recorded);
         });
         setBlob(recorded);
+        setTakeCount((n) => n + 1);
         setState("recorded");
       } else {
         setState("idle");
@@ -206,5 +210,5 @@ export function useVoiceRecorder(): VoiceRecorder {
     [clearTimers]
   );
 
-  return { state, blob, previewUrl, elapsedMs, error, start, stop, clear };
+  return { state, blob, previewUrl, elapsedMs, takeCount, error, start, stop, clear };
 }

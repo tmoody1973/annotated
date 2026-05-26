@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { formatClipTimestamp } from "@annotated/shared";
 import { useVoiceRecorder, MAX_RECORDING_MS } from "../lib/use-voice-recorder";
 import { accent, monoStack, muted, sansStack, valid } from "../lib/clip-styles";
+import { WaveformPreview } from "./waveform-preview";
 
 const labelStyle: React.CSSProperties = {
   fontFamily: monoStack,
@@ -67,6 +68,7 @@ export function CommentaryComposer({
           </button>
         ) : recorder.state === "recorded" && recorder.previewUrl ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {recorder.blob && <WaveformPreview blob={recorder.blob} />}
             <audio
               controls
               src={recorder.previewUrl}
@@ -97,7 +99,8 @@ export function CommentaryComposer({
 
         {recorder.state === "recorded" && (
           <p style={{ color: valid, fontFamily: sansStack, fontSize: 12, fontWeight: 700, marginTop: 6 }}>
-            Voice note attached.
+            Voice note attached
+            {recorder.takeCount > 0 ? ` · Take ${recorder.takeCount}` : ""}.
           </p>
         )}
         {recorder.state === "denied" && recorder.error && (
