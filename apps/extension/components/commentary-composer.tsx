@@ -5,7 +5,7 @@ import { accent, monoStack, muted, sansStack, valid } from "../lib/clip-styles";
 import { WaveformPreview } from "./waveform-preview";
 
 const labelStyle: React.CSSProperties = {
-  fontFamily: monoStack,
+  fontFamily: sansStack,
   fontSize: 11,
   fontWeight: 700,
   letterSpacing: "0.12em",

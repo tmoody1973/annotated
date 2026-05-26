@@ -1,83 +1,97 @@
 /**
- * Brutalism style layer for the sidepanel, matching the landing page (5c): warm
- * paper, near-black ink, hard borders, blocky offset shadows that collapse on
- * press. Monospace is reserved for timestamps only (CLAUDE.md discipline).
+ * Calm editorial style layer for the sidepanel — matches the web app's §10
+ * "type-forward news-app" direction (see docs/prototypes/sidebar-calm.html):
+ * ink on warm paper, hairline borders, soft shadows, one restrained editorial
+ * blue accent, generous radius. Replaces the earlier brutalism (hard borders,
+ * blocky offset shadows, signal red). Monospace is reserved for timestamps; a
+ * serif is used for quotes, echoing the web's Newsreader.
  */
 
-export const ink = "#0A0A0A";
-export const paper = "#FBFAF7";
-export const accent = "#E5484D"; // signal red — the "clip/record" identity
-export const valid = "#1B7F4B";
-export const muted = "#6B6B66";
+export const ink = "#1b1a17";
+export const paper = "#f3f1ea";
+export const panel = "#fdfcf9";
+export const surface = "#f6f4ee";
+export const surface2 = "#ece9e0";
+export const hair = "#e4e0d6";
+export const accent = "#2f5d8a"; // editorial blue — clip/record identity, used sparingly
+export const accentTint = "#2f5d8a1f"; // selection/focus wash
+export const accentDeep = "#25496c"; // hover
+export const valid = "#3f7a5a"; // calm green for success
+export const danger = "#9a3b2f"; // calm editorial red for errors
+export const muted = "#6c6962"; // ink-2
+export const faint = "#9c988e"; // ink-3
 
 export const sansStack =
-  'ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Helvetica Neue", sans-serif';
+  '"IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif';
+export const serifStack = 'Newsreader, Georgia, "Times New Roman", serif';
 export const monoStack =
-  'ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace';
+  '"IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace';
 
-/** Injected once into the panel; drives hover/active/focus brutalist interactions. */
+export const radius = 10;
+export const radiusSm = 7;
+
+/** Injected once into the panel; drives the calm hover/focus/press interactions. */
 export const clipPanelCss = `
-  html, body { margin: 0; background: ${paper}; }
+  html, body { margin: 0; background: ${paper}; color: ${ink}; }
   .ann-root * { box-sizing: border-box; }
-  .ann-shadow { box-shadow: 4px 4px 0 ${ink}; }
-  .ann-press {
-    transition: transform 80ms ease, box-shadow 80ms ease;
-  }
-  .ann-press:active {
-    transform: translate(4px, 4px);
-    box-shadow: 0 0 0 ${ink};
-  }
+  .ann-root { -webkit-font-smoothing: antialiased; }
+  .ann-shadow { box-shadow: 0 1px 2px #1b1a1710, 0 18px 40px -28px #1b1a1738; }
+  .ann-press { transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease, border-color 120ms ease; }
+  .ann-press:active { transform: translateY(1px); }
   .ann-capture {
     cursor: pointer;
-    background: ${paper};
-    border: 2px solid ${ink};
+    background: ${panel};
+    border: 1px solid ${hair};
+    border-radius: ${radiusSm}px;
     color: ${ink};
     font-family: ${sansStack};
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
+    font-weight: 600;
+    letter-spacing: 0.01em;
   }
-  .ann-capture:hover { background: ${ink}; color: ${paper}; }
+  .ann-capture:hover { background: ${surface}; border-color: ${faint}; }
   .ann-field {
-    border: 2px solid ${ink};
-    background: ${paper};
+    border: 1px solid ${hair};
+    border-radius: ${radiusSm}px;
+    background: ${panel};
     color: ${ink};
     font-family: ${monoStack};
-    font-size: 16px;
-    font-weight: 700;
-    padding: 8px 10px;
+    font-size: 15px;
+    font-weight: 500;
+    padding: 9px 11px;
     width: 100%;
     outline: none;
   }
-  .ann-field:focus { background: #FFF7C2; }
+  .ann-field:focus { border-color: ${accent}; background: ${accentTint}; }
   .ann-textarea {
-    border: 2px solid ${ink};
-    background: ${paper};
+    border: 1px solid ${hair};
+    border-radius: ${radiusSm}px;
+    background: ${panel};
     color: ${ink};
     font-family: ${sansStack};
     font-size: 14px;
-    line-height: 1.4;
-    padding: 10px;
+    line-height: 1.5;
+    padding: 10px 11px;
     width: 100%;
     resize: vertical;
     min-height: 76px;
     outline: none;
   }
-  .ann-textarea:focus { background: #FFF7C2; }
+  .ann-textarea:focus { border-color: ${accent}; background: ${accentTint}; }
   .ann-publish {
     cursor: pointer;
     width: 100%;
-    border: 3px solid ${ink};
+    border: none;
+    border-radius: 8px;
     background: ${accent};
-    color: ${paper};
+    color: ${panel};
     font-family: ${sansStack};
-    font-weight: 900;
-    font-size: 16px;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    padding: 14px;
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: 0.01em;
+    padding: 12px;
   }
-  .ann-publish:hover:not(:disabled) { background: ${ink}; }
-  .ann-publish:disabled { cursor: not-allowed; background: ${muted}; opacity: 0.55; }
-  .ann-link { color: ${ink}; font-weight: 800; text-decoration: underline; text-underline-offset: 3px; }
+  .ann-publish:hover:not(:disabled) { background: ${accentDeep}; }
+  .ann-publish:disabled { cursor: not-allowed; background: ${surface2}; color: ${faint}; }
+  .ann-link { color: ${accent}; font-weight: 600; text-decoration: none; }
+  .ann-link:hover { text-decoration: underline; text-underline-offset: 3px; }
 `;

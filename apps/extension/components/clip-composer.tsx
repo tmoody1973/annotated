@@ -14,7 +14,7 @@ import {
   getWebUrl,
   transcodeCommentary,
 } from "../lib/worker-client";
-import { accent, ink, muted, monoStack, valid } from "../lib/clip-styles";
+import { accent, danger, hair, ink, muted, monoStack, panel, sansStack, surface, valid } from "../lib/clip-styles";
 import { CommentaryComposer } from "./commentary-composer";
 import { AnonymousToggle } from "./anonymous-toggle";
 import { useThread } from "../lib/use-thread";
@@ -49,7 +49,7 @@ function describeSpan(span: ClipSpanResult | null): { color: string; text: strin
 }
 
 const label: React.CSSProperties = {
-  fontFamily: monoStack,
+  fontFamily: sansStack,
   fontSize: 11,
   fontWeight: 700,
   letterSpacing: "0.12em",
@@ -168,7 +168,7 @@ export function ClipComposer({ videoId }: { videoId: string }) {
   if (status === "done" && annotationId) {
     const publishedId = annotationId;
     return (
-      <section className="ann-shadow" style={{ border: `3px solid ${ink}`, background: "#EAFBF0", padding: 16 }}>
+      <section className="ann-shadow" style={{ border: `1px solid ${hair}`, borderRadius: 10, background: panel, padding: 16 }}>
         <div style={{ ...label, color: valid }}>Published</div>
         <a className="ann-link" href={`${getWebUrl()}/a/${publishedId}`} target="_blank" rel="noreferrer">
           View annotation ⟶
@@ -248,7 +248,7 @@ export function ClipComposer({ videoId }: { videoId: string }) {
       </button>
 
       {status === "error" && errorMsg && (
-        <p className="ann-shadow" style={{ marginTop: 14, border: `2px solid ${ink}`, background: "#FFE9E9", color: ink, padding: 10, fontSize: 13 }}>
+        <p style={{ marginTop: 14, border: `1px solid ${hair}`, borderRadius: 7, background: surface, color: danger, padding: 10, fontSize: 13 }}>
           {errorMsg}
         </p>
       )}

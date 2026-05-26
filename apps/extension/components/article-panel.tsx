@@ -14,7 +14,18 @@ import {
   transcodeCommentary,
   type ExtractedArticle,
 } from "../lib/worker-client";
-import { accent, ink, monoStack, muted } from "../lib/clip-styles";
+import {
+  accent,
+  danger,
+  hair,
+  ink,
+  monoStack,
+  muted,
+  panel,
+  sansStack,
+  serifStack,
+  valid,
+} from "../lib/clip-styles";
 import {
   captureVisibleArticle,
   generateUploadUrlRef,
@@ -46,7 +57,7 @@ const publishArticleClip = makeFunctionReference<
 >("testing:publishArticleClipDev");
 
 const label = {
-  fontFamily: monoStack,
+  fontFamily: sansStack,
   fontSize: 10,
   fontWeight: 700,
   letterSpacing: "0.1em",
@@ -213,33 +224,21 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
   if (link) {
     return (
       <section style={{ marginBottom: 18 }}>
-        <p style={{ fontFamily: monoStack, fontSize: 12, color: muted }}>Published.</p>
+        <p style={{ fontSize: 13, color: valid, fontWeight: 600, margin: 0 }}>Published.</p>
         <a
-          className="ann-view-link"
+          className="ann-link"
           href={link}
           target="_blank"
           rel="noreferrer"
-          style={{ fontFamily: monoStack, fontWeight: 800, color: ink }}
+          style={{ display: "inline-block", marginTop: 4 }}
         >
           View annotation →
         </a>
         <button
           type="button"
-          className="ann-publish"
+          className="ann-publish ann-press"
           onClick={addAnotherToThread}
-          style={{
-            marginTop: 12,
-            width: "100%",
-            padding: "10px 0",
-            fontFamily: monoStack,
-            fontWeight: 800,
-            letterSpacing: "0.1em",
-            textTransform: "uppercase",
-            background: ink,
-            color: "#fff",
-            border: "none",
-            cursor: "pointer",
-          }}
+          style={{ marginTop: 12 }}
         >
           + Add another clip to this thread
         </button>
@@ -274,9 +273,9 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
       <div style={label}>📰 Article detected</div>
       <h2
         style={{
-          fontFamily: monoStack,
-          fontSize: 16,
-          fontWeight: 800,
+          fontFamily: serifStack,
+          fontSize: 18,
+          fontWeight: 600,
           color: ink,
           margin: "8px 0 4px",
           lineHeight: 1.3,
@@ -301,8 +300,10 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
           marginTop: 8,
           maxHeight: 240,
           overflowY: "auto",
-          border: `2px solid ${ink}`,
-          padding: 10,
+          border: `1px solid ${hair}`,
+          borderRadius: 7,
+          background: panel,
+          padding: 12,
           lineHeight: 1.6,
           fontSize: 14,
           whiteSpace: "pre-wrap",
@@ -317,10 +318,11 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
           <p
             className="ann-quote"
             style={{
-              fontFamily: monoStack,
-              fontSize: 13,
-              borderLeft: `3px solid ${accent}`,
-              paddingLeft: 8,
+              fontFamily: serifStack,
+              fontSize: 17,
+              lineHeight: 1.45,
+              borderLeft: `2px solid ${accent}`,
+              paddingLeft: 10,
               margin: "10px 0 0",
             }}
           >
@@ -357,26 +359,14 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
       />
 
       {error && (
-        <p style={{ color: "#c00", fontSize: 12, margin: "6px 0 0" }}>{error}</p>
+        <p style={{ color: danger, fontSize: 12, margin: "6px 0 0" }}>{error}</p>
       )}
 
       <button
-        className="ann-publish"
+        className="ann-publish ann-press"
         disabled={!canPublish}
         onClick={() => void onPublish()}
-        style={{
-          marginTop: 10,
-          width: "100%",
-          padding: "10px 0",
-          fontFamily: monoStack,
-          fontWeight: 800,
-          letterSpacing: "0.1em",
-          textTransform: "uppercase",
-          background: canPublish ? ink : muted,
-          color: "#fff",
-          border: "none",
-          cursor: canPublish ? "pointer" : "not-allowed",
-        }}
+        style={{ marginTop: 10 }}
       >
         {status === "publishing" ? "Publishing…" : "Publish highlight"}
       </button>

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useAction } from "convex/react";
 import { makeFunctionReference } from "convex/server";
 import type { PodcastDetection } from "../lib/use-active-tab-podcast";
-import { ink, monoStack, muted } from "../lib/clip-styles";
+import { ink, monoStack, muted, sansStack } from "../lib/clip-styles";
 import { PodcastClipper } from "./podcast-clipper";
 
 type ResolveArgs = {
@@ -65,7 +65,7 @@ function toArgs(
 }
 
 const label = {
-  fontFamily: monoStack,
+  fontFamily: sansStack,
   fontSize: 11,
   fontWeight: 700,
   letterSpacing: "0.12em",

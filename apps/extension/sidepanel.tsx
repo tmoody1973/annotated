@@ -7,13 +7,15 @@ import { ClipComposer } from "./components/clip-composer";
 import { PodcastPanel } from "./components/podcast-panel";
 import { ArticlePanel } from "./components/article-panel";
 import {
-  accent,
   clipPanelCss,
+  faint,
+  hair,
   ink,
   monoStack,
   muted,
   paper,
   sansStack,
+  serifStack,
 } from "./lib/clip-styles";
 
 const convexUrl = process.env.PLASMO_PUBLIC_CONVEX_URL;
@@ -46,10 +48,26 @@ function SourceNote({ videoId }: { videoId: string }) {
 
 function Header() {
   return (
-    <header style={{ borderBottom: `3px solid ${ink}`, paddingBottom: 10, marginBottom: 16 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <span style={{ width: 12, height: 12, background: accent, border: `2px solid ${ink}`, borderRadius: "50%" }} />
-        <h1 style={{ margin: 0, fontFamily: sansStack, fontWeight: 900, fontSize: 18, letterSpacing: "0.14em", textTransform: "uppercase" }}>
+    <header style={{ borderBottom: `1px solid ${hair}`, paddingBottom: 12, marginBottom: 16 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+        <span
+          style={{
+            width: 24,
+            height: 24,
+            background: ink,
+            color: paper,
+            borderRadius: 6,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontFamily: serifStack,
+            fontWeight: 600,
+            fontSize: 14,
+          }}
+        >
+          A
+        </span>
+        <h1 style={{ margin: 0, fontFamily: serifStack, fontWeight: 600, fontSize: 18, letterSpacing: "-0.01em" }}>
           Annotated
         </h1>
       </div>
@@ -85,7 +103,7 @@ function Sidepanel() {
         {videoId ? (
           <>
             <section style={{ marginBottom: 18 }}>
-              <div style={{ fontFamily: monoStack, fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: muted }}>
+              <div style={{ fontFamily: sansStack, fontSize: 11, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: faint }}>
                 YouTube clip
               </div>
               <code style={{ fontFamily: monoStack, fontSize: 13, fontWeight: 700 }}>{videoId}</code>

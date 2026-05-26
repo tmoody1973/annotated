@@ -12,7 +12,19 @@ import {
   getWebUrl,
   transcodeCommentary,
 } from "../lib/worker-client";
-import { accent, ink, monoStack, muted } from "../lib/clip-styles";
+import {
+  accent,
+  accentTint,
+  danger,
+  hair,
+  ink,
+  monoStack,
+  muted,
+  panel,
+  sansStack,
+  serifStack,
+  valid,
+} from "../lib/clip-styles";
 import { CommentaryComposer } from "./commentary-composer";
 import { AnonymousToggle } from "./anonymous-toggle";
 import { useThread } from "../lib/use-thread";
@@ -174,28 +186,16 @@ export function TranscriptCanvas({
   if (link) {
     return (
       <section style={{ marginTop: 14 }}>
-        <p style={{ fontFamily: monoStack, fontSize: 12, color: muted }}>Published.</p>
-        <a className="ann-view-link" href={link} target="_blank" rel="noreferrer"
-           style={{ fontFamily: monoStack, fontWeight: 800, color: ink }}>
+        <p style={{ fontSize: 13, color: valid, fontWeight: 600, margin: 0 }}>Published.</p>
+        <a className="ann-link" href={link} target="_blank" rel="noreferrer"
+           style={{ display: "inline-block", marginTop: 4 }}>
           View annotation →
         </a>
         <button
           type="button"
-          className="ann-publish"
+          className="ann-publish ann-press"
           onClick={addAnotherToThread}
-          style={{
-            marginTop: 12,
-            width: "100%",
-            padding: "10px 0",
-            fontFamily: monoStack,
-            fontWeight: 800,
-            letterSpacing: "0.1em",
-            textTransform: "uppercase",
-            background: ink,
-            color: "#fff",
-            border: "none",
-            cursor: "pointer",
-          }}
+          style={{ marginTop: 12 }}
         >
           + Add another clip to this thread
         </button>
@@ -204,7 +204,7 @@ export function TranscriptCanvas({
   }
 
   const labelStyle = {
-    fontFamily: monoStack,
+    fontFamily: sansStack,
     fontSize: 10,
     fontWeight: 700,
     letterSpacing: "0.1em",
@@ -224,8 +224,10 @@ export function TranscriptCanvas({
           marginTop: 8,
           maxHeight: 260,
           overflowY: "auto",
-          border: `2px solid ${ink}`,
-          padding: 10,
+          border: `1px solid ${hair}`,
+          borderRadius: 7,
+          background: panel,
+          padding: 12,
           lineHeight: 1.7,
           fontSize: 14,
         }}
@@ -245,7 +247,10 @@ export function TranscriptCanvas({
                 onClick={() => onWord(index)}
                 style={{
                   cursor: "pointer",
-                  background: isSelected(index) ? accent : "transparent",
+                  background: isSelected(index) ? accentTint : "transparent",
+                  boxShadow: isSelected(index)
+                    ? `inset 0 -2px 0 ${accent}`
+                    : "none",
                   padding: "0 1px",
                 }}
               >
@@ -262,16 +267,17 @@ export function TranscriptCanvas({
             Span {formatClipTimestamp(selection.clipStartMs)}–
             {formatClipTimestamp(selection.clipEndMs)}
             {!selection.withinCap && (
-              <span style={{ color: "#c00" }}> · over 90s — shorten</span>
+              <span style={{ color: danger }}> · over 90s — shorten</span>
             )}
           </div>
           <p
             className="ann-quote"
             style={{
-              fontFamily: monoStack,
-              fontSize: 13,
-              borderLeft: `3px solid ${accent}`,
-              paddingLeft: 8,
+              fontFamily: serifStack,
+              fontSize: 16,
+              lineHeight: 1.45,
+              borderLeft: `2px solid ${accent}`,
+              paddingLeft: 10,
               margin: "6px 0 0",
             }}
           >
@@ -296,26 +302,14 @@ export function TranscriptCanvas({
       />
 
       {error && (
-        <p style={{ color: "#c00", fontSize: 12, margin: "6px 0 0" }}>{error}</p>
+        <p style={{ color: danger, fontSize: 12, margin: "6px 0 0" }}>{error}</p>
       )}
 
       <button
-        className="ann-publish"
+        className="ann-publish ann-press"
         disabled={!canPublish}
         onClick={() => void onPublish()}
-        style={{
-          marginTop: 10,
-          width: "100%",
-          padding: "10px 0",
-          fontFamily: monoStack,
-          fontWeight: 800,
-          letterSpacing: "0.1em",
-          textTransform: "uppercase",
-          background: canPublish ? ink : muted,
-          color: "#fff",
-          border: "none",
-          cursor: canPublish ? "pointer" : "not-allowed",
-        }}
+        style={{ marginTop: 10 }}
       >
         {status === "publishing"
           ? phase === "slicing"
