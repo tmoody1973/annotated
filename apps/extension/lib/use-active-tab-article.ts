@@ -3,6 +3,7 @@ import {
   GET_ARTICLE_PAGE,
   type GetArticlePageResponse,
 } from "./messages";
+import { detectArticleInPage } from "./page-detect";
 
 /** An article detected on the active tab: the page HTML, title, and URL. */
 export interface ArticleDetection {
@@ -20,14 +21,33 @@ async function readActiveTabId(): Promise<number | null> {
   return tab?.id ?? null;
 }
 
-/** Asks the page's content script whether it's an article; null if not / unreachable. */
+/**
+ * Asks whether the active tab is an article. First messages the declarative
+ * content script (present on tabs loaded after the extension was enabled); if
+ * that tab predates the extension the script is absent and `sendMessage`
+ * rejects, so we inject the same detector on-demand via `chrome.scripting` —
+ * which works without a page reload (mirrors lib/player-time.ts). Returns null
+ * only when the page genuinely isn't an article.
+ */
 async function readArticlePage(
   tabId: number
 ): Promise<GetArticlePageResponse | null> {
   try {
-    return await chrome.tabs.sendMessage<unknown, GetArticlePageResponse>(tabId, {
-      type: GET_ARTICLE_PAGE,
+    const response = await chrome.tabs.sendMessage<unknown, GetArticlePageResponse>(
+      tabId,
+      { type: GET_ARTICLE_PAGE }
+    );
+    if (response) return response;
+  } catch {
+    // No content script in this tab yet — fall through to programmatic injection.
+  }
+
+  try {
+    const [injection] = await chrome.scripting.executeScript({
+      target: { tabId },
+      func: detectArticleInPage,
     });
+    return (injection?.result as GetArticlePageResponse | undefined) ?? null;
   } catch {
     return null;
   }

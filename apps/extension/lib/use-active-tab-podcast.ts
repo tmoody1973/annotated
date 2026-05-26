@@ -4,6 +4,7 @@ import {
   GET_PODCAST_PAGE,
   type GetPodcastPageResponse,
 } from "./messages";
+import { detectPodcastPageInfo } from "./page-detect";
 
 /** A podcast detected on the active tab, shaped as resolver arguments. */
 export type PodcastDetection =
@@ -28,12 +29,30 @@ async function readActiveTab(): Promise<ActiveTab> {
   return { id: tab?.id ?? null, url: tab?.url ?? null };
 }
 
-/** Asks the page's content script for its RSS link; null if none / unreachable. */
+/**
+ * Asks the active tab for its podcast signals (RSS link / in-page enclosure).
+ * Messages the declarative content script first; if the tab predates the
+ * extension that script is absent and `sendMessage` rejects, so we inject the
+ * same detector on-demand via `chrome.scripting` — which works without a reload
+ * (mirrors lib/player-time.ts). Null only when there's genuinely no podcast.
+ */
 async function readPageFeed(tabId: number): Promise<GetPodcastPageResponse | null> {
   try {
-    return await chrome.tabs.sendMessage<unknown, GetPodcastPageResponse>(tabId, {
-      type: GET_PODCAST_PAGE,
+    const response = await chrome.tabs.sendMessage<unknown, GetPodcastPageResponse>(
+      tabId,
+      { type: GET_PODCAST_PAGE }
+    );
+    if (response) return response;
+  } catch {
+    // No content script in this tab yet — fall through to programmatic injection.
+  }
+
+  try {
+    const [injection] = await chrome.scripting.executeScript({
+      target: { tabId },
+      func: detectPodcastPageInfo,
     });
+    return (injection?.result as GetPodcastPageResponse | undefined) ?? null;
   } catch {
     return null;
   }
