@@ -18,7 +18,7 @@ const createRef = makeFunctionReference<
 
 const setReadyRef = makeFunctionReference<
   "mutation",
-  { transcriptId: string; words: TranscriptWord[]; deepgramJobId?: string; workerToken: string },
+  { transcriptId: string; wordsJson: string; deepgramJobId?: string; workerToken: string },
   null
 >("transcripts:setReady");
 
@@ -54,7 +54,13 @@ export function createTranscriptWriter(
     },
 
     async markReady(transcriptId: string, words: TranscriptWord[]): Promise<void> {
-      await client.mutation(setReadyRef, { transcriptId, words, workerToken });
+      // Send the words as a JSON string — Convex caps array args at 8192
+      // elements, which a full episode exceeds. The client parses it back.
+      await client.mutation(setReadyRef, {
+        transcriptId,
+        wordsJson: JSON.stringify(words),
+        workerToken,
+      });
     },
 
     async markFailed(transcriptId: string): Promise<void> {

@@ -1,18 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query, type MutationCtx } from "./_generated/server";
 
-/**
- * Validator for a single transcript word, matching the `transcripts.words`
- * shape in schema.ts.
- */
-const wordValidator = v.object({
-  word: v.string(),
-  startMs: v.number(),
-  endMs: v.number(),
-  speaker: v.optional(v.string()),
-  confidence: v.optional(v.number()),
-});
-
 const providerValidator = v.union(
   v.literal("deepgram"),
   v.literal("youtube-vtt")
@@ -58,18 +46,20 @@ export const create = mutation({
     return await ctx.db.insert("transcripts", {
       sourceId: args.sourceId,
       provider: args.provider,
-      words: [],
       status: "processing",
       deepgramJobId: args.deepgramJobId,
     });
   },
 });
 
-/** Writes the transcribed words and flips the row to "ready". */
+/**
+ * Writes the transcribed words (as a JSON string — see schema, bypasses Convex's
+ * 8192-element array cap) and flips the row to "ready".
+ */
 export const setReady = mutation({
   args: {
     transcriptId: v.id("transcripts"),
-    words: v.array(wordValidator),
+    wordsJson: v.string(),
     deepgramJobId: v.optional(v.string()),
     workerToken: v.string(),
   },
@@ -77,7 +67,7 @@ export const setReady = mutation({
   handler: async (ctx, args) => {
     assertWorkerToken(ctx, args.workerToken);
     await ctx.db.patch(args.transcriptId, {
-      words: args.words,
+      wordsJson: args.wordsJson,
       status: "ready",
       ...(args.deepgramJobId ? { deepgramJobId: args.deepgramJobId } : {}),
     });

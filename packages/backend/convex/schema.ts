@@ -62,14 +62,22 @@ export default defineSchema({
   transcripts: defineTable({
     sourceId: v.id("sources"),
     provider: v.union(v.literal("deepgram"), v.literal("youtube-vtt")),
-    words: v.array(
-      v.object({
-        word: v.string(),
-        startMs: v.number(),
-        endMs: v.number(),
-        speaker: v.optional(v.string()),
-        confidence: v.optional(v.number()),
-      })
+    // The word list as a JSON string (parsed client-side). Stored as text rather
+    // than an array because Convex caps arrays at 8192 elements — for stored
+    // fields, mutation args, AND query results — and a full episode easily
+    // exceeds that. `words` is the legacy array (≤8192) kept for pre-existing
+    // rows; new transcripts write `wordsJson`. Both optional.
+    wordsJson: v.optional(v.string()),
+    words: v.optional(
+      v.array(
+        v.object({
+          word: v.string(),
+          startMs: v.number(),
+          endMs: v.number(),
+          speaker: v.optional(v.string()),
+          confidence: v.optional(v.number()),
+        })
+      )
     ),
     status: v.union(
       v.literal("pending"),

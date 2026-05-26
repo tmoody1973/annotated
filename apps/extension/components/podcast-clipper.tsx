@@ -12,9 +12,25 @@ const TRANSCRIBE_ESTIMATE_MS = 30_000;
 
 interface TranscriptRow {
   status: "pending" | "processing" | "ready" | "failed";
-  words: TranscriptWord[];
+  // Words as a JSON string (new rows; bypasses Convex's 8192-array cap) or the
+  // legacy inline array (pre-existing short rows). Parsed client-side.
+  wordsJson?: string;
+  words?: TranscriptWord[];
   /** Convex server timestamp the row was created — when transcription began. */
   _creationTime: number;
+}
+
+/** Parses the transcript's words from the JSON string, falling back to the
+ *  legacy inline array. Empty on malformed JSON rather than throwing. */
+function parseWords(row: TranscriptRow): TranscriptWord[] {
+  if (row.wordsJson) {
+    try {
+      return JSON.parse(row.wordsJson) as TranscriptWord[];
+    } catch {
+      return [];
+    }
+  }
+  return row.words ?? [];
 }
 
 const getTranscriptBySource = makeFunctionReference<
@@ -74,5 +90,7 @@ export function PodcastClipper({
     return <p style={note}>Transcription failed — try reopening the sidebar.</p>;
   }
 
-  return <TranscriptCanvas sourceId={sourceId} mp3Url={mp3Url} words={transcript.words} />;
+  return (
+    <TranscriptCanvas sourceId={sourceId} mp3Url={mp3Url} words={parseWords(transcript)} />
+  );
 }
