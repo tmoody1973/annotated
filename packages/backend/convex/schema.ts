@@ -107,6 +107,11 @@ export default defineSchema({
     // because it's a moment-in-time of what that clipper saw. Optional so clips
     // without a capture (and all pre-§4 rows) validate.
     screenshotStorageId: v.optional(v.id("_storage")),
+    // Anonymous publishing (gap §9): when true, the author identity is masked in
+    // every public projection (feed, landing, profile) — `authorId` is kept on
+    // the row server-side for claims/moderation but never projected. Optional,
+    // default off, so pre-§9 rows validate and behave exactly as before.
+    isAnonymous: v.optional(v.boolean()),
     // Publishing
     isPublic: v.boolean(),
     publishedAt: v.optional(v.number()),

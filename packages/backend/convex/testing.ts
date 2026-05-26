@@ -144,6 +144,7 @@ export const publishYoutubeClipDev = mutation({
     commentaryText: v.optional(v.string()),
     commentaryAudioStorageId: v.optional(v.id("_storage")),
     commentaryAudioTranscript: v.optional(v.string()),
+    isAnonymous: v.optional(v.boolean()),
     workerToken: v.string(),
   },
   returns: v.id("annotations"),
@@ -165,6 +166,7 @@ export const publishYoutubeClipDev = mutation({
       commentaryText: args.commentaryText,
       commentaryAudioStorageId: args.commentaryAudioStorageId,
       commentaryAudioTranscript: args.commentaryAudioTranscript,
+      isAnonymous: args.isAnonymous,
     });
   },
 });
@@ -186,6 +188,7 @@ export const publishPodcastClipDev = mutation({
     commentaryText: v.optional(v.string()),
     commentaryAudioStorageId: v.optional(v.id("_storage")),
     commentaryAudioTranscript: v.optional(v.string()),
+    isAnonymous: v.optional(v.boolean()),
     workerToken: v.string(),
   },
   returns: v.id("annotations"),
@@ -213,6 +216,7 @@ export const publishPodcastClipDev = mutation({
       commentaryText: args.commentaryText,
       commentaryAudioStorageId: args.commentaryAudioStorageId,
       commentaryAudioTranscript: args.commentaryAudioTranscript,
+      isAnonymous: args.isAnonymous,
     });
   },
 });
@@ -238,6 +242,7 @@ export const publishArticleClipDev = mutation({
     commentaryAudioStorageId: v.optional(v.id("_storage")),
     commentaryAudioTranscript: v.optional(v.string()),
     screenshotStorageId: v.optional(v.id("_storage")),
+    isAnonymous: v.optional(v.boolean()),
     workerToken: v.string(),
   },
   returns: v.id("annotations"),
@@ -290,6 +295,7 @@ export const publishArticleClipDev = mutation({
       commentaryAudioStorageId: args.commentaryAudioStorageId,
       commentaryAudioTranscript: args.commentaryAudioTranscript,
       screenshotStorageId: args.screenshotStorageId,
+      isAnonymous: args.isAnonymous,
     });
   },
 });

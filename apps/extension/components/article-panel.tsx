@@ -21,6 +21,7 @@ import {
   uploadToConvexStorage,
 } from "../lib/screenshot";
 import { CommentaryComposer } from "./commentary-composer";
+import { AnonymousToggle } from "./anonymous-toggle";
 
 const publishArticleClip = makeFunctionReference<
   "mutation",
@@ -36,6 +37,7 @@ const publishArticleClip = makeFunctionReference<
     commentaryAudioStorageId?: string;
     commentaryAudioTranscript?: string;
     screenshotStorageId?: string;
+    isAnonymous?: boolean;
     workerToken: string;
   },
   string
@@ -87,6 +89,7 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
   const [highlight, setHighlight] = useState<ArticleHighlight | null>(null);
   const [take, setTake] = useState("");
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [isAnonymous, setIsAnonymous] = useState(false);
   const [status, setStatus] = useState<"idle" | "publishing" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
   const [link, setLink] = useState<string | null>(null);
@@ -173,6 +176,7 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
         commentaryAudioStorageId: commentaryAudio?.storageId,
         commentaryAudioTranscript: commentaryAudio?.transcript ?? undefined,
         ...(screenshotStorageId ? { screenshotStorageId } : {}),
+        isAnonymous,
         workerToken: getWorkerToken(),
       });
       setLink(`${getWebUrl()}/a/${annotationId}`);
@@ -303,6 +307,12 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
           disabled={status === "publishing"}
         />
       </div>
+
+      <AnonymousToggle
+        checked={isAnonymous}
+        onChange={setIsAnonymous}
+        disabled={status === "publishing"}
+      />
 
       {error && (
         <p style={{ color: "#c00", fontSize: 12, margin: "6px 0 0" }}>{error}</p>

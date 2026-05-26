@@ -14,8 +14,10 @@ import { upsertYoutubeSource } from "./sources";
  * and joins the source attribution + author. Shared by listFeed and listByAuthor.
  */
 async function toFeedItem(ctx: QueryCtx, annotation: Doc<"annotations">) {
+  const isAnonymous = annotation.isAnonymous ?? false;
   const source = await ctx.db.get(annotation.sourceId);
-  const author = await ctx.db.get(annotation.authorId);
+  // Never load/project the author when anonymous — the identity is masked.
+  const author = isAnonymous ? null : await ctx.db.get(annotation.authorId);
   const clipUrl = annotation.clipStorageId
     ? await ctx.storage.getUrl(annotation.clipStorageId)
     : null;
@@ -43,6 +45,7 @@ async function toFeedItem(ctx: QueryCtx, annotation: Doc<"annotations">) {
     downCount: annotation.downCount ?? 0,
     threadId: annotation.threadId ?? null,
     clipCount,
+    isAnonymous,
     source: source
       ? {
           type: source.type,
@@ -103,6 +106,7 @@ interface AnnotationInsert {
   commentaryAudioTranscript?: string;
   screenshotStorageId?: Id<"_storage">;
   threadId?: Id<"threads">;
+  isAnonymous?: boolean;
 }
 
 /**
@@ -148,6 +152,7 @@ export async function insertAnnotation(
     screenshotStorageId: input.screenshotStorageId,
     threadId: input.threadId,
     threadOrder,
+    isAnonymous: input.isAnonymous,
     isPublic: true,
     publishedAt: Date.now(),
     commentCount: 0,
@@ -232,7 +237,9 @@ export const listByAuthor = query({
       .withIndex("by_author", (q) => q.eq("authorId", args.authorId))
       .order("desc")
       .collect();
-    const published = rows.filter((a) => a.isPublic);
+    // Anonymous annotations are masked everywhere — they never surface on the
+    // author's own public profile either.
+    const published = rows.filter((a) => a.isPublic && !a.isAnonymous);
     return await Promise.all(published.map((a) => toFeedItem(ctx, a)));
   },
 });
@@ -247,8 +254,10 @@ export async function toLandingView(
   ctx: QueryCtx,
   annotation: Doc<"annotations">
 ) {
+  const isAnonymous = annotation.isAnonymous ?? false;
   const source = await ctx.db.get(annotation.sourceId);
-  const author = await ctx.db.get(annotation.authorId);
+  // Never load/project the author when anonymous — the identity is masked.
+  const author = isAnonymous ? null : await ctx.db.get(annotation.authorId);
   const clipUrl = annotation.clipStorageId
     ? await ctx.storage.getUrl(annotation.clipStorageId)
     : null;
@@ -261,6 +270,11 @@ export async function toLandingView(
 
   return {
     ...annotation,
+    // Mask the author's row id from the public payload when anonymous (kept on
+    // the stored row for claims/moderation, never projected). Convex drops
+    // `undefined` fields from the return, so it isn't sent to the client.
+    ...(isAnonymous ? { authorId: undefined } : {}),
+    isAnonymous,
     // Pre-§2 rows have no `downCount`; default to 0 so the vote control gets a
     // number (mirrors the `listFeed` projection).
     downCount: annotation.downCount ?? 0,

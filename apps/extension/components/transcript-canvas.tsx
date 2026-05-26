@@ -14,6 +14,7 @@ import {
 } from "../lib/worker-client";
 import { accent, ink, monoStack, muted } from "../lib/clip-styles";
 import { CommentaryComposer } from "./commentary-composer";
+import { AnonymousToggle } from "./anonymous-toggle";
 
 const publishPodcastClip = makeFunctionReference<
   "mutation",
@@ -26,6 +27,7 @@ const publishPodcastClip = makeFunctionReference<
     commentaryText?: string;
     commentaryAudioStorageId?: string;
     commentaryAudioTranscript?: string;
+    isAnonymous?: boolean;
     workerToken: string;
   },
   string
@@ -70,6 +72,7 @@ export function TranscriptCanvas({
   const [focus, setFocus] = useState<number | null>(null);
   const [take, setTake] = useState("");
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [isAnonymous, setIsAnonymous] = useState(false);
   const [status, setStatus] = useState<"idle" | "publishing" | "error">("idle");
   // The current step of a publish, so the button names what's happening: cutting
   // the audio on the worker (~2s) vs. writing the annotation. No bar — too fast.
@@ -132,6 +135,7 @@ export function TranscriptCanvas({
         commentaryText: take.trim(),
         commentaryAudioStorageId: commentaryAudio?.storageId,
         commentaryAudioTranscript: commentaryAudio?.transcript ?? undefined,
+        isAnonymous,
         workerToken: getWorkerToken(),
       });
       setLink(`${getWebUrl()}/a/${annotationId}`);
@@ -242,6 +246,12 @@ export function TranscriptCanvas({
           disabled={status === "publishing"}
         />
       </div>
+
+      <AnonymousToggle
+        checked={isAnonymous}
+        onChange={setIsAnonymous}
+        disabled={status === "publishing"}
+      />
 
       {error && (
         <p style={{ color: "#c00", fontSize: 12, margin: "6px 0 0" }}>{error}</p>

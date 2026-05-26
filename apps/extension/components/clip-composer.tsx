@@ -16,6 +16,7 @@ import {
 } from "../lib/worker-client";
 import { accent, ink, muted, monoStack, valid } from "../lib/clip-styles";
 import { CommentaryComposer } from "./commentary-composer";
+import { AnonymousToggle } from "./anonymous-toggle";
 
 const publishYoutubeClipDev = makeFunctionReference<
   "mutation",
@@ -28,6 +29,7 @@ const publishYoutubeClipDev = makeFunctionReference<
     commentaryText?: string;
     commentaryAudioStorageId?: string;
     commentaryAudioTranscript?: string;
+    isAnonymous?: boolean;
     workerToken: string;
   },
   string
@@ -93,6 +95,7 @@ export function ClipComposer({ videoId }: { videoId: string }) {
   const [endInput, setEndInput] = useState("");
   const [commentary, setCommentary] = useState("");
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [isAnonymous, setIsAnonymous] = useState(false);
   const [status, setStatus] = useState<Status>("idle");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [annotationId, setAnnotationId] = useState<string | null>(null);
@@ -137,6 +140,7 @@ export function ClipComposer({ videoId }: { videoId: string }) {
         commentaryText: commentary.trim(),
         commentaryAudioStorageId: commentaryAudio?.storageId,
         commentaryAudioTranscript: commentaryAudio?.transcript ?? undefined,
+        isAnonymous,
         workerToken: getWorkerToken(),
       });
       setAnnotationId(id);
@@ -164,6 +168,7 @@ export function ClipComposer({ videoId }: { videoId: string }) {
             setEndInput("");
             setCommentary("");
             setAudioBlob(null);
+            setIsAnonymous(false);
             setAnnotationId(null);
           }}
         >
@@ -205,6 +210,12 @@ export function ClipComposer({ videoId }: { videoId: string }) {
           disabled={busy}
         />
       </div>
+
+      <AnonymousToggle
+        checked={isAnonymous}
+        onChange={setIsAnonymous}
+        disabled={busy}
+      />
 
       <button
         type="button"

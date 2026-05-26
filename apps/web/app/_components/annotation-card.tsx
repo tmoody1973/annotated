@@ -16,6 +16,7 @@ export interface FeedItem {
   downCount: number;
   threadId?: string | null;
   clipCount?: number;
+  isAnonymous?: boolean;
   source: {
     type: string;
     title: string;
@@ -55,16 +56,18 @@ export function AnnotationCard({ item }: { item: FeedItem }) {
       <Card.Header>
         <div className="flex items-center gap-3">
           <Avatar size="sm">
-            {author?.avatarUrl && (
+            {!item.isAnonymous && author?.avatarUrl && (
               <Avatar.Image src={author.avatarUrl} alt={author.displayName} />
             )}
             <Avatar.Fallback>
-              {initials(author?.displayName ?? "?")}
+              {item.isAnonymous ? "?" : initials(author?.displayName ?? "?")}
             </Avatar.Fallback>
           </Avatar>
           <div className="leading-tight">
             <Card.Title className="text-base">
-              {author ? (
+              {item.isAnonymous ? (
+                "Anonymous"
+              ) : author ? (
                 <Link href={`/u/${author.username}`} className="hover:underline">
                   {author.displayName}
                 </Link>
@@ -72,7 +75,7 @@ export function AnnotationCard({ item }: { item: FeedItem }) {
                 "Unknown"
               )}
             </Card.Title>
-            {author && (
+            {!item.isAnonymous && author && (
               <Card.Description>@{author.username}</Card.Description>
             )}
           </div>

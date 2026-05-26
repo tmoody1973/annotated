@@ -21,6 +21,7 @@ interface AnnotationView {
   clipEndMs?: number;
   clipUrl: string | null;
   screenshotUrl?: string | null;
+  isAnonymous?: boolean;
   likeCount: number;
   downCount: number;
   threadId?: string | null;
@@ -148,7 +149,9 @@ export default async function AnnotationPage({
             clipUrl: annotation.clipUrl,
             screenshotUrl: annotation.screenshotUrl,
             sourceType: annotation.source?.type,
-            authorName: annotation.author?.displayName,
+            authorName: annotation.isAnonymous
+              ? "Anonymous"
+              : annotation.author?.displayName,
             source: annotation.source,
           }}
         />
