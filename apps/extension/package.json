@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@annotated/shared": "workspace:*",
+    "@clerk/chrome-extension": "^3.1.30",
     "@heroui/react": "^3.0.5",
     "@heroui/styles": "^3.0.5",
     "convex": "^1.39.1",
@@ -28,6 +29,7 @@
     "typescript": "^5.7.0"
   },
   "manifest": {
+    "key": "$CRX_PUBLIC_KEY",
     "host_permissions": [
       "https://*/*",
       "http://localhost:8080/*"
@@ -36,7 +38,8 @@
       "sidePanel",
       "storage",
       "activeTab",
-      "scripting"
+      "scripting",
+      "cookies"
     ],
     "side_panel": {
       "default_path": "sidepanel.html"
