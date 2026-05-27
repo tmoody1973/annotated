@@ -128,7 +128,7 @@ export const seedThreadDev = mutation({
  * Dev publish path for the extension before syncHost auth exists. Token-guarded
  * (the panel has no Clerk session) and attributes the clip to the dev seed user.
  * Accepts the real span, commentary, and source metadata the sidepanel collects,
- * and enforces the same publish invariants as the authed `annotations.create`.
+ * and enforces the same publish invariants as the authed `annotations.createYoutube`.
  * DEBT: production must replace this with real auth + a server-side worker call.
  */
 export const publishYoutubeClipDev = mutation({

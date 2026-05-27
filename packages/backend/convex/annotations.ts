@@ -8,6 +8,7 @@ import {
 } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { upsertYoutubeSource } from "./sources";
+import { requireCurrentUser } from "./users";
 
 /**
  * Shapes an annotation into the feed/profile card view: resolves the clip URL
@@ -163,9 +164,11 @@ export async function insertAnnotation(
 /**
  * Publishes a YouTube clip annotation as the signed-in user. Upserts the shared
  * source, then inserts the annotation. Author is derived from the Clerk identity
- * — never accepted as an argument.
+ * (`requireCurrentUser`) — never accepted as an argument. Mirrors the field set
+ * the sidepanel collects (audio commentary, anonymity, thread append), enforcing
+ * the same `assertPublishable` invariants as the dev seed path.
  */
-export const create = mutation({
+export const createYoutube = mutation({
   args: {
     videoId: v.string(),
     title: v.string(),
@@ -175,22 +178,24 @@ export const create = mutation({
     clipStorageId: v.id("_storage"),
     clipStartMs: v.number(),
     clipEndMs: v.number(),
-    commentaryText: v.string(),
+    commentaryText: v.optional(v.string()),
+    commentaryAudioStorageId: v.optional(v.id("_storage")),
+    commentaryAudioTranscript: v.optional(v.string()),
+    isAnonymous: v.optional(v.boolean()),
+    threadId: v.optional(v.id("threads")),
   },
   returns: v.id("annotations"),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
-      .first();
-    if (!user) {
-      throw new Error("No user record for the current identity");
-    }
+    const user = await requireCurrentUser(ctx);
     assertPublishable(args);
+    // A clip may only be appended to a thread the caller owns — the threadId
+    // arrives from the client, so never trust it to belong to this author.
+    if (args.threadId) {
+      const thread = await ctx.db.get(args.threadId);
+      if (!thread || thread.authorId !== user._id) {
+        throw new Error("Cannot append to a thread you do not own");
+      }
+    }
 
     const sourceId = await upsertYoutubeSource(ctx, args);
     return await insertAnnotation(ctx, {
@@ -200,6 +205,10 @@ export const create = mutation({
       clipStartMs: args.clipStartMs,
       clipEndMs: args.clipEndMs,
       commentaryText: args.commentaryText,
+      commentaryAudioStorageId: args.commentaryAudioStorageId,
+      commentaryAudioTranscript: args.commentaryAudioTranscript,
+      isAnonymous: args.isAnonymous,
+      threadId: args.threadId,
     });
   },
 });

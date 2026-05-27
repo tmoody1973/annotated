@@ -32,7 +32,7 @@
     "key": "$CRX_PUBLIC_KEY",
     "host_permissions": [
       "https://*/*",
-      "http://localhost:8080/*"
+      "http://localhost/*"
     ],
     "permissions": [
       "sidePanel",

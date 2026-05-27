@@ -1,6 +1,4 @@
 import { useState } from "react";
-import { useMutation } from "convex/react";
-import { makeFunctionReference } from "convex/server";
 import {
   clockToMs,
   evaluateClipSpan,
@@ -8,34 +6,12 @@ import {
   type ClipSpanResult,
 } from "@annotated/shared";
 import { requestPlayerTimeMs, getActiveVideoTitle } from "../lib/player-time";
-import {
-  clipYoutube,
-  getWorkerToken,
-  getWebUrl,
-  transcodeCommentary,
-} from "../lib/worker-client";
+import { clipYoutube, getWebUrl, transcodeCommentary } from "../lib/worker-client";
+import { publishYoutubeAuthed } from "../lib/convex-publish";
 import { accent, danger, hair, ink, muted, monoStack, panel, sansStack, surface, valid } from "../lib/clip-styles";
 import { CommentaryComposer } from "./commentary-composer";
 import { AnonymousToggle } from "./anonymous-toggle";
 import { useThread } from "../lib/use-thread";
-
-const publishYoutubeClipDev = makeFunctionReference<
-  "mutation",
-  {
-    videoId: string;
-    title: string;
-    clipStorageId: string;
-    clipStartMs: number;
-    clipEndMs: number;
-    commentaryText?: string;
-    commentaryAudioStorageId?: string;
-    commentaryAudioTranscript?: string;
-    isAnonymous?: boolean;
-    threadId?: string;
-    workerToken: string;
-  },
-  string
->("testing:publishYoutubeClipDev");
 
 type Status = "idle" | "clipping" | "publishing" | "done" | "error";
 
@@ -92,7 +68,6 @@ function TimeColumn({
 }
 
 export function ClipComposer({ videoId }: { videoId: string }) {
-  const publish = useMutation(publishYoutubeClipDev);
   const thread = useThread();
   const [startInput, setStartInput] = useState("");
   const [endInput, setEndInput] = useState("");
@@ -134,7 +109,7 @@ export function ClipComposer({ videoId }: { videoId: string }) {
         ? await transcodeCommentary(audioBlob)
         : null;
       setStatus("publishing");
-      const id = await publish({
+      const id = await publishYoutubeAuthed({
         videoId,
         title,
         clipStorageId: storageId,
@@ -145,7 +120,6 @@ export function ClipComposer({ videoId }: { videoId: string }) {
         commentaryAudioTranscript: commentaryAudio?.transcript ?? undefined,
         isAnonymous,
         threadId: thread.threadId ?? undefined,
-        workerToken: getWorkerToken(),
       });
       setAnnotationId(id);
       setStatus("done");

@@ -35,7 +35,7 @@ interface YoutubeSourceInput {
 /**
  * Inserts a YouTube source, or returns the existing one for this video id.
  * Sources are shared across users (the dedup moat) — idempotent by video id.
- * Plain helper so `annotations.create` and the test seed share one code path.
+ * Plain helper so `annotations.createYoutube` and the test seed share one code path.
  */
 export async function upsertYoutubeSource(
   ctx: MutationCtx,
