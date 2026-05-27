@@ -6,6 +6,7 @@ import { useActiveTabArticle } from "./lib/use-active-tab-article";
 import { ClipComposer } from "./components/clip-composer";
 import { PodcastPanel } from "./components/podcast-panel";
 import { ArticlePanel } from "./components/article-panel";
+import { AuthSlot } from "./components/auth-slot";
 import {
   clipPanelCss,
   faint,
@@ -48,7 +49,16 @@ function SourceNote({ videoId }: { videoId: string }) {
 
 function Header() {
   return (
-    <header style={{ borderBottom: `1px solid ${hair}`, paddingBottom: 12, marginBottom: 16 }}>
+    <header
+      style={{
+        borderBottom: `1px solid ${hair}`,
+        paddingBottom: 12,
+        marginBottom: 16,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+      }}
+    >
       <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
         <span
           style={{
@@ -71,6 +81,7 @@ function Header() {
           Annotated
         </h1>
       </div>
+      <AuthSlot />
     </header>
   );
 }
