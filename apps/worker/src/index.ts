@@ -5,6 +5,7 @@ import { createTranscriptWriter } from "./convex-writer.js";
 import { createClipUploader } from "./clip-uploader.js";
 import { registerTranscribeRoute } from "./routes/transcribe.js";
 import { registerClipYoutubeRoute } from "./routes/clip-youtube.js";
+import { registerYoutubeChaptersRoute } from "./routes/youtube-chapters.js";
 import { registerClipAudioRoute } from "./routes/clip-audio.js";
 import { registerExtractArticleRoute } from "./routes/extract-article.js";
 import { registerTranscodeCommentaryRoute } from "./routes/transcode-commentary.js";
@@ -26,6 +27,10 @@ registerTranscribeRoute(app, {
 
 registerClipYoutubeRoute(app, {
   uploader: createClipUploader(env.CONVEX_URL, env.WORKER_AUTH_TOKEN),
+  workerToken: env.WORKER_AUTH_TOKEN,
+});
+
+registerYoutubeChaptersRoute(app, {
   workerToken: env.WORKER_AUTH_TOKEN,
 });
 

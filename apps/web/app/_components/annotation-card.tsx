@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { slugId, formatRelativeTime } from "@annotated/shared";
 import { VoteButtons } from "./vote-buttons";
+import { WaveformPlayer } from "./waveform-player";
 
 export interface FeedItem {
   _id: string;
@@ -23,6 +24,7 @@ export interface FeedItem {
     title: string;
     canonicalUrl: string;
     siteName?: string;
+    imageUrl?: string | null;
   } | null;
   author: {
     username: string;
@@ -97,18 +99,14 @@ export function AnnotationCard({ item }: { item: FeedItem }) {
         <video controls src={item.clipUrl} className="block w-full border-y-[3px] border-[color:var(--b-line)] bg-black" />
       )}
 
-      {type === "podcast" && item.clipUrl && (
-        <div className="border-y-[3px] border-[color:var(--b-line)] bg-[color:var(--b-chrome)] p-3">
-          <audio controls src={item.clipUrl} className="block w-full" />
-        </div>
-      )}
+      {type === "podcast" && item.clipUrl && <WaveformPlayer src={item.clipUrl} />}
 
-      {type === "article" && item.screenshotUrl && (
+      {type === "article" && (item.screenshotUrl ?? item.source?.imageUrl) && (
         <Link href={detailHref} className="block border-y-[3px] border-[color:var(--b-line)]">
-          {/* eslint-disable-next-line @next/next/no-img-element -- signed Convex storage URL */}
+          {/* eslint-disable-next-line @next/next/no-img-element -- signed Convex storage URL or source og:image */}
           <img
-            src={item.screenshotUrl}
-            alt="Screenshot of the source page"
+            src={item.screenshotUrl ?? item.source?.imageUrl ?? undefined}
+            alt="Source page visual"
             className="block max-h-[200px] w-full object-cover object-top"
           />
         </Link>

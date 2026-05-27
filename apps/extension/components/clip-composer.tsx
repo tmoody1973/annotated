@@ -1,12 +1,19 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   clockToMs,
   evaluateClipSpan,
   formatClipTimestamp,
+  MAX_CLIP_MS,
+  type Chapter,
   type ClipSpanResult,
 } from "@annotated/shared";
 import { requestPlayerTimeMs, getActiveVideoTitle } from "../lib/player-time";
-import { clipYoutube, getWebUrl, transcodeCommentary } from "../lib/worker-client";
+import {
+  clipYoutube,
+  fetchYoutubeChapters,
+  getWebUrl,
+  transcodeCommentary,
+} from "../lib/worker-client";
 import { publishYoutubeAuthed } from "../lib/convex-publish";
 import { accent, danger, hair, ink, muted, monoStack, panel, sansStack, surface, valid } from "../lib/clip-styles";
 import { CommentaryComposer } from "./commentary-composer";
@@ -14,6 +21,11 @@ import { AnonymousToggle } from "./anonymous-toggle";
 import { useThread } from "../lib/use-thread";
 
 type Status = "idle" | "clipping" | "publishing" | "done" | "error";
+
+/** True when commentary is an untouched "Chapter: X — " stub (no user text after it). */
+function isUneditedChapterSeed(text: string): boolean {
+  return /^Chapter: .+ — $/.test(text);
+}
 
 /** Maps the span result to a colored status line (narrows the union cleanly). */
 function describeSpan(span: ClipSpanResult | null): { color: string; text: string } {
@@ -33,6 +45,59 @@ const label: React.CSSProperties = {
   color: muted,
   marginBottom: 6,
 };
+
+function ChapterList({
+  chapters,
+  onSelect,
+}: {
+  chapters: Chapter[];
+  onSelect: (chapter: Chapter) => void;
+}) {
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <div style={label}>Chapters · tap to set in/out</div>
+      <div
+        className="ann-shadow"
+        style={{
+          border: `1px solid ${hair}`,
+          borderRadius: 8,
+          background: surface,
+          maxHeight: 168,
+          overflowY: "auto",
+        }}
+      >
+        {chapters.map((chapter, index) => (
+          <button
+            key={`${chapter.startMs}-${index}`}
+            type="button"
+            className="ann-press"
+            onClick={() => onSelect(chapter)}
+            style={{
+              display: "flex",
+              width: "100%",
+              alignItems: "baseline",
+              justifyContent: "space-between",
+              gap: 10,
+              padding: "9px 11px",
+              border: "none",
+              borderTop: index === 0 ? "none" : `1px solid ${hair}`,
+              background: "transparent",
+              cursor: "pointer",
+              textAlign: "left",
+            }}
+          >
+            <span style={{ fontFamily: sansStack, fontSize: 13, fontWeight: 600, color: ink }}>
+              {chapter.title}
+            </span>
+            <span style={{ fontFamily: monoStack, fontSize: 12, color: muted, flexShrink: 0 }}>
+              {formatClipTimestamp(chapter.startMs)}
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function TimeColumn({
   heading,
@@ -78,6 +143,39 @@ export function ClipComposer({ videoId }: { videoId: string }) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [annotationId, setAnnotationId] = useState<string | null>(null);
   const [captureHint, setCaptureHint] = useState<string | null>(null);
+  const [chapters, setChapters] = useState<Chapter[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    // Clear immediately so a previous video's chapters never linger (and stay
+    // tappable) while the new lookup is in flight.
+    setChapters([]);
+    fetchYoutubeChapters(videoId)
+      .then((result) => {
+        if (active) setChapters(result);
+      })
+      .catch(() => {
+        // Chapters are an enhancement; a lookup failure must not block clipping.
+        if (active) setChapters([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, [videoId]);
+
+  function selectChapter(chapter: Chapter): void {
+    setStartInput(formatClipTimestamp(chapter.startMs));
+    const cappedEndMs = Math.min(chapter.endMs, chapter.startMs + MAX_CLIP_MS);
+    setEndInput(formatClipTimestamp(cappedEndMs));
+    // Seed the commentary when it's empty or still an unedited chapter stub, so
+    // switching chapters before typing keeps the title in sync — but never
+    // clobber text the user has actually written.
+    setCommentary((current) =>
+      current.trim().length === 0 || isUneditedChapterSeed(current)
+        ? `Chapter: ${chapter.title} — `
+        : current
+    );
+  }
 
   const startMs = clockToMs(startInput);
   const endMs = clockToMs(endInput);
@@ -174,6 +272,10 @@ export function ClipComposer({ videoId }: { videoId: string }) {
 
   return (
     <section>
+      {chapters.length > 0 && (
+        <ChapterList chapters={chapters} onSelect={selectChapter} />
+      )}
+
       <div style={{ display: "flex", gap: 12 }}>
         <TimeColumn heading="In" value={startInput} onChange={setStartInput} onCapture={() => capture("start")} />
         <TimeColumn heading="Out" value={endInput} onChange={setEndInput} onCapture={() => capture("end")} />

@@ -49,6 +49,7 @@ const publishArticleClip = makeFunctionReference<
     commentaryAudioStorageId?: string;
     commentaryAudioTranscript?: string;
     screenshotStorageId?: string;
+    sourceImageUrl?: string;
     isAnonymous?: boolean;
     threadId?: string;
     workerToken: string;
@@ -191,6 +192,7 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
         commentaryAudioStorageId: commentaryAudio?.storageId,
         commentaryAudioTranscript: commentaryAudio?.transcript ?? undefined,
         ...(screenshotStorageId ? { screenshotStorageId } : {}),
+        ...(article.imageUrl ? { sourceImageUrl: article.imageUrl } : {}),
         isAnonymous,
         threadId: thread.threadId ?? undefined,
         workerToken: getWorkerToken(),

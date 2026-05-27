@@ -7,6 +7,22 @@ export interface ParsedArticle {
   textContent: string;
   byline: string | null;
   siteName: string | null;
+  /** The page's social-card image (og:image / twitter:image), if present — a
+   *  reliable, curated citation visual when a viewport screenshot isn't captured. */
+  imageUrl: string | null;
+}
+
+/** Reads the social-card image URL from page metadata (absolute http(s) only). */
+function readSocialImage(document: {
+  querySelector(selector: string): { getAttribute(name: string): string | null } | null;
+}): string | null {
+  const content = (selector: string): string | null =>
+    document.querySelector(selector)?.getAttribute("content")?.trim() || null;
+  const url =
+    content('meta[property="og:image"]') ??
+    content('meta[name="twitter:image"]') ??
+    content('meta[name="twitter:image:src"]');
+  return url && /^https?:\/\//i.test(url) ? url : null;
 }
 
 /**
@@ -18,6 +34,8 @@ export interface ParsedArticle {
  */
 export function parseArticle(html: string): ParsedArticle | null {
   const { document } = parseHTML(html);
+  // Read the social-card image before Readability runs (it mutates the doc).
+  const imageUrl = readSocialImage(document);
   // linkedom's Document is structurally compatible but isn't the DOM lib's
   // global `Document` (this Node worker has no "dom" lib), so cast to the exact
   // types Readability's own API expects rather than naming the global.
@@ -49,5 +67,6 @@ export function parseArticle(html: string): ParsedArticle | null {
     textContent,
     byline: article.byline?.trim() || null,
     siteName: article.siteName?.trim() || null,
+    imageUrl,
   };
 }

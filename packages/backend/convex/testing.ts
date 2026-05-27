@@ -239,6 +239,7 @@ export const publishArticleClipDev = mutation({
     title: v.string(),
     siteName: v.optional(v.string()),
     author: v.optional(v.string()),
+    sourceImageUrl: v.optional(v.string()),
     selectedText: v.string(),
     textStart: v.number(),
     textEnd: v.number(),
@@ -288,6 +289,7 @@ export const publishArticleClipDev = mutation({
       title: args.title,
       siteName: args.siteName,
       author: args.author,
+      imageUrl: args.sourceImageUrl,
     });
 
     return await insertAnnotation(ctx, {

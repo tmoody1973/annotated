@@ -31,6 +31,11 @@ describe("parseArticle", () => {
     expect(result?.byline).toBeTruthy();
   });
 
+  it("extracts the og:image as the citation visual", () => {
+    const result = parseArticle(fixtureHtml);
+    expect(result?.imageUrl).toMatch(/^https:\/\/npr\.brightspotcdn\.com\//);
+  });
+
   it("returns null on HTML with no extractable article", () => {
     const result = parseArticle(
       "<html><head><title>x</title></head><body><nav>menu</nav></body></html>"

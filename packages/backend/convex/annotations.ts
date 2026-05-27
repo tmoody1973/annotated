@@ -59,6 +59,7 @@ async function toFeedItem(ctx: QueryCtx, annotation: Doc<"annotations">) {
           title: source.title,
           canonicalUrl: source.canonicalUrl,
           siteName: source.siteName,
+          imageUrl: source.imageUrl,
         }
       : null,
     author: author
@@ -303,6 +304,7 @@ export async function toLandingView(
           type: source.type,
           siteName: source.siteName,
           author: source.author,
+          imageUrl: source.imageUrl,
         }
       : null,
     author: author

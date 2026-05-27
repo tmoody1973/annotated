@@ -125,6 +125,7 @@ interface ArticleSourceInput {
   title: string;
   siteName?: string;
   author?: string;
+  imageUrl?: string;
 }
 
 /**
@@ -150,6 +151,7 @@ export async function upsertArticleSource(
     title: input.title,
     siteName: input.siteName,
     author: input.author,
+    imageUrl: input.imageUrl,
     cachedAt: Date.now(),
   });
 }

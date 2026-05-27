@@ -1,3 +1,5 @@
+import { parseYoutubeChapters, type Chapter } from "@annotated/shared";
+
 const workerUrl = process.env.PLASMO_PUBLIC_WORKER_URL;
 const workerToken = process.env.PLASMO_PUBLIC_WORKER_TOKEN;
 
@@ -104,6 +106,7 @@ export interface ExtractedArticle {
   textContent: string;
   byline: string | null;
   siteName: string | null;
+  imageUrl: string | null;
 }
 
 /**
@@ -142,6 +145,7 @@ export async function extractArticle(
     textContent: body.textContent,
     byline: body.byline ?? null,
     siteName: body.siteName ?? null,
+    imageUrl: body.imageUrl ?? null,
   };
 }
 
@@ -194,6 +198,33 @@ export async function transcodeCommentary(blob: Blob): Promise<CommentaryResult>
     throw new Error("Worker returned no storageId for the commentary audio");
   }
   return { storageId: body.storageId, transcript: body.transcript ?? null };
+}
+
+/**
+ * Asks the worker for a YouTube video's chapters (metadata-only yt-dlp), then
+ * normalizes the raw payload with the shared parser. Returns [] when the video
+ * has no chapters. CORS-free via the worker host permission.
+ */
+export async function fetchYoutubeChapters(videoId: string): Promise<Chapter[]> {
+  if (!workerUrl || !workerToken) {
+    throw new Error("Worker is not configured (PLASMO_PUBLIC_WORKER_URL/_TOKEN)");
+  }
+  const response = await fetch(`${workerUrl}/youtube-chapters`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${workerToken}`,
+    },
+    body: JSON.stringify({ videoId }),
+  });
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    throw new Error(
+      `Chapters failed (${response.status})${detail ? `: ${detail}` : ""}`
+    );
+  }
+  const body = (await response.json()) as { chapters?: unknown };
+  return parseYoutubeChapters(body.chapters);
 }
 
 /** The dev worker token, passed to the token-guarded publish mutation. */

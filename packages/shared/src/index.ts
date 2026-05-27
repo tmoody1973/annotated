@@ -24,3 +24,5 @@ export { slugify, splitSlugId, slugId } from "./slug-url";
 export { progressFraction } from "./progress-fraction";
 export { computeWaveformPeaks } from "./waveform-peaks";
 export { formatRelativeTime } from "./relative-time";
+export { parseYoutubeChapters } from "./youtube-chapters";
+export type { Chapter } from "./youtube-chapters";

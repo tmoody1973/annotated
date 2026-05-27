@@ -32,6 +32,7 @@ interface AnnotationView {
     type: string;
     siteName?: string;
     author?: string;
+    imageUrl?: string | null;
   } | null;
   author: { id: string; username: string; displayName: string } | null;
 }

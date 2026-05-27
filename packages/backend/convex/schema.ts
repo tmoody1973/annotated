@@ -35,6 +35,9 @@ export default defineSchema({
     mp3Url: v.optional(v.string()),
     // Article
     siteName: v.optional(v.string()),
+    // Article social-card image (og:image) — citation visual fallback when no
+    // viewport screenshot was captured at clip time.
+    imageUrl: v.optional(v.string()),
     // Cache metadata
     cachedAt: v.optional(v.number()),
   })

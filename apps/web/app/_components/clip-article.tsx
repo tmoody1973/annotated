@@ -1,4 +1,5 @@
 import { formatClipTimestamp } from "@annotated/shared";
+import { WaveformPlayer } from "./waveform-player";
 
 /**
  * The source screenshot, capped in height and top-anchored so the head of the
@@ -47,6 +48,7 @@ export interface ClipArticleData {
     canonicalUrl: string;
     title: string;
     siteName?: string;
+    imageUrl?: string | null;
   } | null;
 }
 
@@ -62,6 +64,9 @@ const label = "font-mono text-[11px] font-bold uppercase tracking-[0.14em]";
 export function ClipArticle({ data }: { data: ClipArticleData }) {
   const isPodcast = data.sourceType === "podcast";
   const isArticle = data.sourceType === "article";
+  // Prefer the clipper's viewport screenshot; fall back to the source's og:image
+  // so an article clip always has a citation visual.
+  const articleVisual = data.screenshotUrl ?? data.source?.imageUrl ?? null;
   const range =
     data.clipStartMs != null && data.clipEndMs != null
       ? `${formatClipTimestamp(data.clipStartMs)}–${formatClipTimestamp(data.clipEndMs)}`
@@ -69,21 +74,21 @@ export function ClipArticle({ data }: { data: ClipArticleData }) {
 
   return (
     <article className="border-[3px] border-[color:var(--b-line)] bg-[color:var(--b-card)] text-[color:var(--b-ink)] shadow-[8px_8px_0_0_var(--b-shadow)]">
-      {!isArticle && (
+      {!isArticle && !data.clipUrl && (
         <div className="border-b-[3px] border-[color:var(--b-line)] bg-[color:var(--b-chrome)]">
-          {!data.clipUrl ? (
-            <p className={`p-8 text-center ${label} text-[color:var(--b-acid)]`}>clip unavailable</p>
-          ) : isPodcast ? (
-            <audio controls src={data.clipUrl} className="block w-full p-4" />
-          ) : (
-            <video controls src={data.clipUrl} className="block max-h-[60vh] w-full bg-black" />
-          )}
+          <p className={`p-8 text-center ${label} text-[color:var(--b-acid)]`}>clip unavailable</p>
+        </div>
+      )}
+      {!isArticle && data.clipUrl && isPodcast && <WaveformPlayer src={data.clipUrl} />}
+      {!isArticle && data.clipUrl && !isPodcast && (
+        <div className="border-b-[3px] border-[color:var(--b-line)] bg-[color:var(--b-chrome)]">
+          <video controls src={data.clipUrl} className="block max-h-[60vh] w-full bg-black" />
         </div>
       )}
 
-      {isArticle && data.screenshotUrl && (
+      {isArticle && articleVisual && (
         <figure className="border-b-[3px] border-[color:var(--b-line)]">
-          <SourceVisual screenshotUrl={data.screenshotUrl} href={data.source?.canonicalUrl} />
+          <SourceVisual screenshotUrl={articleVisual} href={data.source?.canonicalUrl} />
           <figcaption className={`border-t-[3px] border-[color:var(--b-line)] bg-[color:var(--b-chrome)] px-5 py-2.5 ${label} text-[color:var(--b-acid)]`}>
             Original — Annotated points at it, doesn&rsquo;t replace it
           </figcaption>
