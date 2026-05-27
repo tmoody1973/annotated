@@ -120,6 +120,56 @@ turns a fleeting media moment into a citable, shareable, defensible object.
 
 ---
 
+## 5. Renée Castellano — Audience-development editor (institutional / publisher account)
+
+*Not an individual creator — the human who'd run a newspaper's or magazine's account.
+The wedge for "publisher accounts," and the move that turns Annotated's IP risk into a moat.*
+
+- **Role.** Owns distribution, referral traffic, and audience growth for a mid-size metro
+  newspaper-and-magazine group. Champions new platforms — but must clear the rights/legal
+  desk before adopting anything. (So the "user" is really a buying committee: Renée wants
+  reach; legal fears exposure.)
+- **What the org wants.** Referral traffic back to articles; reach a younger, audio-native
+  audience; turn its journalism into shareable, *attributed* social units; reclaim
+  distribution from platforms that strip the byline and bury outbound links; audience data.
+- **What the org fears (the gatekeeper).** Losing control of how its work is excerpted;
+  **cannibalization** (readers consume the 90s clip instead of clicking through);
+  misrepresentation in someone else's commentary; setting a bad legal precedent; brand
+  safety — their reporting sitting next to toxic takes.
+- **Jobs to be done.**
+  - "Get our journalism in front of new audiences as sourced, attributed clips that drive
+    clicks *back to us*."
+  - "Hold a *verified* presence so our official clips aren't impostors."
+  - "Manage — not just litigate — how third parties excerpt our content."
+  - "See what's resonating and what it sends back in traffic."
+- **Pains today.** Their content is clipped and screenshotted everywhere with no attribution
+  and no traffic back; aggregators strip them; social platforms deprioritize outbound links;
+  they have no foothold on emerging clip-native platforms.
+- **How they'd use a publisher account.** A verified org account; staff publish official
+  annotated clips of their own pieces (referral traffic); they *claim and manage* third-party
+  clips of their content — the claim button as a managed channel, not a takedown war;
+  referral-traffic + engagement analytics; optionally featured/curated clip collections.
+- **Killer feature.** The verified publisher account + the attribution/claim system reframed
+  as a **managed distribution-and-control channel** — the IP risk converted into a traffic
+  engine — backed by referral analytics that prove ROI.
+- **Day in the life.** Renée's team clips the 90-second crux of an investigation, annotates
+  it, publishes from the verified account; it spikes referral readers. She spots a rival's
+  clip of their reporting and, instead of a takedown, posts an official response on it.
+- **What makes them never adopt (or churn).** Clips that cannibalize instead of drive traffic
+  (excerpt too long/satisfying); weak attribution; legal can't get comfortable; an unmanaged,
+  brand-unsafe feed; no analytics to prove ROI.
+
+### Publisher accounts — strategic note
+
+Converting Annotated's central *risk* (excerpting publishers' IP — the reason the claim
+button exists) into its central *moat* (being the engagement + referral channel publishers
+opt into). Anchor tenants also seed credible content and solve cold-start, and a B2B layer
+(verified accounts, analytics, publisher programs) opens monetization under a consumer
+social product. **Cost:** it's a two-sided market — verification, dashboards, analytics,
+possibly contracts — and the partner model needs a coherent excerpt/attribution policy
+(always links back, excerpt-limited, so it's traffic-positive). **Scope:** post-bounty
+roadmap and pitch narrative, not the bounty build.
+
 ## Cross-cutting product signals
 
 - **The audio-clip moat is the wedge for 3 of 4** (Maya, Daniel, Priya rely on it; Marcus
@@ -131,3 +181,6 @@ turns a fleeting media moment into a citable, shareable, defensible object.
   for show-prep). Currently a v1 non-goal — worth revisiting post-bounty.
 - **Cold-start / audience** is the shared adoption risk (Marcus most acute). The feed only
   has value once a few sharp voices are on it.
+- **Publishers are the anchor-tenant play** (Renée). Bringing newspapers/magazines on as
+  verified accounts seeds credible content, solves cold-start, and flips the IP/legal risk
+  into a partnership moat — the single highest-leverage post-bounty bet.
