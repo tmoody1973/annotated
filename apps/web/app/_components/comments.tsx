@@ -141,7 +141,7 @@ function CommentComposer({
   return (
     <div className="mt-3 flex flex-col gap-2">
       <textarea
-        className="min-h-20 w-full border border-border bg-surface p-3"
+        className="min-h-20 w-full rounded border border-[color:var(--calm-hair)] bg-[color:var(--calm-panel)] p-3 text-[color:var(--calm-ink)] placeholder:text-[color:var(--calm-ink-3)]"
         placeholder={placeholder}
         value={text}
         onChange={(e) => setText(e.target.value)}
