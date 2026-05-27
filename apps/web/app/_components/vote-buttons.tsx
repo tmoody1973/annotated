@@ -2,15 +2,13 @@
 
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { SignInButton } from "@clerk/nextjs";
-import { Button } from "@heroui/react";
 import { api } from "@annotated/backend/convex/_generated/api";
 import type { Id } from "@annotated/backend/convex/_generated/dataModel";
 
 /**
- * Up/down vote control for an annotation — Jason's binary "brilliant" (▲) vs
- * "BS" (▼) trigger. The user's current choice is highlighted; the net score is
- * shown small (no Reddit-style score wars). Signed-out users route to sign-in.
- * Counts update in real time via the parent feed/landing query.
+ * Brutalist up/down vote — Jason's binary "brilliant" (▲) vs "BS" (▼). The user's
+ * choice highlights (acid up / red down); the net score sits between in mono.
+ * Signed-out users route to sign-in. Counts update in real time via the parent.
  */
 export function VoteButtons({
   annotationId,
@@ -30,42 +28,43 @@ export function VoteButtons({
   const toggle = useMutation(api.votes.toggleVote);
   const net = upCount - downCount;
 
+  const shell =
+    "inline-flex items-center border-2 border-[color:var(--b-line)] select-none";
+  const cell = "px-2.5 py-1.5 text-[14px] font-black leading-none";
+  const score =
+    "border-x-2 border-[color:var(--b-line)] px-2.5 py-1.5 font-mono text-[13px] font-bold leading-none";
+
   if (!isAuthenticated) {
     return (
       <SignInButton mode="modal">
-        <Button variant="ghost" size="sm" aria-label="Vote (sign in)">
-          ▲ {net} ▼
-        </Button>
+        <button className={shell} aria-label="Vote (sign in)">
+          <span className={cell}>▲</span>
+          <span className={score}>{net}</span>
+          <span className={cell}>▼</span>
+        </button>
       </SignInButton>
     );
   }
 
   return (
-    <div className="inline-flex items-center gap-1">
-      <Button
-        variant={myVote === 1 ? "primary" : "ghost"}
-        size="sm"
+    <div className={shell}>
+      <button
+        className={`${cell} ${myVote === 1 ? "bg-[color:var(--b-acid)] text-[color:var(--b-acid-ink)]" : "hover:bg-[color:var(--b-acid)]"}`}
         aria-label="Brilliant (upvote)"
         aria-pressed={myVote === 1}
-        onPress={() => void toggle({ annotationId: id, value: 1 })}
+        onClick={() => void toggle({ annotationId: id, value: 1 })}
       >
         ▲
-      </Button>
-      <span
-        className="min-w-6 text-center text-sm tabular-nums text-muted"
-        aria-label={`net score ${net}`}
-      >
-        {net}
-      </span>
-      <Button
-        variant={myVote === -1 ? "danger" : "ghost"}
-        size="sm"
+      </button>
+      <span className={score}>{net}</span>
+      <button
+        className={`${cell} ${myVote === -1 ? "bg-[#ff3b30] text-white" : "hover:bg-[#ff3b30] hover:text-white"}`}
         aria-label="BS (downvote)"
         aria-pressed={myVote === -1}
-        onPress={() => void toggle({ annotationId: id, value: -1 })}
+        onClick={() => void toggle({ annotationId: id, value: -1 })}
       >
         ▼
-      </Button>
+      </button>
     </div>
   );
 }

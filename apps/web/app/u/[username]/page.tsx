@@ -50,17 +50,17 @@ export default async function ProfilePage({
   const { user, annotations, counts } = profile;
 
   return (
-    <main className="flex flex-1 flex-col">
+    <main className="flex min-h-screen flex-1 flex-col bg-[color:var(--b-bg)] text-[color:var(--b-onbg)]">
       <SiteHeader />
       <section className="mx-auto w-full max-w-2xl p-6">
-        <div className="flex items-center gap-4 border-b border-border pb-6">
-          <div className="flex size-16 items-center justify-center border border-border bg-surface-secondary text-xl">
+        <div className="flex items-center gap-4 border-b-[3px] border-[color:var(--b-line)] pb-6">
+          <div className="flex size-16 items-center justify-center border-2 border-[color:var(--b-line)] bg-[color:var(--b-acid)] text-xl font-black text-[color:var(--b-acid-ink)] shadow-[5px_5px_0_0_var(--b-shadow)]">
             {initials(user.displayName)}
           </div>
           <div>
-            <h1 className="text-2xl">{user.displayName}</h1>
-            <p className="text-muted">@{user.username}</p>
-            <p className="text-muted text-sm">
+            <h1 className="font-display text-3xl leading-none tracking-tight">{user.displayName}</h1>
+            <p className="mt-1 font-mono text-[13px] text-[color:var(--b-dim-onbg)]">@{user.username}</p>
+            <p className="font-mono text-[12px] uppercase tracking-wide text-[color:var(--b-dim-onbg)]">
               {counts.followers} followers · {counts.following} following
             </p>
           </div>
@@ -71,7 +71,7 @@ export default async function ProfilePage({
 
         <div className="mt-6 flex flex-col gap-5">
           {annotations.length === 0 ? (
-            <p className="text-muted">No annotations yet.</p>
+            <p className="font-mono text-sm text-[color:var(--b-dim-onbg)]">No annotations yet.</p>
           ) : (
             annotations.map((item) => (
               <AnnotationCard key={item._id} item={item as FeedItem} />

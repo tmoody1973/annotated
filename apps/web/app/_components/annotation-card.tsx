@@ -1,16 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { Avatar, Card } from "@heroui/react";
-import { slugId } from "@annotated/shared";
+import { slugId, formatRelativeTime } from "@annotated/shared";
 import { VoteButtons } from "./vote-buttons";
 
 export interface FeedItem {
   _id: string;
+  publishedAt?: number;
   selectedText?: string;
   commentaryText?: string;
   commentaryAudioTranscript?: string;
   clipUrl: string | null;
+  screenshotUrl?: string | null;
   commentCount: number;
   likeCount: number;
   downCount: number;
@@ -30,115 +31,133 @@ export interface FeedItem {
   } | null;
 }
 
-function initials(name: string): string {
-  return name
-    .split(/\s+/)
-    .map((w) => w[0])
-    .filter(Boolean)
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-}
+type TypeKey = "youtube" | "podcast" | "article";
 
-/** A single feed/profile card: author, the clip or quote, commentary, and the
- *  social row (like, comments, source link). Clicking through goes to /a/[id]. */
+const TYPE_META: Record<TypeKey, { label: string; glyph: string; box: string }> = {
+  youtube: { label: "Clipped · YouTube", glyph: "▶", box: "bg-[#ff3b30] text-white" },
+  podcast: { label: "Podcast", glyph: "♪", box: "bg-[color:var(--b-chrome)] text-[color:var(--b-acid)]" },
+  article: { label: "Highlighted · Article", glyph: "A", box: "bg-[color:var(--b-chrome)] text-[color:var(--b-acid)]" },
+};
+
+/** A single brutalist clip card (Tumblr-style block): hard border, acid offset
+ *  shadow, mono type-label + relative date, type-aware media, notes + vote. */
 export function AnnotationCard({ item }: { item: FeedItem }) {
   const { source, author } = item;
-  const isPodcast = source?.type === "podcast";
+  const type = (source?.type as TypeKey) ?? "article";
+  const meta = TYPE_META[type] ?? TYPE_META.article;
   const isThread = item.threadId != null && (item.clipCount ?? 1) > 1;
   const detailHref =
     isThread && item.threadId
       ? `/t/${slugId(source?.title ?? "thread", item.threadId)}`
       : `/a/${slugId(source?.title ?? "clip", item._id)}`;
+  const age = item.publishedAt ? formatRelativeTime(item.publishedAt) : "";
+  const labelCls = "font-mono text-[11px] font-bold uppercase tracking-[0.14em]";
 
   return (
-    <Card className="w-full">
-      <Card.Header>
-        <div className="flex items-center gap-3">
-          <Avatar size="sm">
-            {!item.isAnonymous && author?.avatarUrl && (
-              <Avatar.Image src={author.avatarUrl} alt={author.displayName} />
-            )}
-            <Avatar.Fallback>
-              {item.isAnonymous ? "?" : initials(author?.displayName ?? "?")}
-            </Avatar.Fallback>
-          </Avatar>
-          <div className="leading-tight">
-            <Card.Title className="text-base">
-              {item.isAnonymous ? (
-                "Anonymous"
-              ) : author ? (
-                <Link href={`/u/${author.username}`} className="hover:underline">
-                  {author.displayName}
-                </Link>
-              ) : (
-                "Unknown"
-              )}
-            </Card.Title>
-            {!item.isAnonymous && author && (
-              <Card.Description>@{author.username}</Card.Description>
-            )}
-          </div>
-        </div>
-      </Card.Header>
+    <article className="mb-6 break-inside-avoid border-[3px] border-[color:var(--b-line)] bg-[color:var(--b-card)] text-[color:var(--b-ink)] shadow-[6px_6px_0_0_var(--b-shadow)]">
+      <div className="flex items-center gap-2.5 px-4 pt-3.5">
+        <span className={`grid size-[22px] flex-none place-items-center text-xs font-black ${meta.box}`}>
+          {meta.glyph}
+        </span>
+        <span className={labelCls}>
+          {meta.label}
+          {source?.siteName ? ` · ${source.siteName}` : ""}
+        </span>
+        <span className={`ml-auto ${labelCls} text-[color:var(--b-dim)]`}>{age}</span>
+      </div>
 
-      <Card.Content className="flex flex-col gap-3">
+      <h2 className="px-4 pb-0.5 pt-2.5 text-[21px] font-extrabold leading-[1.06] tracking-[-0.01em]">
+        <Link href={detailHref} className="hover:bg-[color:var(--b-acid)]">
+          {source?.title ?? "Untitled clip"}
+        </Link>
+      </h2>
+
+      <p className="flex items-center gap-1.5 px-4 pb-3 text-[13px] font-bold text-[color:var(--b-dim)]">
+        clipped by{" "}
+        {item.isAnonymous ? (
+          <span className="text-[color:var(--b-ink)]">Anonymous</span>
+        ) : author ? (
+          <Link href={`/u/${author.username}`} className="text-[color:var(--b-ink)] hover:underline">
+            {author.displayName}
+          </Link>
+        ) : (
+          <span className="text-[color:var(--b-ink)]">Unknown</span>
+        )}
         {isThread && (
           <Link
             href={detailHref}
-            className="inline-flex w-fit items-center gap-1 border border-border bg-accent/10 px-2 py-1 text-sm font-bold hover:bg-accent/20"
+            className="ml-1 border-2 border-[color:var(--b-line)] bg-[color:var(--b-acid)] px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide text-[color:var(--b-acid-ink)]"
           >
             🧵 {item.clipCount} clips
           </Link>
         )}
+      </p>
 
-        {item.clipUrl &&
-          (isPodcast ? (
-            <audio controls src={item.clipUrl} className="w-full" />
-          ) : (
-            <video controls src={item.clipUrl} className="max-h-80 w-full bg-black" />
-          ))}
+      {type === "youtube" && item.clipUrl && (
+        <video controls src={item.clipUrl} className="block w-full border-y-[3px] border-[color:var(--b-line)] bg-black" />
+      )}
 
-        {item.selectedText && (
-          <blockquote className="border-l-4 border-accent pl-3 text-lg">
-            “{item.selectedText}”
-          </blockquote>
-        )}
-
-        {item.commentaryText ? (
-          <p>{item.commentaryText}</p>
-        ) : item.commentaryAudioTranscript ? (
-          <p className="text-muted italic">🎙 “{item.commentaryAudioTranscript}”</p>
-        ) : null}
-
-        {source && (
-          <a
-            href={source.canonicalUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-muted text-sm hover:underline"
-          >
-            ↗ {source.siteName ? `${source.siteName} — ` : ""}
-            {source.title}
-          </a>
-        )}
-      </Card.Content>
-
-      <Card.Footer>
-        <div className="flex w-full items-center gap-2">
-          <VoteButtons
-            annotationId={item._id}
-            upCount={item.likeCount}
-            downCount={item.downCount}
-          />
-          <Link
-            href={detailHref}
-            className="inline-flex items-center gap-1 border border-border px-2 py-1 text-sm hover:bg-surface-secondary"
-          >
-            💬 {item.commentCount}
-          </Link>
+      {type === "podcast" && item.clipUrl && (
+        <div className="border-y-[3px] border-[color:var(--b-line)] bg-[color:var(--b-chrome)] p-3">
+          <audio controls src={item.clipUrl} className="block w-full" />
         </div>
-      </Card.Footer>
-    </Card>
+      )}
+
+      {type === "article" && item.screenshotUrl && (
+        <Link href={detailHref} className="block border-y-[3px] border-[color:var(--b-line)]">
+          {/* eslint-disable-next-line @next/next/no-img-element -- signed Convex storage URL */}
+          <img
+            src={item.screenshotUrl}
+            alt="Screenshot of the source page"
+            className="block max-h-[200px] w-full object-cover object-top"
+          />
+        </Link>
+      )}
+
+      {item.selectedText && (
+        <blockquote className="mx-4 mt-4 border-l-[5px] border-[color:var(--b-acid)] pl-3 text-[17px] font-semibold leading-snug">
+          “{item.selectedText}”
+        </blockquote>
+      )}
+
+      {item.commentaryText ? (
+        <p className="px-4 pt-3 text-[15px] leading-relaxed">{item.commentaryText}</p>
+      ) : item.commentaryAudioTranscript ? (
+        <p className="px-4 pt-3 text-[15px] italic leading-relaxed text-[color:var(--b-dim)]">
+          🎙 “{item.commentaryAudioTranscript}”
+        </p>
+      ) : null}
+
+      {source && (
+        <a
+          href={source.canonicalUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-3 block px-4 font-mono text-[12px] text-[color:var(--b-dim)] hover:text-[color:var(--b-ink)] hover:underline"
+        >
+          ↗ {source.siteName ? `${source.siteName} — ` : ""}
+          {source.title}
+        </a>
+      )}
+
+      <div className="mt-3 flex items-center gap-2 border-t-[3px] border-[color:var(--b-line)] p-3">
+        <Link
+          href={detailHref}
+          className="inline-flex items-center gap-1.5 border-2 border-[color:var(--b-line)] px-2.5 py-1.5 text-[13px] font-extrabold hover:bg-[color:var(--b-acid)]"
+        >
+          💬 {item.commentCount} notes
+        </Link>
+        <VoteButtons annotationId={item._id} upCount={item.likeCount} downCount={item.downCount} />
+        <span className="flex-1" />
+        <a
+          href={source?.canonicalUrl ?? detailHref}
+          className="px-2.5 py-1.5 text-[13px] font-extrabold hover:bg-[color:var(--b-acid)]"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          ⤴ Share
+        </a>
+      </div>
+    </article>
   );
 }

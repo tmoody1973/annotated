@@ -55,6 +55,28 @@ export const currentUser = query({
   },
 });
 
+/**
+ * Up to `limit` suggested accounts for the feed's "people worth following" rail:
+ * most-recent users, excluding the signed-in user. Lightweight — no ranking yet.
+ */
+export const suggestions = query({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    const me = await getCurrentUser(ctx);
+    const limit = Math.min(args.limit ?? 4, 12);
+    const recent = await ctx.db.query("users").order("desc").take(limit + 2);
+    return recent
+      .filter((u) => !me || u._id !== me._id)
+      .slice(0, limit)
+      .map((u) => ({
+        _id: u._id,
+        username: u.username,
+        displayName: u.displayName,
+        avatarUrl: u.avatarUrl,
+      }));
+  },
+});
+
 export const ensureCurrentUser = mutation({
   args: {},
   returns: v.id("users"),

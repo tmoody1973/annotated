@@ -2,13 +2,15 @@
 
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { SignInButton } from "@clerk/nextjs";
-import { Button } from "@heroui/react";
 import { api } from "@annotated/backend/convex/_generated/api";
 import type { Id } from "@annotated/backend/convex/_generated/dataModel";
 
+const BASE =
+  "border-2 border-[color:var(--b-line)] px-3.5 py-1.5 text-[12px] font-black uppercase tracking-wide";
+
 /**
- * Follow/unfollow toggle for a target user. Hidden when the target is the
- * signed-in user themselves; routes signed-out users to sign-in.
+ * Brutalist follow/unfollow toggle. Filled acid when not following, outline when
+ * following. Hidden on your own content; signed-out users route to sign-in.
  */
 export function FollowButton({ targetUserId }: { targetUserId: string }) {
   const { isAuthenticated } = useConvexAuth();
@@ -23,21 +25,25 @@ export function FollowButton({ targetUserId }: { targetUserId: string }) {
   if (!isAuthenticated) {
     return (
       <SignInButton mode="modal">
-        <Button size="sm">Follow</Button>
+        <button className={`${BASE} bg-[color:var(--b-acid)] text-[color:var(--b-acid-ink)]`}>
+          Follow
+        </button>
       </SignInButton>
     );
   }
 
-  // Don't show a follow button on your own content.
   if (me && me._id === targetUserId) return null;
 
   return (
-    <Button
-      size="sm"
-      variant={following ? "outline" : "primary"}
-      onPress={() => void toggle({ targetUserId: id })}
+    <button
+      className={`${BASE} ${
+        following
+          ? "bg-[color:var(--b-card)] text-[color:var(--b-ink)] hover:bg-[#ff3b30] hover:text-white hover:border-[#ff3b30]"
+          : "bg-[color:var(--b-acid)] text-[color:var(--b-acid-ink)]"
+      }`}
+      onClick={() => void toggle({ targetUserId: id })}
     >
       {following ? "Following" : "Follow"}
-    </Button>
+    </button>
   );
 }

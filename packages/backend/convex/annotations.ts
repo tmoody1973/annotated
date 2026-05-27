@@ -22,6 +22,11 @@ async function toFeedItem(ctx: QueryCtx, annotation: Doc<"annotations">) {
   const clipUrl = annotation.clipStorageId
     ? await ctx.storage.getUrl(annotation.clipStorageId)
     : null;
+  // The source-page screenshot (articles) — the feed card's citation visual when
+  // there's no audio/video clip. Not identity-bearing, so shown even if anonymous.
+  const screenshotUrl = annotation.screenshotStorageId
+    ? await ctx.storage.getUrl(annotation.screenshotStorageId)
+    : null;
   // A thread head card carries the count of clips in its thread (badge);
   // standalone clips count as 1.
   const clipCount = annotation.threadId
@@ -41,6 +46,7 @@ async function toFeedItem(ctx: QueryCtx, annotation: Doc<"annotations">) {
     clipStartMs: annotation.clipStartMs,
     clipEndMs: annotation.clipEndMs,
     clipUrl,
+    screenshotUrl,
     commentCount: annotation.commentCount,
     likeCount: annotation.likeCount,
     downCount: annotation.downCount ?? 0,

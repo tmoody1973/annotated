@@ -1,13 +1,19 @@
 import { SiteHeader } from "./_components/site-header";
 import { Feed } from "./_components/feed";
+import { LeftNav } from "./_components/left-nav";
+import { RightRail } from "./_components/right-rail";
 
 export default function Home() {
   return (
-    <main className="flex flex-1 flex-col">
+    <main className="flex min-h-screen flex-1 flex-col">
       <SiteHeader />
-      <section className="mx-auto w-full max-w-2xl p-6">
-        <Feed />
-      </section>
+      <div className="mx-auto grid w-full max-w-[1340px] grid-cols-1 gap-7 px-6 py-7 lg:grid-cols-[210px_minmax(0,1fr)] xl:grid-cols-[210px_minmax(0,1fr)_290px]">
+        <LeftNav />
+        <section className="min-w-0">
+          <Feed />
+        </section>
+        <RightRail />
+      </div>
     </main>
   );
 }

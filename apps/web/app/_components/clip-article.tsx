@@ -2,8 +2,8 @@ import { formatClipTimestamp } from "@annotated/shared";
 
 /**
  * The source screenshot, capped in height and top-anchored so the head of the
- * page shows. Wrapped in a link to the original when the source URL is known
- * (omitted on thread pages), reinforcing "click through to the real thing".
+ * page shows. Linked to the original when the source URL is known (omitted on
+ * thread pages), reinforcing "click through to the real thing".
  */
 function SourceVisual({
   screenshotUrl,
@@ -50,11 +50,14 @@ export interface ClipArticleData {
   } | null;
 }
 
+const label = "font-mono text-[11px] font-bold uppercase tracking-[0.14em]";
+
 /**
- * The brutalism clip card: media (by source type), the quote, text + voice
+ * The brutalist clip card: media (by source type), the quote, text + voice
  * commentary, author, and (optionally) the source attribution. Presentational
  * and server-renderable — shared by the /a/[id] landing and the /t/[id] thread
- * page so a clip looks identical standalone or in a thread.
+ * so a clip looks identical standalone or in a thread. Reads --b-* tokens, so it
+ * flips light/dark with the theme.
  */
 export function ClipArticle({ data }: { data: ClipArticleData }) {
   const isPodcast = data.sourceType === "podcast";
@@ -65,32 +68,23 @@ export function ClipArticle({ data }: { data: ClipArticleData }) {
       : null;
 
   return (
-    <article className="overflow-hidden rounded-[10px] border border-[color:var(--calm-hair)] bg-[color:var(--calm-panel)] shadow-[0_1px_2px_rgba(27,26,23,0.06),0_22px_48px_-28px_rgba(27,26,23,0.22)]">
+    <article className="border-[3px] border-[color:var(--b-line)] bg-[color:var(--b-card)] text-[color:var(--b-ink)] shadow-[8px_8px_0_0_var(--b-shadow)]">
       {!isArticle && (
-        <div className="border-b border-[color:var(--calm-hair)] bg-[color:var(--calm-surface)]">
+        <div className="border-b-[3px] border-[color:var(--b-line)] bg-[color:var(--b-chrome)]">
           {!data.clipUrl ? (
-            <p className="p-8 text-center font-mono text-sm text-[color:var(--calm-ink-3)]">
-              clip unavailable
-            </p>
+            <p className={`p-8 text-center ${label} text-[color:var(--b-acid)]`}>clip unavailable</p>
           ) : isPodcast ? (
             <audio controls src={data.clipUrl} className="block w-full p-4" />
           ) : (
-            <video
-              controls
-              src={data.clipUrl}
-              className="block max-h-[60vh] w-full bg-[#1b1a17]"
-            />
+            <video controls src={data.clipUrl} className="block max-h-[60vh] w-full bg-black" />
           )}
         </div>
       )}
 
       {isArticle && data.screenshotUrl && (
-        <figure className="border-b border-[color:var(--calm-hair)] bg-[color:var(--calm-surface)]">
-          <SourceVisual
-            screenshotUrl={data.screenshotUrl}
-            href={data.source?.canonicalUrl}
-          />
-          <figcaption className="px-5 py-2.5 font-mono text-[11px] font-medium uppercase tracking-widest text-[color:var(--calm-ink-3)]">
+        <figure className="border-b-[3px] border-[color:var(--b-line)]">
+          <SourceVisual screenshotUrl={data.screenshotUrl} href={data.source?.canonicalUrl} />
+          <figcaption className={`border-t-[3px] border-[color:var(--b-line)] bg-[color:var(--b-chrome)] px-5 py-2.5 ${label} text-[color:var(--b-acid)]`}>
             Original — Annotated points at it, doesn&rsquo;t replace it
           </figcaption>
         </figure>
@@ -98,21 +92,21 @@ export function ClipArticle({ data }: { data: ClipArticleData }) {
 
       <div className="p-5 sm:p-6">
         {isArticle && (
-          <span className="inline-block rounded-[6px] border border-[color:var(--calm-accent)] bg-[color:var(--calm-accent-tint)] px-2 py-1 font-mono text-[11px] font-medium uppercase tracking-widest text-[color:var(--calm-accent)]">
+          <span className={`inline-block border-2 border-[color:var(--b-line)] bg-[color:var(--b-acid)] px-2 py-1 ${label} text-[color:var(--b-acid-ink)]`}>
             Highlight
           </span>
         )}
 
         {range && !isArticle && (
-          <span className="inline-block rounded-[6px] border border-[color:var(--calm-hair)] bg-[color:var(--calm-surface)] px-2 py-1 font-mono text-sm font-medium text-[color:var(--calm-ink-2)]">
+          <span className={`inline-block border-2 border-[color:var(--b-line)] px-2 py-1 ${label}`}>
             {range}
           </span>
         )}
 
         {data.selectedText && (
           <blockquote
-            className={`mt-4 border-l-2 border-[color:var(--calm-accent)] pl-5 font-serif leading-snug text-[color:var(--calm-ink)] ${
-              isArticle ? "text-2xl font-medium" : "text-lg"
+            className={`mt-4 border-l-[6px] border-[color:var(--b-acid)] pl-5 font-extrabold leading-[1.12] tracking-[-0.01em] ${
+              isArticle ? "text-[28px]" : "text-[22px]"
             }`}
           >
             “{data.selectedText}”
@@ -120,19 +114,15 @@ export function ClipArticle({ data }: { data: ClipArticleData }) {
         )}
 
         {data.commentaryText && (
-          <p className="mt-4 border-l-2 border-[color:var(--calm-hair)] pl-4 font-serif text-lg leading-relaxed text-[color:var(--calm-ink)]">
-            {data.commentaryText}
-          </p>
+          <p className="mt-5 text-[17px] leading-relaxed">{data.commentaryText}</p>
         )}
 
         {data.commentaryAudioUrl && (
-          <div className="mt-4 border-l-2 border-[color:var(--calm-accent)] pl-4">
-            <p className="mb-2 font-mono text-[11px] font-medium uppercase tracking-widest text-[color:var(--calm-ink-3)]">
-              Voice commentary
-            </p>
+          <div className="mt-5 border-l-[6px] border-[color:var(--b-acid)] pl-4">
+            <p className={`mb-2 ${label} text-[color:var(--b-dim)]`}>Voice commentary</p>
             <audio controls src={data.commentaryAudioUrl} className="w-full" />
             {data.commentaryAudioTranscript && (
-              <p className="mt-2 font-serif text-base italic leading-relaxed text-[color:var(--calm-ink-2)]">
+              <p className="mt-2 text-[15px] italic leading-relaxed text-[color:var(--b-dim)]">
                 “{data.commentaryAudioTranscript}”
               </p>
             )}
@@ -140,25 +130,20 @@ export function ClipArticle({ data }: { data: ClipArticleData }) {
         )}
 
         {data.authorName && (
-          <p className="mt-3 text-sm font-medium uppercase tracking-wide text-[color:var(--calm-ink-2)]">
-            — {data.authorName}
-          </p>
+          <p className={`mt-4 ${label}`}>— {data.authorName}</p>
         )}
 
         {data.source && (
-          <div className="mt-6 border-t border-[color:var(--calm-hair)] pt-4">
-            <p className="text-[11px] font-medium uppercase tracking-widest text-[color:var(--calm-ink-3)]">
-              Clipped from
-              {data.source.siteName ? ` · ${data.source.siteName}` : ""}
+          <div className="mt-6 border-t-[3px] border-[color:var(--b-line)] pt-4">
+            <p className={`${label} text-[color:var(--b-dim)]`}>
+              Clipped from{data.source.siteName ? ` · ${data.source.siteName}` : ""}
             </p>
-            <p className="mt-1 font-medium text-[color:var(--calm-ink)]">
-              {data.source.title}
-            </p>
+            <p className="mt-1 text-[17px] font-extrabold">{data.source.title}</p>
             <a
               href={data.source.canonicalUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-2 inline-flex items-center gap-1 rounded-[7px] border border-[color:var(--calm-hair)] bg-[color:var(--calm-panel)] px-3 py-1.5 text-sm font-medium text-[color:var(--calm-accent)] hover:bg-[color:var(--calm-surface)]"
+              className="mt-3 inline-flex items-center gap-1 border-2 border-[color:var(--b-line)] bg-[color:var(--b-acid)] px-3 py-1.5 text-sm font-black uppercase tracking-wide text-[color:var(--b-acid-ink)]"
             >
               View original ↗
             </a>

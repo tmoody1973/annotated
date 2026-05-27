@@ -1,29 +1,29 @@
 import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
-import { IBM_Plex_Sans, IBM_Plex_Mono, Newsreader } from "next/font/google";
+import { Archivo, Archivo_Black, JetBrains_Mono } from "next/font/google";
 import { ConvexClientProvider } from "./ConvexClientProvider";
 import { Providers } from "./Providers";
 import { SITE_URL } from "./_lib/urls";
 import "./globals.css";
 
-// Type-forward "news-app" pairing: IBM Plex Sans for UI, Newsreader (serif) for
-// quotes + commentary, IBM Plex Mono scoped to timestamps.
-const plexSans = IBM_Plex_Sans({
-  weight: ["400", "500", "600"],
+// Brutalist × Tumblr pairing: Archivo (grotesk) for UI/body, Archivo Black for
+// heavy condensed display headlines, JetBrains Mono for metadata labels.
+const archivo = Archivo({
+  weight: ["500", "600", "700", "800", "900"],
   subsets: ["latin"],
-  variable: "--font-ibm-plex-sans",
+  variable: "--font-archivo",
 });
 
-const newsreader = Newsreader({
-  weight: ["400", "500", "600"],
+const archivoBlack = Archivo_Black({
+  weight: "400",
   subsets: ["latin"],
-  variable: "--font-newsreader",
+  variable: "--font-archivo-black",
 });
 
-const plexMono = IBM_Plex_Mono({
-  weight: ["400", "500"],
+const jetbrainsMono = JetBrains_Mono({
+  weight: ["400", "500", "700"],
   subsets: ["latin"],
-  variable: "--font-ibm-plex-mono",
+  variable: "--font-jetbrains-mono",
 });
 
 export const metadata: Metadata = {
@@ -42,9 +42,9 @@ export default function RootLayout({
       <html
         lang="en"
         suppressHydrationWarning
-        className={`${plexSans.variable} ${newsreader.variable} ${plexMono.variable} brutalism-light h-full antialiased`}
+        className={`${archivo.variable} ${archivoBlack.variable} ${jetbrainsMono.variable} brutalism-light h-full antialiased`}
       >
-        <body className="min-h-full flex flex-col bg-background text-foreground">
+        <body className="min-h-full flex flex-col bg-[color:var(--b-bg)] text-[color:var(--b-onbg)] font-sans">
           <Providers>
             <ConvexClientProvider>{children}</ConvexClientProvider>
           </Providers>

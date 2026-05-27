@@ -8,9 +8,10 @@
 /* Register the type-forward families so font-sans / font-serif / font-mono
    Tailwind utilities resolve to them. */
 @theme inline {
-  --font-sans: var(--font-ibm-plex-sans), system-ui, sans-serif;
+  --font-sans: var(--font-archivo), system-ui, sans-serif;
+  --font-display: var(--font-archivo-black), var(--font-archivo), sans-serif;
   --font-serif: var(--font-newsreader), Georgia, serif;
-  --font-mono: var(--font-ibm-plex-mono), ui-monospace, monospace;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
 }
 
 /* Type-forward "news-app" direction (gap §10): clean sans UI, serif reserved for
@@ -18,11 +19,10 @@
    the theme's font variables at the next/font families (self-hosted). */
 .brutalism-light,
 .brutalism-dark {
-  --brutalism-font-body: var(--font-ibm-plex-sans), system-ui, sans-serif;
-  --brutalism-font-display: var(--font-ibm-plex-sans), system-ui, sans-serif;
-  --font-sans: var(--font-ibm-plex-sans), system-ui, sans-serif;
-  --font-mono: var(--font-ibm-plex-mono), ui-monospace, monospace;
-
+  --brutalism-font-body: var(--font-archivo), system-ui, sans-serif;
+  --brutalism-font-display: var(--font-archivo-black), var(--font-archivo), sans-serif;
+  --font-sans: var(--font-archivo), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
 }
 
 /* Calm the brutalism tokens (gap §10): a restrained blue accent instead of
@@ -48,17 +48,40 @@ html.brutalism-dark :is(h1, h2, h3, h4, h5, h6) {
   font-weight: 600 !important;
 }
 
-/* Calm editorial palette for the landing + thread pages (ink on warm paper,
-   hairline borders, one restrained accent). Mirrors the sidebar prototype. */
+/* Brutalist x Tumblr design system (the live direction). Dark dashboard chrome
+   with light cards that pop; hard borders, offset shadows, sharp corners, one
+   acid accent. The theme toggle flips the page bg + the shadow accent; cards
+   stay light in both modes. --b-onbg is text on the page bg (flips);
+   --b-ink is text on the light cards (constant). */
 :root {
-  --calm-paper: #f3f1ea;
-  --calm-panel: #fdfcf9;
-  --calm-surface: #f6f4ee;
-  --calm-surface-2: #ece9e0;
-  --calm-ink: #1b1a17;
-  --calm-ink-2: #6c6962;
-  --calm-ink-3: #9c988e;
-  --calm-hair: #e4e0d6;
-  --calm-accent: #2f5d8a;
-  --calm-accent-tint: #2f5d8a1f;
+  --b-bg: #f4f1e8;
+  --b-onbg: #0a0a0a;
+  --b-card: #ffffff;
+  --b-ink: #0a0a0a;
+  --b-acid: #e1ff00;
+  --b-acid-ink: #0a0a0a;
+  --b-line: #0a0a0a;
+  --b-dim: #5f5f59;       /* dim on cards (light) — AA on white */
+  --b-dim-onbg: #555049;  /* dim on the page bg — AA on light paper */
+  --b-shadow: #0a0a0a;
+  --b-chrome: #000000;
+}
+html.dark {
+  --b-bg: #0b0b0c;
+  --b-onbg: #fbfbf7;
+  --b-card: #fbfbf7;
+  --b-ink: #0a0a0a;
+  --b-acid: #e1ff00;
+  --b-acid-ink: #0a0a0a;
+  --b-line: #000000;
+  --b-dim: #5f5f59;       /* cards stay light in dark mode, so dim-on-card is constant */
+  --b-dim-onbg: #a9a9a1;  /* dim on the near-black page bg — AA on dark */
+  --b-shadow: #e1ff00;
+  --b-chrome: #000000;
+}
+
+/* Accessibility: a hard acid focus ring on every keyboard-focused control. */
+:where(a, button, input, textarea, select, [tabindex]):focus-visible {
+  outline: 3px solid var(--b-acid);
+  outline-offset: 2px;
 }

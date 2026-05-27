@@ -6,7 +6,7 @@ import { api } from "@annotated/backend/convex/_generated/api";
 import type { Id } from "@annotated/backend/convex/_generated/dataModel";
 
 const fieldClass =
-  "w-full rounded-[7px] border border-[color:var(--calm-hair)] bg-[color:var(--calm-panel)] px-3 py-2 text-sm text-[color:var(--calm-ink)] outline-none focus:border-[color:var(--calm-accent)] disabled:opacity-60";
+  "w-full border-2 border-[color:var(--b-line)] bg-[color:var(--b-card)] px-3 py-2 text-sm text-[color:var(--b-ink)] outline-none focus:border-[color:var(--b-acid)] disabled:opacity-60";
 
 type Status = "idle" | "submitting" | "success" | "error";
 
@@ -49,7 +49,7 @@ export function ClaimButton({ annotationId }: { annotationId: string }) {
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="rounded-[7px] border border-[color:var(--calm-hair)] bg-[color:var(--calm-panel)] px-4 py-2 text-sm font-medium text-[color:var(--calm-ink-2)] hover:bg-[color:var(--calm-surface)]"
+        className="border-2 border-[color:var(--b-line)] bg-[color:var(--b-card)] px-4 py-2 text-sm font-extrabold uppercase tracking-wide text-[color:var(--b-ink)] shadow-[5px_5px_0_0_var(--b-shadow)] transition-transform hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-[color:var(--b-acid)] hover:shadow-[2px_2px_0_0_var(--b-shadow)]"
       >
         File a claim
       </button>
@@ -57,14 +57,14 @@ export function ClaimButton({ annotationId }: { annotationId: string }) {
       {open && (
         <form
           onSubmit={handleSubmit}
-          className="mt-4 rounded-[10px] border border-[color:var(--calm-hair)] bg-[color:var(--calm-panel)] p-5 shadow-[0_1px_2px_rgba(27,26,23,0.06),0_18px_40px_-26px_rgba(27,26,23,0.22)]"
+          className="mt-4 border-[3px] border-[color:var(--b-line)] bg-[color:var(--b-card)] p-5 text-[color:var(--b-ink)] shadow-[6px_6px_0_0_var(--b-shadow)]"
         >
-          <p className="mb-3 text-[11px] font-medium uppercase tracking-widest text-[color:var(--calm-ink-3)]">
+          <p className="mb-3 font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-[color:var(--b-dim)]">
             Report a fair-use issue with this clip
           </p>
 
           {status === "success" ? (
-            <p className="rounded-[7px] border border-[color:var(--calm-accent)] bg-[color:var(--calm-accent-tint)] px-3 py-2 text-sm text-[color:var(--calm-ink)]">
+            <p className="border-2 border-[color:var(--b-line)] bg-[color:var(--b-acid)] px-3 py-2 text-sm font-semibold text-[color:var(--b-acid-ink)]">
               Thanks — your claim was filed. We&apos;ll review it and follow up by email.
             </p>
           ) : (
@@ -96,14 +96,14 @@ export function ClaimButton({ annotationId }: { annotationId: string }) {
                 required
               />
               {status === "error" && (
-                <p className="rounded-[7px] border border-[#9a3b2f] bg-[#9a3b2f12] px-3 py-2 text-sm text-[#9a3b2f]">
+                <p className="border-2 border-[#ff3b30] bg-[#ff3b3014] px-3 py-2 text-sm font-semibold text-[#ff3b30]">
                   {error}
                 </p>
               )}
               <button
                 type="submit"
                 disabled={status === "submitting"}
-                className="self-start rounded-[7px] bg-[color:var(--calm-ink)] px-4 py-2 text-sm font-medium text-[color:var(--calm-panel)] hover:bg-black disabled:opacity-60"
+                className="self-start border-2 border-[color:var(--b-line)] bg-[color:var(--b-acid)] px-4 py-2 text-sm font-black uppercase tracking-wide text-[color:var(--b-acid-ink)] shadow-[4px_4px_0_0_var(--b-shadow)] transition-transform hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_0_var(--b-shadow)] disabled:opacity-60"
               >
                 {status === "submitting" ? "Filing…" : "Submit claim"}
               </button>
