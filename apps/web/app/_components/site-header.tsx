@@ -17,6 +17,10 @@ function useEnsureUser(): void {
 }
 
 /** Brutalist top chrome: black bar, acid-block wordmark, theme toggle, Clerk auth. */
+// Chrome Web Store install link — set NEXT_PUBLIC_EXTENSION_URL once the listing
+// is live to reveal the "Get the extension" CTA; hidden until then.
+const extensionUrl = process.env.NEXT_PUBLIC_EXTENSION_URL;
+
 export function SiteHeader() {
   useEnsureUser();
   const { isAuthenticated } = useConvexAuth();
@@ -32,6 +36,16 @@ export function SiteHeader() {
         >
           Home
         </Link>
+        {extensionUrl && (
+          <a
+            href={extensionUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="border-2 border-[color:var(--b-acid)] px-3 py-1.5 text-[13px] font-extrabold uppercase tracking-wide text-[color:var(--b-acid)] hover:bg-[color:var(--b-acid)] hover:text-[color:var(--b-acid-ink)]"
+          >
+            Get the extension
+          </a>
+        )}
       </nav>
       <div className="ml-auto flex items-center gap-3">
         <ThemeToggle />
