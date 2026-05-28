@@ -1,7 +1,8 @@
 import { convexTest } from "convex-test";
 import { beforeAll, expect, test } from "vitest";
 import schema from "./schema";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
+import type { Id } from "./_generated/dataModel";
 
 const modules = import.meta.glob("./**/*.*s");
 const WORKER_TOKEN = "test-worker-token";
@@ -9,6 +10,18 @@ const WORKER_TOKEN = "test-worker-token";
 beforeAll(() => {
   process.env.WORKER_AUTH_TOKEN = WORKER_TOKEN;
 });
+
+async function oneTopic(t: ReturnType<typeof convexTest>): Promise<Id<"topics">[]> {
+  await t.mutation(internal.topics.seedTopics, {});
+  const id = await t.run(async (ctx) => {
+    const topic = await ctx.db
+      .query("topics")
+      .withIndex("by_slug", (q) => q.eq("slug", "tech"))
+      .first();
+    return topic!._id;
+  });
+  return [id];
+}
 
 const quote = "a quoted passage";
 const articleBase = {
@@ -30,6 +43,7 @@ test("article publish persists a source screenshot and getById projects its URL"
   const annId = await t.mutation(api.testing.publishArticleClipDev, {
     ...articleBase,
     screenshotStorageId,
+    topicIds: await oneTopic(t),
   });
 
   const row = await t.run((ctx) => ctx.db.get(annId));
@@ -44,6 +58,7 @@ test("article publish without a screenshot leaves screenshotUrl null (graceful a
 
   const annId = await t.mutation(api.testing.publishArticleClipDev, {
     ...articleBase,
+    topicIds: await oneTopic(t),
   });
 
   const view = await t.query(api.annotations.getById, { annotationId: annId });

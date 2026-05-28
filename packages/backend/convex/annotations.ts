@@ -10,6 +10,9 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { upsertYoutubeSource } from "./sources";
 import { requireCurrentUser } from "./users";
 
+const MIN_TOPICS = 1;
+const MAX_TOPICS = 3;
+
 /**
  * Shapes an annotation into the feed/profile card view: resolves the clip URL
  * and joins the source attribution + author. Shared by listFeed and listByAuthor.
@@ -100,6 +103,27 @@ export function assertPublishable(input: {
   }
 }
 
+/**
+ * Publish-time topic guard: 1–3 distinct topics, each one a real `topics` row.
+ * The id list arrives from the client, so never trust the count or membership.
+ */
+export async function assertTopics(
+  ctx: MutationCtx,
+  topicIds: Id<"topics">[]
+): Promise<void> {
+  if (topicIds.length < MIN_TOPICS || topicIds.length > MAX_TOPICS) {
+    throw new Error("Pick 1-3 topics");
+  }
+  if (new Set(topicIds).size !== topicIds.length) {
+    throw new Error("Duplicate topic");
+  }
+  for (const id of topicIds) {
+    if (!(await ctx.db.get(id))) {
+      throw new Error("Unknown topic");
+    }
+  }
+}
+
 interface AnnotationInsert {
   authorId: Id<"users">;
   sourceId: Id<"sources">;
@@ -115,6 +139,7 @@ interface AnnotationInsert {
   screenshotStorageId?: Id<"_storage">;
   threadId?: Id<"threads">;
   isAnonymous?: boolean;
+  topicIds?: Id<"topics">[];
 }
 
 /**
@@ -145,7 +170,8 @@ export async function insertAnnotation(
     input.threadId !== undefined
       ? await nextThreadOrder(ctx, input.threadId)
       : undefined;
-  return await ctx.db.insert("annotations", {
+  const publishedAt = Date.now();
+  const annotationId = await ctx.db.insert("annotations", {
     authorId: input.authorId,
     sourceId: input.sourceId,
     clipStorageId: input.clipStorageId,
@@ -162,10 +188,14 @@ export async function insertAnnotation(
     threadOrder,
     isAnonymous: input.isAnonymous,
     isPublic: true,
-    publishedAt: Date.now(),
+    publishedAt,
     commentCount: 0,
     likeCount: 0,
   });
+  for (const topicId of input.topicIds ?? []) {
+    await ctx.db.insert("annotationTopics", { annotationId, topicId, publishedAt });
+  }
+  return annotationId;
 }
 
 /**
@@ -190,11 +220,13 @@ export const createYoutube = mutation({
     commentaryAudioTranscript: v.optional(v.string()),
     isAnonymous: v.optional(v.boolean()),
     threadId: v.optional(v.id("threads")),
+    topicIds: v.array(v.id("topics")),
   },
   returns: v.id("annotations"),
   handler: async (ctx, args) => {
     const user = await requireCurrentUser(ctx);
     assertPublishable(args);
+    await assertTopics(ctx, args.topicIds);
     // A clip may only be appended to a thread the caller owns — the threadId
     // arrives from the client, so never trust it to belong to this author.
     if (args.threadId) {
@@ -216,6 +248,7 @@ export const createYoutube = mutation({
       commentaryAudioTranscript: args.commentaryAudioTranscript,
       isAnonymous: args.isAnonymous,
       threadId: args.threadId,
+      topicIds: args.topicIds,
     });
   },
 });
