@@ -1,4 +1,4 @@
-import { convexTest } from "convex-test";
+import { convexTest, type TestConvex } from "convex-test";
 import { expect, test } from "vitest";
 import schema from "./schema";
 import { api, internal } from "./_generated/api";
@@ -6,11 +6,11 @@ import type { Id } from "./_generated/dataModel";
 
 const modules = import.meta.glob("./**/*.*s");
 
-async function seedClipStorage(t: ReturnType<typeof convexTest>): Promise<Id<"_storage">> {
+async function seedClipStorage(t: TestConvex<typeof schema>): Promise<Id<"_storage">> {
   return await t.run(async (ctx) => ctx.storage.store(new Blob(["clip"])));
 }
 
-async function topicIds(t: ReturnType<typeof convexTest>, slugs: string[]): Promise<Id<"topics">[]> {
+async function topicIds(t: TestConvex<typeof schema>, slugs: string[]): Promise<Id<"topics">[]> {
   await t.mutation(internal.topics.seedTopics, {});
   return await t.run(async (ctx) => {
     const ids: Id<"topics">[] = [];
@@ -54,7 +54,7 @@ test("createYoutube requires 1-3 valid topics and writes join rows", async () =>
   await expect(
     tarik.mutation(api.annotations.createYoutube, {
       ...base,
-      topicIds: [tech, news, science, health],
+      topicIds: [tech!, news!, science!, health!],
     })
   ).rejects.toThrow(/1.?3 topics/);
 
@@ -69,12 +69,12 @@ test("createYoutube requires 1-3 valid topics and writes join rows", async () =>
 
   // Duplicate topic ids rejected.
   await expect(
-    tarik.mutation(api.annotations.createYoutube, { ...base, topicIds: [tech, tech] })
+    tarik.mutation(api.annotations.createYoutube, { ...base, topicIds: [tech!, tech!] })
   ).rejects.toThrow(/Duplicate topic/);
 
   const annotationId = await tarik.mutation(api.annotations.createYoutube, {
     ...base,
-    topicIds: [tech, news],
+    topicIds: [tech!, news!],
   });
   const joins = await t.run(async (ctx) =>
     ctx.db
@@ -83,7 +83,7 @@ test("createYoutube requires 1-3 valid topics and writes join rows", async () =>
       .collect()
   );
   const annotation = await t.run((ctx) => ctx.db.get(annotationId));
-  expect(joins.map((j) => j.topicId).sort()).toEqual([tech, news].sort());
+  expect(joins.map((j) => j.topicId).sort()).toEqual([tech!, news!].sort());
   expect(joins.every((j) => j.publishedAt === annotation?.publishedAt)).toBe(true);
 });
 
@@ -114,7 +114,7 @@ test("listByTopic ranks Hot/Top/New and collapses thread follow-ons", async () =
         likeCount,
         downCount,
       });
-      await ctx.db.insert("annotationTopics", { annotationId: id, topicId: tech, publishedAt });
+      await ctx.db.insert("annotationTopics", { annotationId: id, topicId: tech!, publishedAt });
       return id;
     });
   }

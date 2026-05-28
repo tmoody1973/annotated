@@ -1,4 +1,4 @@
-import { convexTest } from "convex-test";
+import { convexTest, type TestConvex } from "convex-test";
 import { beforeAll, expect, test } from "vitest";
 import schema from "./schema";
 import { api, internal } from "./_generated/api";
@@ -11,7 +11,7 @@ beforeAll(() => {
   process.env.WORKER_AUTH_TOKEN = WORKER_TOKEN;
 });
 
-async function oneTopic(t: ReturnType<typeof convexTest>): Promise<Id<"topics">[]> {
+async function oneTopic(t: TestConvex<typeof schema>): Promise<Id<"topics">[]> {
   await t.mutation(internal.topics.seedTopics, {});
   const id = await t.run(async (ctx) => {
     const topic = await ctx.db

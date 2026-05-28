@@ -1,4 +1,4 @@
-import { convexTest } from "convex-test";
+import { convexTest, type TestConvex } from "convex-test";
 import { expect, test } from "vitest";
 import schema from "./schema";
 import { api, internal } from "./_generated/api";
@@ -6,7 +6,7 @@ import type { Id } from "./_generated/dataModel";
 
 const modules = import.meta.glob("./**/*.*s");
 
-async function oneTopic(t: ReturnType<typeof convexTest>): Promise<Id<"topics">[]> {
+async function oneTopic(t: TestConvex<typeof schema>): Promise<Id<"topics">[]> {
   await t.mutation(internal.topics.seedTopics, {});
   const id = await t.run(async (ctx) => {
     const topic = await ctx.db
@@ -20,7 +20,7 @@ async function oneTopic(t: ReturnType<typeof convexTest>): Promise<Id<"topics">[
 
 /** A throwaway storage blob so the clip-bearing mutation has a real storageId. */
 async function seedClipStorage(
-  t: ReturnType<typeof convexTest>
+  t: TestConvex<typeof schema>
 ): Promise<Id<"_storage">> {
   return await t.run(async (ctx) => ctx.storage.store(new Blob(["clip"])));
 }
