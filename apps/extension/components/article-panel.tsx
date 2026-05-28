@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation } from "convex/react";
-import { makeFunctionReference } from "convex/server";
 import {
   selectArticleHighlight,
   MAX_QUOTE_WORDS,
@@ -14,6 +13,7 @@ import {
   transcodeCommentary,
   type ExtractedArticle,
 } from "../lib/worker-client";
+import { publishArticleAuthed, NotSignedInError } from "../lib/convex-publish";
 import {
   accent,
   danger,
@@ -35,29 +35,6 @@ import { CommentaryComposer } from "./commentary-composer";
 import { AnonymousToggle } from "./anonymous-toggle";
 import { TopicPicker } from "./topic-picker";
 import { useThread } from "../lib/use-thread";
-
-const publishArticleClip = makeFunctionReference<
-  "mutation",
-  {
-    canonicalUrl: string;
-    title: string;
-    siteName?: string;
-    author?: string;
-    selectedText: string;
-    textStart: number;
-    textEnd: number;
-    commentaryText?: string;
-    commentaryAudioStorageId?: string;
-    commentaryAudioTranscript?: string;
-    screenshotStorageId?: string;
-    sourceImageUrl?: string;
-    isAnonymous?: boolean;
-    threadId?: string;
-    topicIds: string[];
-    workerToken: string;
-  },
-  string
->("testing:publishArticleClipDev");
 
 const label = {
   fontFamily: sansStack,
@@ -95,7 +72,6 @@ function readSelectionOffsets(
  * publish to a source-linked landing page. No transcription, no ffmpeg.
  */
 export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
-  const publish = useMutation(publishArticleClip);
   const generateUploadUrl = useMutation(generateUploadUrlRef);
   const thread = useThread();
   const textRef = useRef<HTMLDivElement | null>(null);
@@ -184,7 +160,7 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
         ? await transcodeCommentary(audioBlob)
         : null;
       const screenshotStorageId = await captureSourceScreenshot();
-      const annotationId = await publish({
+      const annotationId = await publishArticleAuthed({
         canonicalUrl: detection.url,
         title: article.title || detection.title,
         ...(article.siteName ? { siteName: article.siteName } : {}),
@@ -200,7 +176,6 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
         isAnonymous,
         threadId: thread.threadId ?? undefined,
         topicIds,
-        workerToken: getWorkerToken(),
       });
       setPublishedId(annotationId);
       setLink(`${getWebUrl()}/a/${annotationId}`);
@@ -208,7 +183,11 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
     } catch (e) {
       publishing.current = false;
       setStatus("error");
-      setError(e instanceof Error ? e.message : "Publish failed");
+      if (e instanceof NotSignedInError) {
+        setError(e.message);
+      } else {
+        setError(e instanceof Error ? e.message : "Publish failed");
+      }
     }
   };
 

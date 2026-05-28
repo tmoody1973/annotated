@@ -1,6 +1,4 @@
 import { useMemo, useRef, useState } from "react";
-import { useMutation } from "convex/react";
-import { makeFunctionReference } from "convex/server";
 import {
   selectClipSpan,
   formatClipTimestamp,
@@ -8,10 +6,10 @@ import {
 } from "@annotated/shared";
 import {
   clipAudio,
-  getWorkerToken,
   getWebUrl,
   transcodeCommentary,
 } from "../lib/worker-client";
+import { publishPodcastAuthed, NotSignedInError } from "../lib/convex-publish";
 import {
   accent,
   accentTint,
@@ -29,25 +27,6 @@ import { CommentaryComposer } from "./commentary-composer";
 import { AnonymousToggle } from "./anonymous-toggle";
 import { TopicPicker } from "./topic-picker";
 import { useThread } from "../lib/use-thread";
-
-const publishPodcastClip = makeFunctionReference<
-  "mutation",
-  {
-    sourceId: string;
-    clipStorageId: string;
-    clipStartMs: number;
-    clipEndMs: number;
-    selectedText: string;
-    commentaryText?: string;
-    commentaryAudioStorageId?: string;
-    commentaryAudioTranscript?: string;
-    isAnonymous?: boolean;
-    threadId?: string;
-    topicIds: string[];
-    workerToken: string;
-  },
-  string
->("testing:publishPodcastClipDev");
 
 interface SpeakerSegment {
   speaker: string | undefined;
@@ -83,7 +62,6 @@ export function TranscriptCanvas({
   mp3Url: string;
   words: TranscriptWord[];
 }) {
-  const publish = useMutation(publishPodcastClip);
   const thread = useThread();
   const [anchor, setAnchor] = useState<number | null>(null);
   const [focus, setFocus] = useState<number | null>(null);
@@ -146,7 +124,7 @@ export function TranscriptCanvas({
         ? await transcodeCommentary(audioBlob)
         : null;
       setPhase("saving");
-      const annotationId = await publish({
+      const annotationId = await publishPodcastAuthed({
         sourceId,
         clipStorageId,
         clipStartMs: selection.clipStartMs,
@@ -158,7 +136,6 @@ export function TranscriptCanvas({
         isAnonymous,
         threadId: thread.threadId ?? undefined,
         topicIds,
-        workerToken: getWorkerToken(),
       });
       setPublishedId(annotationId);
       setLink(`${getWebUrl()}/a/${annotationId}`);
@@ -168,7 +145,11 @@ export function TranscriptCanvas({
       publishing.current = false;
       setStatus("error");
       setPhase(null);
-      setError(e instanceof Error ? e.message : "Publish failed");
+      if (e instanceof NotSignedInError) {
+        setError(e.message);
+      } else {
+        setError(e instanceof Error ? e.message : "Publish failed");
+      }
     }
   };
 
