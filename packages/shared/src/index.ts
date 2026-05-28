@@ -27,3 +27,5 @@ export { formatRelativeTime } from "./relative-time";
 export { parseYoutubeChapters } from "./youtube-chapters";
 export type { Chapter } from "./youtube-chapters";
 export { sliceTranscriptToSpan } from "./youtube-vtt";
+export { rankAnnotations, netScore } from "./rank-annotations";
+export type { Rankable, RankSort } from "./rank-annotations";
