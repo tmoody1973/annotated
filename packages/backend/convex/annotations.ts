@@ -40,6 +40,15 @@ async function toFeedItem(ctx: QueryCtx, annotation: Doc<"annotations">) {
           .collect()
       ).length
     : 1;
+  const topicRows = await ctx.db
+    .query("annotationTopics")
+    .withIndex("by_annotation", (q) => q.eq("annotationId", annotation._id))
+    .collect();
+  const topics = (
+    await Promise.all(topicRows.map((r) => ctx.db.get(r.topicId)))
+  )
+    .filter((t): t is Doc<"topics"> => t !== null)
+    .map((t) => ({ slug: t.slug, name: t.name }));
   return {
     _id: annotation._id,
     publishedAt: annotation.publishedAt,
@@ -55,6 +64,7 @@ async function toFeedItem(ctx: QueryCtx, annotation: Doc<"annotations">) {
     downCount: annotation.downCount ?? 0,
     threadId: annotation.threadId ?? null,
     clipCount,
+    topics,
     isAnonymous,
     source: source
       ? {

@@ -349,3 +349,37 @@ export const startThreadDev = mutation({
     return threadId;
   },
 });
+
+/**
+ * Test-only: (re)assign topics to an existing annotation so launch rooms aren't
+ * empty before the composer flow has tagged content. Token-guarded; idempotent
+ * (clears prior topic rows first). DEBT: a launch-bootstrap helper, not production.
+ */
+export const assignTopicsDev = mutation({
+  args: {
+    annotationId: v.id("annotations"),
+    topicIds: v.array(v.id("topics")),
+    workerToken: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    if (args.workerToken !== process.env.WORKER_AUTH_TOKEN) {
+      throw new Error("Unauthorized");
+    }
+    const annotation = await ctx.db.get(args.annotationId);
+    if (!annotation) throw new Error("Annotation not found");
+    const existing = await ctx.db
+      .query("annotationTopics")
+      .withIndex("by_annotation", (q) => q.eq("annotationId", args.annotationId))
+      .collect();
+    for (const row of existing) await ctx.db.delete(row._id);
+    for (const topicId of args.topicIds) {
+      await ctx.db.insert("annotationTopics", {
+        annotationId: args.annotationId,
+        topicId,
+        publishedAt: annotation.publishedAt ?? Date.now(),
+      });
+    }
+    return null;
+  },
+});
