@@ -368,6 +368,9 @@ export const assignTopicsDev = mutation({
     }
     const annotation = await ctx.db.get(args.annotationId);
     if (!annotation) throw new Error("Annotation not found");
+    // Hold the same 1-3 / valid-topic invariant the publish paths enforce, so
+    // backfill can't seed rows that violate the model.
+    await assertTopics(ctx, args.topicIds);
     const existing = await ctx.db
       .query("annotationTopics")
       .withIndex("by_annotation", (q) => q.eq("annotationId", args.annotationId))
