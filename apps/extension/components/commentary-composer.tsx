@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { formatClipTimestamp } from "@annotated/shared";
 import { useVoiceRecorder, MAX_RECORDING_MS } from "../lib/use-voice-recorder";
-import { accent, monoStack, muted, sansStack, valid } from "../lib/clip-styles";
+import { accent, danger, ink, monoStack, muted, sansStack, valid } from "../lib/clip-styles";
 import { WaveformPreview } from "./waveform-preview";
 
 const labelStyle: React.CSSProperties = {
@@ -60,7 +60,7 @@ export function CommentaryComposer({
           <button
             type="button"
             className="ann-capture ann-press"
-            style={{ ...recordButton, background: accent, color: "#FBFAF7" }}
+            style={{ ...recordButton, background: accent, color: ink, border: `2px solid ${ink}` }}
             onClick={recorder.stop}
           >
             ■ Stop · {formatClipTimestamp(recorder.elapsedMs)} /{" "}
@@ -104,7 +104,7 @@ export function CommentaryComposer({
           </p>
         )}
         {recorder.state === "denied" && recorder.error && (
-          <p style={{ color: accent, fontFamily: sansStack, fontSize: 12, marginTop: 8 }}>
+          <p style={{ color: danger, fontFamily: sansStack, fontSize: 12, marginTop: 8 }}>
             {recorder.error}
           </p>
         )}

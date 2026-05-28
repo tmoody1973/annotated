@@ -1,5 +1,6 @@
 import { useQuery } from "convex/react";
 import { makeFunctionReference } from "convex/server";
+import { accent, ink, muted, sansStack } from "../lib/clip-styles";
 
 interface TopicSummary {
   _id: string;
@@ -36,12 +37,12 @@ export function TopicPicker({
   }
 
   if (topics === undefined) {
-    return <p style={{ fontSize: 12, opacity: 0.6 }}>Loading topics…</p>;
+    return <p style={{ fontSize: 12, color: muted, fontFamily: sansStack }}>Loading topics…</p>;
   }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <label style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em" }}>
+      <label style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.12em", fontFamily: sansStack, color: muted }}>
         Topics (pick 1–3)
       </label>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
@@ -55,15 +56,18 @@ export function TopicPicker({
               onClick={() => toggle(t._id)}
               disabled={atCap}
               style={{
-                border: "2px solid #111",
-                background: active ? "#d9fb06" : "#fff",
-                color: "#111",
-                padding: "3px 7px",
+                border: `2px solid ${ink}`,
+                background: active ? accent : "#fff",
+                color: ink,
+                padding: "3px 8px",
                 fontSize: 11,
-                fontWeight: 700,
+                fontWeight: 800,
                 textTransform: "uppercase",
+                letterSpacing: "0.06em",
+                fontFamily: sansStack,
                 cursor: atCap ? "not-allowed" : "pointer",
                 opacity: atCap ? 0.4 : 1,
+                borderRadius: 0,
               }}
             >
               #{t.name}

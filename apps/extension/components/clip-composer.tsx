@@ -16,7 +16,7 @@ import {
   transcribeYoutube,
 } from "../lib/worker-client";
 import { publishYoutubeAuthed } from "../lib/convex-publish";
-import { accent, danger, hair, ink, muted, monoStack, panel, sansStack, surface, valid } from "../lib/clip-styles";
+import { accent, danger, ink, muted, monoStack, panel, sansStack, surface, valid } from "../lib/clip-styles";
 import { CommentaryComposer } from "./commentary-composer";
 import { AnonymousToggle } from "./anonymous-toggle";
 import { TopicPicker } from "./topic-picker";
@@ -59,13 +59,13 @@ function ChapterList({
     <div style={{ marginBottom: 16 }}>
       <div style={label}>Chapters · tap to set in/out</div>
       <div
-        className="ann-shadow"
         style={{
-          border: `1px solid ${hair}`,
-          borderRadius: 8,
+          border: `2px solid ${ink}`,
+          borderRadius: 0,
           background: surface,
           maxHeight: 168,
           overflowY: "auto",
+          boxShadow: `4px 4px 0 0 ${ink}`,
         }}
       >
         {chapters.map((chapter, index) => (
@@ -82,7 +82,7 @@ function ChapterList({
               gap: 10,
               padding: "9px 11px",
               border: "none",
-              borderTop: index === 0 ? "none" : `1px solid ${hair}`,
+              borderTop: index === 0 ? "none" : `1px solid ${ink}`,
               background: "transparent",
               cursor: "pointer",
               textAlign: "left",
@@ -248,7 +248,7 @@ export function ClipComposer({ videoId }: { videoId: string }) {
   if (status === "done" && annotationId) {
     const publishedId = annotationId;
     return (
-      <section className="ann-shadow" style={{ border: `1px solid ${hair}`, borderRadius: 10, background: panel, padding: 16 }}>
+      <section style={{ border: `2px solid ${ink}`, borderRadius: 0, background: panel, padding: 16, boxShadow: `6px 6px 0 0 ${ink}` }}>
         <div style={{ ...label, color: valid }}>Published</div>
         <a className="ann-link" href={`${getWebUrl()}/a/${publishedId}`} target="_blank" rel="noreferrer">
           View annotation ⟶
@@ -340,7 +340,7 @@ export function ClipComposer({ videoId }: { videoId: string }) {
       )}
 
       {status === "error" && errorMsg && (
-        <p style={{ marginTop: 14, border: `1px solid ${hair}`, borderRadius: 7, background: surface, color: danger, padding: 10, fontSize: 13 }}>
+        <p style={{ marginTop: 14, border: `2px solid ${danger}`, borderRadius: 0, background: surface, color: danger, padding: 10, fontSize: 13 }}>
           {errorMsg}
         </p>
       )}

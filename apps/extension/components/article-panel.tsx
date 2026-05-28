@@ -16,14 +16,13 @@ import {
 import { publishArticleAuthed, NotSignedInError } from "../lib/convex-publish";
 import {
   accent,
+  accentTint,
   danger,
-  hair,
   ink,
   monoStack,
   muted,
   panel,
   sansStack,
-  serifStack,
   valid,
 } from "../lib/clip-styles";
 import {
@@ -260,12 +259,13 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
       <div style={label}>📰 Article detected</div>
       <h2
         style={{
-          fontFamily: serifStack,
-          fontSize: 18,
-          fontWeight: 600,
+          fontFamily: sansStack,
+          fontSize: 16,
+          fontWeight: 900,
           color: ink,
           margin: "8px 0 4px",
           lineHeight: 1.3,
+          letterSpacing: "-0.01em",
         }}
       >
         {article.title}
@@ -287,8 +287,8 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
           marginTop: 8,
           maxHeight: 240,
           overflowY: "auto",
-          border: `1px solid ${hair}`,
-          borderRadius: 7,
+          border: `2px solid ${ink}`,
+          borderRadius: 0,
           background: panel,
           padding: 12,
           lineHeight: 1.6,
@@ -305,11 +305,13 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
           <p
             className="ann-quote"
             style={{
-              fontFamily: serifStack,
-              fontSize: 17,
+              fontFamily: sansStack,
+              fontSize: 14,
+              fontWeight: 600,
               lineHeight: 1.45,
-              borderLeft: `2px solid ${accent}`,
-              paddingLeft: 10,
+              borderLeft: `4px solid ${ink}`,
+              background: accentTint,
+              padding: "8px 10px",
               margin: "10px 0 0",
             }}
           >

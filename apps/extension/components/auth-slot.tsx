@@ -1,6 +1,8 @@
 import { Component, useEffect, useState, type ReactNode } from "react";
 import { ClerkProvider, useUser } from "@clerk/chrome-extension";
-import { accent, muted, sansStack, valid } from "../lib/clip-styles";
+import { accent, sansStack, valid } from "../lib/clip-styles";
+
+const CHROME_TEXT = "#ffffff";
 
 const publishableKey = process.env.PLASMO_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "";
 const syncHost = process.env.PLASMO_PUBLIC_CLERK_SYNC_HOST ?? "";
@@ -15,8 +17,10 @@ function SignInLink() {
       onClick={() => void chrome.tabs.create({ url: `${webUrl}/sign-in` })}
       style={{
         fontFamily: sansStack,
-        fontSize: 12,
-        fontWeight: 600,
+        fontSize: 11,
+        fontWeight: 800,
+        letterSpacing: "0.08em",
+        textTransform: "uppercase",
         color: accent,
         background: "transparent",
         border: "none",
@@ -37,7 +41,7 @@ function AuthStatus() {
   if (!isLoaded || !isSignedIn) return <SignInLink />;
   const name = user.firstName ?? user.username ?? "you";
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: muted }}>
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, color: CHROME_TEXT }}>
       <span style={{ width: 7, height: 7, borderRadius: "50%", background: valid }} />
       {name}
     </span>

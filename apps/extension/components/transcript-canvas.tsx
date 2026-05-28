@@ -14,13 +14,11 @@ import {
   accent,
   accentTint,
   danger,
-  hair,
   ink,
   monoStack,
   muted,
   panel,
   sansStack,
-  serifStack,
   valid,
 } from "../lib/clip-styles";
 import { CommentaryComposer } from "./commentary-composer";
@@ -211,8 +209,8 @@ export function TranscriptCanvas({
           marginTop: 8,
           maxHeight: 260,
           overflowY: "auto",
-          border: `1px solid ${hair}`,
-          borderRadius: 7,
+          border: `2px solid ${ink}`,
+          borderRadius: 0,
           background: panel,
           padding: 12,
           lineHeight: 1.7,
@@ -234,10 +232,8 @@ export function TranscriptCanvas({
                 onClick={() => onWord(index)}
                 style={{
                   cursor: "pointer",
-                  background: isSelected(index) ? accentTint : "transparent",
-                  boxShadow: isSelected(index)
-                    ? `inset 0 -2px 0 ${accent}`
-                    : "none",
+                  background: isSelected(index) ? accent : "transparent",
+                  outline: isSelected(index) ? `1px solid ${ink}` : "none",
                   padding: "0 1px",
                 }}
               >
@@ -260,12 +256,15 @@ export function TranscriptCanvas({
           <p
             className="ann-quote"
             style={{
-              fontFamily: serifStack,
-              fontSize: 16,
+              fontFamily: sansStack,
+              fontSize: 15,
+              fontWeight: 600,
               lineHeight: 1.45,
-              borderLeft: `2px solid ${accent}`,
+              borderLeft: `4px solid ${ink}`,
               paddingLeft: 10,
               margin: "6px 0 0",
+              background: accentTint,
+              padding: "8px 10px",
             }}
           >
             “{selection.quote}”
