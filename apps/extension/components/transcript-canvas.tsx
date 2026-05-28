@@ -27,6 +27,7 @@ import {
 } from "../lib/clip-styles";
 import { CommentaryComposer } from "./commentary-composer";
 import { AnonymousToggle } from "./anonymous-toggle";
+import { TopicPicker } from "./topic-picker";
 import { useThread } from "../lib/use-thread";
 
 const publishPodcastClip = makeFunctionReference<
@@ -42,6 +43,7 @@ const publishPodcastClip = makeFunctionReference<
     commentaryAudioTranscript?: string;
     isAnonymous?: boolean;
     threadId?: string;
+    topicIds: string[];
     workerToken: string;
   },
   string
@@ -87,6 +89,7 @@ export function TranscriptCanvas({
   const [focus, setFocus] = useState<number | null>(null);
   const [take, setTake] = useState("");
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [topicIds, setTopicIds] = useState<string[]>([]);
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [status, setStatus] = useState<"idle" | "publishing" | "error">("idle");
   // The current step of a publish, so the button names what's happening: cutting
@@ -124,6 +127,7 @@ export function TranscriptCanvas({
     selection !== null &&
     selection.withinCap &&
     (take.trim().length > 0 || audioBlob !== null) &&
+    topicIds.length > 0 &&
     status !== "publishing";
 
   const onPublish = async (): Promise<void> => {
@@ -153,6 +157,7 @@ export function TranscriptCanvas({
         commentaryAudioTranscript: commentaryAudio?.transcript ?? undefined,
         isAnonymous,
         threadId: thread.threadId ?? undefined,
+        topicIds,
         workerToken: getWorkerToken(),
       });
       setPublishedId(annotationId);
@@ -176,6 +181,7 @@ export function TranscriptCanvas({
       setFocus(null);
       setTake("");
       setAudioBlob(null);
+      setTopicIds([]);
       setLink(null);
       setPublishedId(null);
       setStatus("idle");
@@ -295,6 +301,10 @@ export function TranscriptCanvas({
         />
       </div>
 
+      <div style={{ marginTop: 10 }}>
+        <TopicPicker selected={topicIds} onChange={setTopicIds} />
+      </div>
+
       <AnonymousToggle
         checked={isAnonymous}
         onChange={setIsAnonymous}
@@ -317,6 +327,10 @@ export function TranscriptCanvas({
             : "Saving annotation…"
           : "Publish clip"}
       </button>
+
+      {topicIds.length === 0 && (
+        <p style={{ marginTop: 6, fontSize: 12, color: muted }}>Pick at least one topic</p>
+      )}
     </section>
   );
 }

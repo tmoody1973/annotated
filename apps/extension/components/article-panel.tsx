@@ -33,6 +33,7 @@ import {
 } from "../lib/screenshot";
 import { CommentaryComposer } from "./commentary-composer";
 import { AnonymousToggle } from "./anonymous-toggle";
+import { TopicPicker } from "./topic-picker";
 import { useThread } from "../lib/use-thread";
 
 const publishArticleClip = makeFunctionReference<
@@ -52,6 +53,7 @@ const publishArticleClip = makeFunctionReference<
     sourceImageUrl?: string;
     isAnonymous?: boolean;
     threadId?: string;
+    topicIds: string[];
     workerToken: string;
   },
   string
@@ -104,6 +106,7 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
   const [highlight, setHighlight] = useState<ArticleHighlight | null>(null);
   const [take, setTake] = useState("");
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [topicIds, setTopicIds] = useState<string[]>([]);
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [status, setStatus] = useState<"idle" | "publishing" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
@@ -168,6 +171,7 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
     highlight !== null &&
     highlight.valid &&
     (take.trim().length > 0 || audioBlob !== null) &&
+    topicIds.length > 0 &&
     status !== "publishing";
 
   const onPublish = async (): Promise<void> => {
@@ -195,6 +199,7 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
         ...(article.imageUrl ? { sourceImageUrl: article.imageUrl } : {}),
         isAnonymous,
         threadId: thread.threadId ?? undefined,
+        topicIds,
         workerToken: getWorkerToken(),
       });
       setPublishedId(annotationId);
@@ -215,6 +220,7 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
       setHighlight(null);
       setTake("");
       setAudioBlob(null);
+      setTopicIds([]);
       setIsAnonymous(false);
       setLink(null);
       setPublishedId(null);
@@ -354,6 +360,10 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
         />
       </div>
 
+      <div style={{ marginTop: 10 }}>
+        <TopicPicker selected={topicIds} onChange={setTopicIds} />
+      </div>
+
       <AnonymousToggle
         checked={isAnonymous}
         onChange={setIsAnonymous}
@@ -372,6 +382,10 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
       >
         {status === "publishing" ? "Publishing…" : "Publish highlight"}
       </button>
+
+      {topicIds.length === 0 && (
+        <p style={{ marginTop: 6, fontSize: 12, color: muted }}>Pick at least one topic</p>
+      )}
     </section>
   );
 }
