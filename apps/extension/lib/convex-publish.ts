@@ -15,6 +15,7 @@ export type YoutubePublishArgs = {
   commentaryAudioTranscript?: string;
   isAnonymous?: boolean;
   threadId?: string;
+  topicIds: string[];
 };
 
 const createYoutube = makeFunctionReference<"mutation", YoutubePublishArgs, string>(

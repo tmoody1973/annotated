@@ -19,6 +19,7 @@ import { publishYoutubeAuthed } from "../lib/convex-publish";
 import { accent, danger, hair, ink, muted, monoStack, panel, sansStack, surface, valid } from "../lib/clip-styles";
 import { CommentaryComposer } from "./commentary-composer";
 import { AnonymousToggle } from "./anonymous-toggle";
+import { TopicPicker } from "./topic-picker";
 import { useThread } from "../lib/use-thread";
 
 type Status = "idle" | "clipping" | "publishing" | "done" | "error";
@@ -139,6 +140,7 @@ export function ClipComposer({ videoId }: { videoId: string }) {
   const [endInput, setEndInput] = useState("");
   const [commentary, setCommentary] = useState("");
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [topicIds, setTopicIds] = useState<string[]>([]);
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [status, setStatus] = useState<Status>("idle");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -219,6 +221,7 @@ export function ClipComposer({ videoId }: { videoId: string }) {
         commentaryAudioTranscript: commentaryAudio?.transcript ?? undefined,
         isAnonymous,
         threadId: thread.threadId ?? undefined,
+        topicIds,
       });
       setAnnotationId(id);
       setStatus("done");
@@ -237,6 +240,7 @@ export function ClipComposer({ videoId }: { videoId: string }) {
     setEndInput("");
     setCommentary("");
     setAudioBlob(null);
+    setTopicIds([]);
     setIsAnonymous(false);
     setAnnotationId(null);
   };
@@ -311,6 +315,10 @@ export function ClipComposer({ videoId }: { videoId: string }) {
         />
       </div>
 
+      <div style={{ marginTop: 16 }}>
+        <TopicPicker selected={topicIds} onChange={setTopicIds} />
+      </div>
+
       <AnonymousToggle
         checked={isAnonymous}
         onChange={setIsAnonymous}
@@ -321,11 +329,15 @@ export function ClipComposer({ videoId }: { videoId: string }) {
         type="button"
         className="ann-publish ann-press ann-shadow"
         style={{ marginTop: 16 }}
-        disabled={!canPublish}
+        disabled={!canPublish || topicIds.length === 0}
         onClick={handlePublish}
       >
         {status === "clipping" ? "Clipping… (~2s)" : status === "publishing" ? "Saving annotation…" : "Publish clip →"}
       </button>
+
+      {topicIds.length === 0 && (
+        <p style={{ marginTop: 8, fontSize: 12, color: muted }}>Pick at least one topic</p>
+      )}
 
       {status === "error" && errorMsg && (
         <p style={{ marginTop: 14, border: `1px solid ${hair}`, borderRadius: 7, background: surface, color: danger, padding: 10, fontSize: 13 }}>
