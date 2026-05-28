@@ -28,10 +28,26 @@ const setFailedRef = makeFunctionReference<
   null
 >("transcripts:setFailed");
 
+const getBySourceRef = makeFunctionReference<
+  "query",
+  { sourceId: string },
+  { status: string } | null
+>("transcripts:getBySource");
+
+const getByYoutubeIdRef = makeFunctionReference<
+  "query",
+  { youtubeVideoId: string },
+  { _id: string } | null
+>("sources:getByYoutubeId");
+
 export interface TranscriptWriter {
-  createProcessing(sourceId: string): Promise<string>;
+  createProcessing(sourceId: string, provider?: Provider): Promise<string>;
   markReady(transcriptId: string, words: TranscriptWord[]): Promise<void>;
   markFailed(transcriptId: string): Promise<void>;
+  /** True if a transcript row already exists for this source (any provider). */
+  hasTranscript(sourceId: string): Promise<boolean>;
+  /** Resolves the source id for a YouTube video, or null if no source exists yet. */
+  resolveYoutubeSourceId(videoId: string): Promise<string | null>;
 }
 
 /**
@@ -45,10 +61,13 @@ export function createTranscriptWriter(
   const client = new ConvexHttpClient(convexUrl);
 
   return {
-    async createProcessing(sourceId: string): Promise<string> {
+    async createProcessing(
+      sourceId: string,
+      provider: Provider = "deepgram"
+    ): Promise<string> {
       return await client.mutation(createRef, {
         sourceId,
-        provider: "deepgram",
+        provider,
         workerToken,
       });
     },
@@ -65,6 +84,18 @@ export function createTranscriptWriter(
 
     async markFailed(transcriptId: string): Promise<void> {
       await client.mutation(setFailedRef, { transcriptId, workerToken });
+    },
+
+    async hasTranscript(sourceId: string): Promise<boolean> {
+      const existing = await client.query(getBySourceRef, { sourceId });
+      return existing !== null;
+    },
+
+    async resolveYoutubeSourceId(videoId: string): Promise<string | null> {
+      const source = await client.query(getByYoutubeIdRef, {
+        youtubeVideoId: videoId,
+      });
+      return source?._id ?? null;
     },
   };
 }

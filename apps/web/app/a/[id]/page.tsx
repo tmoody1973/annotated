@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import { ConvexHttpClient } from "convex/browser";
 import { makeFunctionReference } from "convex/server";
-import { slugId, splitSlugId } from "@annotated/shared";
+import { slugId, splitSlugId, sliceTranscriptToSpan } from "@annotated/shared";
 import { ClaimButton } from "./claim-button";
 import { VoteButtons } from "../../_components/vote-buttons";
 import { FollowButton } from "../../_components/follow-button";
@@ -13,6 +13,7 @@ import { absoluteUrl, clipPath, threadPath } from "../../_lib/urls";
 
 interface AnnotationView {
   _id: string;
+  sourceId: string;
   commentaryText?: string;
   commentaryAudioUrl?: string | null;
   commentaryAudioTranscript?: string;
@@ -43,7 +44,43 @@ const getById = makeFunctionReference<
   AnnotationView | null
 >("annotations:getById");
 
+const getTranscriptBySource = makeFunctionReference<
+  "query",
+  { sourceId: string },
+  { wordsJson?: string } | null
+>("transcripts:getBySource");
+
 const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
+
+/**
+ * Builds the clip-window transcript for a YouTube clip: loads the source's
+ * stored words (youtube-vtt), slices to [startMs, endMs], and joins them. Returns
+ * undefined when there's no transcript yet — the accordion simply won't render.
+ */
+async function fetchClipTranscript(
+  sourceId: string,
+  startMs: number,
+  endMs: number
+): Promise<string | undefined> {
+  if (!convexUrl) return undefined;
+  try {
+    const client = new ConvexHttpClient(convexUrl);
+    const row = await client.query(getTranscriptBySource, { sourceId });
+    if (!row?.wordsJson) return undefined;
+    const words = JSON.parse(row.wordsJson) as {
+      word: string;
+      startMs: number;
+      endMs: number;
+    }[];
+    const text = sliceTranscriptToSpan(words, startMs, endMs)
+      .map((w) => w.word)
+      .join(" ")
+      .trim();
+    return text.length > 0 ? text : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 async function fetchAnnotation(id: string): Promise<AnnotationView | null> {
   if (!convexUrl) {
@@ -107,6 +144,19 @@ export default async function AnnotationPage({
     permanentRedirect(clipPath(annotation.source?.title ?? "clip", annotation._id));
   }
 
+  // YouTube clips show the spoken transcript for the clip window (best-effort —
+  // backfilled at publish, absent if captions were unavailable or still pending).
+  const clipTranscript =
+    annotation.source?.type === "youtube" &&
+    annotation.clipStartMs != null &&
+    annotation.clipEndMs != null
+      ? await fetchClipTranscript(
+          annotation.sourceId,
+          annotation.clipStartMs,
+          annotation.clipEndMs
+        )
+      : undefined;
+
   // Structured data: the commentary is the original work; it cites the source.
   const jsonLd = {
     "@context": "https://schema.org",
@@ -147,6 +197,7 @@ export default async function AnnotationPage({
             commentaryText: annotation.commentaryText,
             commentaryAudioUrl: annotation.commentaryAudioUrl,
             commentaryAudioTranscript: annotation.commentaryAudioTranscript,
+            clipTranscript,
             clipStartMs: annotation.clipStartMs,
             clipEndMs: annotation.clipEndMs,
             clipUrl: annotation.clipUrl,

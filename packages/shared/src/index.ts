@@ -26,3 +26,4 @@ export { computeWaveformPeaks } from "./waveform-peaks";
 export { formatRelativeTime } from "./relative-time";
 export { parseYoutubeChapters } from "./youtube-chapters";
 export type { Chapter } from "./youtube-chapters";
+export { sliceTranscriptToSpan } from "./youtube-vtt";

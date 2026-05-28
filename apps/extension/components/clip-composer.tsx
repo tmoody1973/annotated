@@ -13,6 +13,7 @@ import {
   fetchYoutubeChapters,
   getWebUrl,
   transcodeCommentary,
+  transcribeYoutube,
 } from "../lib/worker-client";
 import { publishYoutubeAuthed } from "../lib/convex-publish";
 import { accent, danger, hair, ink, muted, monoStack, panel, sansStack, surface, valid } from "../lib/clip-styles";
@@ -221,6 +222,9 @@ export function ClipComposer({ videoId }: { videoId: string }) {
       });
       setAnnotationId(id);
       setStatus("done");
+      // Fire-and-forget: backfill the video's transcript once per source so the
+      // landing page can show the clip-window accordion. Never blocks publish.
+      void transcribeYoutube(videoId);
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : "Publish failed");
       setStatus("error");

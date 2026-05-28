@@ -34,6 +34,8 @@ export interface ClipArticleData {
   commentaryText?: string;
   commentaryAudioUrl?: string | null;
   commentaryAudioTranscript?: string;
+  // The transcript text for the clip window (youtube-vtt), shown in an accordion.
+  clipTranscript?: string;
   clipStartMs?: number;
   clipEndMs?: number;
   clipUrl: string | null;
@@ -132,6 +134,17 @@ export function ClipArticle({ data }: { data: ClipArticleData }) {
               </p>
             )}
           </div>
+        )}
+
+        {data.clipTranscript && (
+          <details className="mt-5 border-2 border-[color:var(--b-line)]">
+            <summary className={`cursor-pointer select-none bg-[color:var(--b-chrome)] px-4 py-2.5 ${label} text-[color:var(--b-acid)]`}>
+              Transcript
+            </summary>
+            <p className="border-t-2 border-[color:var(--b-line)] px-4 py-3 text-[15px] leading-relaxed text-[color:var(--b-ink)]">
+              {data.clipTranscript}
+            </p>
+          </details>
         )}
 
         {data.authorName && (

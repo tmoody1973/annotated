@@ -227,6 +227,28 @@ export async function fetchYoutubeChapters(videoId: string): Promise<Chapter[]> 
   return parseYoutubeChapters(body.chapters);
 }
 
+/**
+ * Fire-and-forget: asks the worker to fetch + store this video's captions as a
+ * youtube-vtt transcript (idempotent per source, resolved server-side from the
+ * videoId). Best-effort — a failure must never affect the publish, so this
+ * never throws. Called once after a YouTube clip is published.
+ */
+export async function transcribeYoutube(videoId: string): Promise<void> {
+  if (!workerUrl || !workerToken) return;
+  try {
+    await fetch(`${workerUrl}/transcribe-youtube`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${workerToken}`,
+      },
+      body: JSON.stringify({ videoId }),
+    });
+  } catch {
+    // Transcript is an enhancement; swallow.
+  }
+}
+
 /** The dev worker token, passed to the token-guarded publish mutation. */
 export function getWorkerToken(): string {
   if (!workerToken) {
