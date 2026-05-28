@@ -31,6 +31,7 @@ export interface FeedItem {
     displayName: string;
     avatarUrl?: string;
   } | null;
+  topics?: { slug: string; name: string }[];
 }
 
 type TypeKey = "youtube" | "podcast" | "article";
@@ -125,6 +126,20 @@ export function AnnotationCard({ item }: { item: FeedItem }) {
           🎙 “{item.commentaryAudioTranscript}”
         </p>
       ) : null}
+
+      {item.topics && item.topics.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 px-4 pt-3">
+          {item.topics.map((t) => (
+            <Link
+              key={t.slug}
+              href={`/topics/${t.slug}`}
+              className="border-2 border-[color:var(--b-line)] bg-[color:var(--b-card)] px-1.5 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wide text-[color:var(--b-ink)] hover:bg-[color:var(--b-acid)]"
+            >
+              #{t.name}
+            </Link>
+          ))}
+        </div>
+      )}
 
       {source && (
         <a

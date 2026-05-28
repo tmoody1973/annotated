@@ -19,3 +19,8 @@ export function threadPath(title: string, id: string): string {
 export function absoluteUrl(path: string): string {
   return `${SITE_URL}${path.startsWith("/") ? path : `/${path}`}`;
 }
+
+/** Canonical path for a topic feed page: /topics/[slug]. */
+export function topicPath(slug: string): string {
+  return `/topics/${slug}`;
+}
