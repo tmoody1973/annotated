@@ -67,6 +67,11 @@ test("createYoutube requires 1-3 valid topics and writes join rows", async () =>
     tarik.mutation(api.annotations.createYoutube, { ...base, topicIds: [fakeTopicId] })
   ).rejects.toThrow(/Unknown topic/);
 
+  // Duplicate topic ids rejected.
+  await expect(
+    tarik.mutation(api.annotations.createYoutube, { ...base, topicIds: [tech, tech] })
+  ).rejects.toThrow(/Duplicate topic/);
+
   const annotationId = await tarik.mutation(api.annotations.createYoutube, {
     ...base,
     topicIds: [tech, news],
