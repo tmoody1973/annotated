@@ -7,9 +7,12 @@ import {
   type QueryCtx,
 } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
-import { upsertYoutubeSource } from "./sources";
+import { upsertArticleSource, upsertYoutubeSource } from "./sources";
 import { requireCurrentUser } from "./users";
-import { rankAnnotations } from "@annotated/shared";
+import { countWords, MAX_QUOTE_WORDS, rankAnnotations } from "@annotated/shared";
+
+/** An article highlight is an excerpt — a few paragraphs at most, not a reprint. */
+const MAX_HIGHLIGHT_CHARS = 2000;
 
 const MIN_TOPICS = 1;
 const MAX_TOPICS = 3;
@@ -257,6 +260,148 @@ export const createYoutube = mutation({
       commentaryText: args.commentaryText,
       commentaryAudioStorageId: args.commentaryAudioStorageId,
       commentaryAudioTranscript: args.commentaryAudioTranscript,
+      isAnonymous: args.isAnonymous,
+      threadId: args.threadId,
+      topicIds: args.topicIds,
+    });
+  },
+});
+
+/**
+ * Publishes a podcast clip annotation as the signed-in user. The source row is
+ * identified by the `sourceId` created during the podcast-resolution step
+ * (Step 6). Validates that the source is actually a podcast, that the transcript
+ * quote is non-empty, and that the clip span + commentary meet the publish
+ * invariants. Author is derived from the Clerk identity — never accepted as an
+ * argument.
+ */
+export const createPodcast = mutation({
+  args: {
+    sourceId: v.id("sources"),
+    clipStorageId: v.id("_storage"),
+    clipStartMs: v.number(),
+    clipEndMs: v.number(),
+    selectedText: v.string(),
+    commentaryText: v.optional(v.string()),
+    commentaryAudioStorageId: v.optional(v.id("_storage")),
+    commentaryAudioTranscript: v.optional(v.string()),
+    isAnonymous: v.optional(v.boolean()),
+    threadId: v.optional(v.id("threads")),
+    topicIds: v.array(v.id("topics")),
+  },
+  returns: v.id("annotations"),
+  handler: async (ctx, args) => {
+    const user = await requireCurrentUser(ctx);
+    const source = await ctx.db.get(args.sourceId);
+    if (!source || source.type !== "podcast") {
+      throw new Error("Source is not a podcast");
+    }
+    if (args.selectedText.trim().length === 0) {
+      throw new Error("A transcript quote is required");
+    }
+    assertPublishable(args);
+    await assertTopics(ctx, args.topicIds);
+    if (args.threadId) {
+      const thread = await ctx.db.get(args.threadId);
+      if (!thread || thread.authorId !== user._id) {
+        throw new Error("Cannot append to a thread you do not own");
+      }
+    }
+    return await insertAnnotation(ctx, {
+      authorId: user._id,
+      sourceId: args.sourceId,
+      clipStorageId: args.clipStorageId,
+      clipStartMs: args.clipStartMs,
+      clipEndMs: args.clipEndMs,
+      selectedText: args.selectedText,
+      commentaryText: args.commentaryText,
+      commentaryAudioStorageId: args.commentaryAudioStorageId,
+      commentaryAudioTranscript: args.commentaryAudioTranscript,
+      isAnonymous: args.isAnonymous,
+      threadId: args.threadId,
+      topicIds: args.topicIds,
+    });
+  },
+});
+
+/**
+ * Publishes an article clip annotation as the signed-in user. An article has
+ * no media clip — the "clip" is the highlighted quote (`selectedText` +
+ * char offsets) plus commentary. Does NOT call `assertPublishable` (which
+ * assumes an audio/video span); instead validates the quote, offsets, and
+ * commentary directly. Upserts the article source by canonical URL. Author is
+ * derived from the Clerk identity — never accepted as an argument.
+ */
+export const createArticle = mutation({
+  args: {
+    canonicalUrl: v.string(),
+    title: v.string(),
+    siteName: v.optional(v.string()),
+    author: v.optional(v.string()),
+    sourceImageUrl: v.optional(v.string()),
+    selectedText: v.string(),
+    textStart: v.number(),
+    textEnd: v.number(),
+    commentaryText: v.optional(v.string()),
+    commentaryAudioStorageId: v.optional(v.id("_storage")),
+    commentaryAudioTranscript: v.optional(v.string()),
+    screenshotStorageId: v.optional(v.id("_storage")),
+    isAnonymous: v.optional(v.boolean()),
+    threadId: v.optional(v.id("threads")),
+    topicIds: v.array(v.id("topics")),
+  },
+  returns: v.id("annotations"),
+  handler: async (ctx, args) => {
+    const user = await requireCurrentUser(ctx);
+    if (args.selectedText.trim().length === 0) {
+      throw new Error("A highlighted quote is required");
+    }
+    const hasCommentaryText = (args.commentaryText ?? "").trim().length > 0;
+    if (!hasCommentaryText && args.commentaryAudioStorageId === undefined) {
+      throw new Error("Commentary is required (text or recorded audio)");
+    }
+    if (
+      !Number.isInteger(args.textStart) ||
+      !Number.isInteger(args.textEnd) ||
+      args.textStart < 0 ||
+      args.selectedText.length !== args.textEnd - args.textStart
+    ) {
+      throw new Error("Highlight offsets are invalid");
+    }
+    if (args.selectedText.length > MAX_HIGHLIGHT_CHARS) {
+      throw new Error(
+        `Highlight exceeds the ${MAX_HIGHLIGHT_CHARS}-character excerpt limit`
+      );
+    }
+    if (countWords(args.selectedText) > MAX_QUOTE_WORDS) {
+      throw new Error(
+        `Highlight exceeds the ${MAX_QUOTE_WORDS}-word fair-use limit`
+      );
+    }
+    await assertTopics(ctx, args.topicIds);
+    if (args.threadId) {
+      const thread = await ctx.db.get(args.threadId);
+      if (!thread || thread.authorId !== user._id) {
+        throw new Error("Cannot append to a thread you do not own");
+      }
+    }
+    const sourceId = await upsertArticleSource(ctx, {
+      canonicalUrl: args.canonicalUrl,
+      title: args.title,
+      siteName: args.siteName,
+      author: args.author,
+      imageUrl: args.sourceImageUrl,
+    });
+    return await insertAnnotation(ctx, {
+      authorId: user._id,
+      sourceId,
+      selectedText: args.selectedText,
+      textStart: args.textStart,
+      textEnd: args.textEnd,
+      commentaryText: args.commentaryText,
+      commentaryAudioStorageId: args.commentaryAudioStorageId,
+      commentaryAudioTranscript: args.commentaryAudioTranscript,
+      screenshotStorageId: args.screenshotStorageId,
       isAnonymous: args.isAnonymous,
       threadId: args.threadId,
       topicIds: args.topicIds,
