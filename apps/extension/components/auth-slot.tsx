@@ -1,4 +1,4 @@
-import { Component, type ReactNode } from "react";
+import { Component, useEffect, useState, type ReactNode } from "react";
 import { ClerkProvider, useUser } from "@clerk/chrome-extension";
 import { accent, muted, sansStack, valid } from "../lib/clip-styles";
 
@@ -64,9 +64,27 @@ class AuthErrorBoundary extends Component<{ children: ReactNode }, { failed: boo
  * would reintroduce the Convex↔Clerk coupling carefully.
  */
 export function AuthSlot() {
+  // Clerk's syncHost handshake only runs when this provider first mounts, and the
+  // SDK does not auto-refresh auth state in a side panel. So when the panel regains
+  // focus (e.g. the user just signed in on the web tab and switched back), remount
+  // the provider via a changing `key` to force a fresh handshake — this removes the
+  // documented "close and reopen the side panel" step.
+  const [syncKey, setSyncKey] = useState(0);
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState === "visible") setSyncKey((k) => k + 1);
+    };
+    document.addEventListener("visibilitychange", refresh);
+    window.addEventListener("focus", refresh);
+    return () => {
+      document.removeEventListener("visibilitychange", refresh);
+      window.removeEventListener("focus", refresh);
+    };
+  }, []);
+
   if (!publishableKey || !syncHost) return <SignInLink />;
   return (
-    <AuthErrorBoundary>
+    <AuthErrorBoundary key={syncKey}>
       <ClerkProvider
         publishableKey={publishableKey}
         syncHost={syncHost}
