@@ -9,6 +9,7 @@ import {
 import type { Doc, Id } from "./_generated/dataModel";
 import { upsertYoutubeSource } from "./sources";
 import { requireCurrentUser } from "./users";
+import { rankAnnotations } from "@annotated/shared";
 
 const MIN_TOPICS = 1;
 const MAX_TOPICS = 3;
@@ -300,6 +301,50 @@ export const listByAuthor = query({
     // author's own public profile either.
     const published = rows.filter((a) => a.isPublic && !a.isAnonymous);
     return await Promise.all(published.map((a) => toFeedItem(ctx, a)));
+  },
+});
+
+const TOPIC_CANDIDATE_CAP = 1000;
+const TOPIC_PAGE_SIZE = 50;
+
+/**
+ * A topic room: published clips carrying `slug`, ranked by `sort`. Candidates are
+ * the most-recent rows from the `by_topic` index (capped), thread follow-ons are
+ * collapsed to their head, then the pure ranker orders them. Null when the slug
+ * is unknown so the page can 404.
+ */
+export const listByTopic = query({
+  args: {
+    slug: v.string(),
+    sort: v.union(v.literal("hot"), v.literal("top"), v.literal("new")),
+  },
+  handler: async (ctx, args) => {
+    const topic = await ctx.db
+      .query("topics")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .first();
+    if (!topic) return null;
+
+    const joins = await ctx.db
+      .query("annotationTopics")
+      .withIndex("by_topic", (q) => q.eq("topicId", topic._id))
+      .order("desc")
+      .take(TOPIC_CANDIDATE_CAP);
+
+    const annotations = (
+      await Promise.all(joins.map((j) => ctx.db.get(j.annotationId)))
+    ).filter(
+      (a): a is Doc<"annotations"> =>
+        a !== null &&
+        a.isPublic &&
+        (a.threadId === undefined || a.threadOrder === 0)
+    );
+
+    const ranked = rankAnnotations(annotations, args.sort).slice(0, TOPIC_PAGE_SIZE);
+    return {
+      topic: { slug: topic.slug, name: topic.name, description: topic.description },
+      items: await Promise.all(ranked.map((a) => toFeedItem(ctx, a))),
+    };
   },
 });
 
