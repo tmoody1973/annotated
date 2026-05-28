@@ -199,4 +199,22 @@ export default defineSchema({
   })
     .index("by_annotation", ["annotationId"])
     .index("by_status", ["status"]),
+
+  // Canonical, curated topics. Addressable rooms (/topics/[slug]).
+  topics: defineTable({
+    slug: v.string(),
+    name: v.string(),
+    description: v.optional(v.string()),
+    sortOrder: v.optional(v.number()),
+  }).index("by_slug", ["slug"]),
+
+  // Annotation↔topic join. `publishedAt` is denormalized from the annotation
+  // (immutable, set once) so a topic room reads its most-recent candidates by index.
+  annotationTopics: defineTable({
+    annotationId: v.id("annotations"),
+    topicId: v.id("topics"),
+    publishedAt: v.number(),
+  })
+    .index("by_topic", ["topicId", "publishedAt"])
+    .index("by_annotation", ["annotationId"]),
 });
