@@ -2,6 +2,7 @@ import Link from "next/link";
 
 const items = [
   { label: "Latest", glyph: "◷", href: "/", active: true },
+  { label: "Topics", glyph: "#", href: "/topics", active: false },
   { label: "For You", glyph: "✦", href: "/", active: false },
 ];
 
