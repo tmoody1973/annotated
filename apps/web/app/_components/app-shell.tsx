@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { SiteHeader } from "./site-header";
 import { LeftNav } from "./left-nav";
 import { RightRail } from "./right-rail";
+import { ExtensionToast } from "./extension-toast";
 
 /**
  * The persistent app shell: sticky site header + a symmetric three-column grid
@@ -29,6 +30,7 @@ export function AppShell({
         </section>
         <RightRail />
       </div>
+      <ExtensionToast />
     </main>
   );
 }

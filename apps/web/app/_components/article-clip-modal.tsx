@@ -15,6 +15,7 @@ import {
 import { TopicPicker } from "./topic-picker";
 import { ExtensionCta } from "./extension-cta";
 import { useBrowserInfo } from "../_lib/use-browser-info";
+import { markManualPublish } from "../_lib/extension-nudge";
 
 const BROWSER_NAMES: Record<BrowserKind, string> = {
   chrome: "Chrome",
@@ -181,6 +182,7 @@ export function ArticleClipModal({ onClose }: { onClose: () => void }) {
         commentaryText: commentary.trim(),
         topicIds,
       });
+      markManualPublish();
       router.push(`/a/${slugId(article.title, id)}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Publish failed");

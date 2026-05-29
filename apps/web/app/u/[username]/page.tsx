@@ -6,6 +6,7 @@ import { AppShell } from "../../_components/app-shell";
 import { AnnotationCard, type FeedItem } from "../../_components/annotation-card";
 import { FollowButton } from "../../_components/follow-button";
 import { AuthorAvatar, VerifiedBadge } from "../../_components/author-avatar";
+import { ProfileEmptyState } from "../../_components/profile-empty-state";
 import { absoluteUrl } from "../../_lib/urls";
 
 const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
@@ -104,7 +105,7 @@ export default async function ProfilePage({
 
         <div className="mt-6 flex flex-col gap-5">
           {annotations.length === 0 ? (
-            <p className="font-mono text-sm text-[color:var(--b-dim-onbg)]">No annotations yet.</p>
+            <ProfileEmptyState username={user.username} />
           ) : (
             annotations.map((item) => (
               <AnnotationCard key={item._id} item={item as FeedItem} />
