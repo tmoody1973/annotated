@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ConvexHttpClient } from "convex/browser";
 import { makeFunctionReference } from "convex/server";
-import { SiteHeader } from "../../_components/site-header";
+import { AppShell } from "../../_components/app-shell";
 import { TopicFeed } from "../../_components/topic-feed";
 
 interface TopicSummary {
@@ -49,21 +49,18 @@ export default async function TopicPage({
   if (!topic) notFound();
 
   return (
-    <main className="flex min-h-screen flex-1 flex-col">
-      <SiteHeader />
-      <div className="mx-auto w-full max-w-[800px] px-6 py-8">
-        <header className="mb-6">
-          <h1 className="font-display text-3xl tracking-tight text-[color:var(--b-onbg)]">
-            #{topic.name}
-          </h1>
-          {topic.description && (
-            <p className="mt-2 text-[15px] font-semibold text-[color:var(--b-dim-onbg)]">
-              {topic.description}
-            </p>
-          )}
-        </header>
-        <TopicFeed slug={topic.slug} />
-      </div>
-    </main>
+    <AppShell>
+      <header className="mb-6">
+        <h1 className="font-display text-3xl tracking-tight text-[color:var(--b-onbg)]">
+          #{topic.name}
+        </h1>
+        {topic.description && (
+          <p className="mt-2 text-[15px] font-semibold text-[color:var(--b-dim-onbg)]">
+            {topic.description}
+          </p>
+        )}
+      </header>
+      <TopicFeed slug={topic.slug} />
+    </AppShell>
   );
 }

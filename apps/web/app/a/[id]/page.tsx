@@ -9,6 +9,7 @@ import { VoteButtons } from "../../_components/vote-buttons";
 import { FollowButton } from "../../_components/follow-button";
 import { Comments } from "../../_components/comments";
 import { ClipArticle } from "../../_components/clip-article";
+import { AppShell } from "../../_components/app-shell";
 import { JsonLd } from "../../_components/json-ld";
 import { absoluteUrl, clipPath, threadPath } from "../../_lib/urls";
 
@@ -182,19 +183,9 @@ export default async function AnnotationPage({
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center bg-[color:var(--b-bg)] px-4 py-10 text-[color:var(--b-onbg)]">
+    <AppShell narrow>
       <JsonLd data={jsonLd} />
-      <div className="w-full max-w-2xl">
-        <header className="mb-6 flex items-center justify-between">
-          <a href="/" className="font-display text-lg leading-none tracking-tight">
-            <span className="bg-[color:var(--b-acid)] px-1.5 text-[color:var(--b-acid-ink)]">A</span>NNOTATED
-          </a>
-          <span className="border-2 border-[color:var(--b-line)] bg-[color:var(--b-acid)] px-2.5 py-1 font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-[color:var(--b-acid-ink)]">
-            Clip
-          </span>
-        </header>
-
-        <ClipArticle
+      <ClipArticle
           data={{
             selectedText: annotation.selectedText,
             commentaryText: annotation.commentaryText,
@@ -234,7 +225,6 @@ export default async function AnnotationPage({
         <footer className="mt-8 text-center font-mono text-xs text-[color:var(--b-dim-onbg)]">
           annotated.com
         </footer>
-      </div>
-    </main>
+    </AppShell>
   );
 }

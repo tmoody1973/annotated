@@ -9,6 +9,7 @@ import { FollowButton } from "../../_components/follow-button";
 import { Comments } from "../../_components/comments";
 import { ClipArticle } from "../../_components/clip-article";
 import { SourceByline } from "../../_components/source-byline";
+import { AppShell } from "../../_components/app-shell";
 import { JsonLd } from "../../_components/json-ld";
 import { absoluteUrl, threadPath } from "../../_lib/urls";
 
@@ -129,17 +130,13 @@ export default async function ThreadPage({
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center bg-[color:var(--b-bg)] px-4 py-10 text-[color:var(--b-onbg)]">
+    <AppShell narrow>
       <JsonLd data={jsonLd} />
-      <div className="w-full max-w-2xl">
-        <header className="mb-6 flex items-center justify-between">
-          <a href="/" className="font-display text-lg leading-none tracking-tight">
-            <span className="bg-[color:var(--b-acid)] px-1.5 text-[color:var(--b-acid-ink)]">A</span>NNOTATED
-          </a>
-          <span className="border-2 border-[color:var(--b-line)] bg-[color:var(--b-acid)] px-2.5 py-1 font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-[color:var(--b-acid-ink)]">
-            🧵 {thread.clips.length} clips
-          </span>
-        </header>
+      <div className="mb-4 flex justify-end">
+        <span className="border-2 border-[color:var(--b-line)] bg-[color:var(--b-acid)] px-2.5 py-1 font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-[color:var(--b-acid-ink)]">
+          🧵 {thread.clips.length} clips
+        </span>
+      </div>
 
         {thread.source && (
           <div className="mb-6 border-[3px] border-[color:var(--b-line)] bg-[color:var(--b-card)] p-5 text-[color:var(--b-ink)] shadow-[8px_8px_0_0_var(--b-shadow)]">
@@ -215,7 +212,6 @@ export default async function ThreadPage({
         <footer className="mt-10 text-center font-mono text-xs text-[color:var(--b-dim-onbg)]">
           annotated.com
         </footer>
-      </div>
-    </main>
+    </AppShell>
   );
 }

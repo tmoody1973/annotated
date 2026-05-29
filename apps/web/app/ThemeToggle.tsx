@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
-import { Button } from "@heroui/react";
 
-/** Flips between the brutalism light and dark themes. Renders a stable label
- *  until mounted to avoid a hydration mismatch (next-themes resolves on client). */
+/** Flips between the brutalism light and dark themes. Styled to match the dark
+ *  header chrome (acid outline + acid text) so it stays readable in both themes;
+ *  renders a stable label until mounted to avoid a hydration mismatch. */
 export function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -13,13 +13,13 @@ export function ThemeToggle() {
 
   const isDark = resolvedTheme === "dark";
   return (
-    <Button
-      variant="outline"
-      size="sm"
+    <button
+      type="button"
       aria-label="Toggle light and dark theme"
-      onPress={() => setTheme(isDark ? "light" : "dark")}
+      onClick={() => setTheme(isDark ? "light" : "dark")}
+      className="border-2 border-[color:var(--b-acid)] px-3 py-1.5 text-[13px] font-extrabold uppercase tracking-wide text-[color:var(--b-acid)] hover:bg-[color:var(--b-acid)] hover:text-[color:var(--b-acid-ink)]"
     >
       {mounted ? (isDark ? "Light" : "Dark") : "Theme"}
-    </Button>
+    </button>
   );
 }

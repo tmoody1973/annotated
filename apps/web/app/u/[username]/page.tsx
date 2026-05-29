@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "@annotated/backend/convex/_generated/api";
-import { SiteHeader } from "../../_components/site-header";
+import { AppShell } from "../../_components/app-shell";
 import { AnnotationCard, type FeedItem } from "../../_components/annotation-card";
 import { FollowButton } from "../../_components/follow-button";
 import { AuthorAvatar, VerifiedBadge } from "../../_components/author-avatar";
@@ -50,9 +50,7 @@ export default async function ProfilePage({
   const { user, annotations, counts } = profile;
 
   return (
-    <main className="flex min-h-screen flex-1 flex-col bg-[color:var(--b-bg)] text-[color:var(--b-onbg)]">
-      <SiteHeader />
-      <section className="mx-auto w-full max-w-2xl p-6">
+    <AppShell narrow>
         <div className="border-b-[3px] border-[color:var(--b-line)] pb-6">
           <div className="flex items-center gap-4">
             <span className="inline-block flex-none shadow-[5px_5px_0_0_var(--b-shadow)]">
@@ -113,7 +111,6 @@ export default async function ProfilePage({
             ))
           )}
         </div>
-      </section>
-    </main>
+    </AppShell>
   );
 }

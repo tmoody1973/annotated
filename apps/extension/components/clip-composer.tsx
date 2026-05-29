@@ -12,6 +12,7 @@ import {
   getActiveVideoTitle,
   getActiveVideoChannel,
 } from "../lib/player-time";
+import { ProgressIndicator } from "./progress-indicator";
 import {
   clipYoutube,
   fetchYoutubeChapters,
@@ -147,6 +148,7 @@ export function ClipComposer({ videoId }: { videoId: string }) {
   const [topicIds, setTopicIds] = useState<string[]>([]);
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [status, setStatus] = useState<Status>("idle");
+  const [processingStartedAt, setProcessingStartedAt] = useState<number | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [annotationId, setAnnotationId] = useState<string | null>(null);
   const [captureHint, setCaptureHint] = useState<string | null>(null);
@@ -206,6 +208,7 @@ export function ClipComposer({ videoId }: { videoId: string }) {
   async function handlePublish() {
     if (startMs === null || endMs === null) return;
     setStatus("clipping");
+    setProcessingStartedAt(Date.now());
     setErrorMsg(null);
     try {
       const title = await getActiveVideoTitle();
@@ -339,8 +342,16 @@ export function ClipComposer({ videoId }: { videoId: string }) {
         disabled={!canPublish || topicIds.length === 0}
         onClick={handlePublish}
       >
-        {status === "clipping" ? "Clipping… (~2s)" : status === "publishing" ? "Saving annotation…" : "Publish clip →"}
+        {status === "clipping" ? "Clipping…" : status === "publishing" ? "Saving annotation…" : "Publish clip →"}
       </button>
+
+      {busy && processingStartedAt !== null && (
+        <ProgressIndicator
+          label={status === "publishing" ? "Saving annotation…" : "Processing clip…"}
+          estimateMs={audioBlob ? 9000 : 6000}
+          startedAt={processingStartedAt}
+        />
+      )}
 
       {topicIds.length === 0 && (
         <p style={{ marginTop: 8, fontSize: 12, color: muted }}>Pick at least one topic</p>
