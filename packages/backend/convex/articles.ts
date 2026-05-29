@@ -6,6 +6,7 @@ const extractedArticleValidator = v.object({
   textContent: v.string(),
   byline: v.union(v.string(), v.null()),
   siteName: v.union(v.string(), v.null()),
+  imageUrl: v.union(v.string(), v.null()),
 });
 
 /**
@@ -40,7 +41,8 @@ export const extractArticle = action({
       throw new Error("Couldn't read this article. Please try again in a moment.");
     }
     const body = (await response.json()) as Partial<{
-      title: string; textContent: string; byline: string | null; siteName: string | null;
+      title: string; textContent: string; byline: string | null;
+      siteName: string | null; imageUrl: string | null;
     }>;
     if (typeof body.title !== "string" || typeof body.textContent !== "string") {
       throw new Error("Worker returned an unexpected article response");
@@ -50,6 +52,7 @@ export const extractArticle = action({
       textContent: body.textContent,
       byline: body.byline ?? null,
       siteName: body.siteName ?? null,
+      imageUrl: body.imageUrl ?? null,
     };
   },
 });

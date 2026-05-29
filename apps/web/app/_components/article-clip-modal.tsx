@@ -18,6 +18,7 @@ interface Extracted {
   textContent: string;
   byline: string | null;
   siteName: string | null;
+  imageUrl: string | null;
 }
 
 type CreateArticleArgs = {
@@ -25,6 +26,7 @@ type CreateArticleArgs = {
   title: string;
   siteName?: string;
   author?: string;
+  sourceImageUrl?: string;
   selectedText: string;
   textStart: number;
   textEnd: number;
@@ -105,6 +107,7 @@ export function ArticleClipModal({ onClose }: { onClose: () => void }) {
         title: article.title,
         siteName: article.siteName ?? undefined,
         author: article.byline ?? undefined,
+        sourceImageUrl: article.imageUrl ?? undefined,
         selectedText: highlight.selectedText,
         textStart: highlight.textStart,
         textEnd: highlight.textEnd,
