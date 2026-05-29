@@ -546,6 +546,7 @@ export async function toLandingView(
           id: author._id,
           username: author.username,
           displayName: author.displayName,
+          avatarUrl: author.avatarUrl,
           isVerified: author.isVerified ?? false,
         }
       : null,
