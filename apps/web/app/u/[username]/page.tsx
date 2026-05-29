@@ -5,6 +5,7 @@ import { api } from "@annotated/backend/convex/_generated/api";
 import { SiteHeader } from "../../_components/site-header";
 import { AnnotationCard, type FeedItem } from "../../_components/annotation-card";
 import { FollowButton } from "../../_components/follow-button";
+import { AuthorAvatar } from "../../_components/author-avatar";
 
 const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
 
@@ -18,16 +19,6 @@ async function fetchProfile(username: string) {
     client.query(api.follows.getCounts, { userId: user._id }),
   ]);
   return { user, annotations, counts };
-}
-
-function initials(name: string): string {
-  return name
-    .split(/\s+/)
-    .map((w) => w[0])
-    .filter(Boolean)
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
 }
 
 export async function generateMetadata({
@@ -54,9 +45,7 @@ export default async function ProfilePage({
       <SiteHeader />
       <section className="mx-auto w-full max-w-2xl p-6">
         <div className="flex items-center gap-4 border-b-[3px] border-[color:var(--b-line)] pb-6">
-          <div className="flex size-16 items-center justify-center border-2 border-[color:var(--b-line)] bg-[color:var(--b-acid)] text-xl font-black text-[color:var(--b-acid-ink)] shadow-[5px_5px_0_0_var(--b-shadow)]">
-            {initials(user.displayName)}
-          </div>
+          <AuthorAvatar displayName={user.displayName} avatarUrl={user.avatarUrl} size={64} />
           <div>
             <h1 className="font-display text-3xl leading-none tracking-tight">{user.displayName}</h1>
             <p className="mt-1 font-mono text-[13px] text-[color:var(--b-dim-onbg)]">@{user.username}</p>
