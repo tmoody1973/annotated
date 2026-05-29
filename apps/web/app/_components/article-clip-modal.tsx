@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { makeFunctionReference } from "convex/server";
 import { useAction, useMutation } from "convex/react";
@@ -10,8 +10,60 @@ import {
   parsePodcastUrl,
   slugId,
   type ArticleHighlight,
+  type BrowserKind,
 } from "@annotated/shared";
 import { TopicPicker } from "./topic-picker";
+import { ExtensionCta } from "./extension-cta";
+import { useBrowserInfo } from "../_lib/use-browser-info";
+
+const BROWSER_NAMES: Record<BrowserKind, string> = {
+  chrome: "Chrome",
+  edge: "Edge",
+  firefox: "Firefox",
+  brave: "Brave",
+  safari: "Safari",
+  other: "your browser",
+};
+
+/** Keeps focus inside the dialog, closes on Esc, and restores focus to the
+ *  invoking control on unmount (WCAG modal requirements). */
+function useDialogA11y(onClose: () => void) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    const focusables = () =>
+      ref.current?.querySelectorAll<HTMLElement>(
+        'a[href],button:not([disabled]),input:not([disabled]),textarea:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])'
+      );
+    focusables()?.[0]?.focus();
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        onClose();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const items = focusables();
+      if (!items || items.length === 0) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      previouslyFocused?.focus?.();
+    };
+  }, [onClose]);
+  return ref;
+}
 
 interface Extracted {
   title: string;
@@ -68,6 +120,21 @@ export function ArticleClipModal({ onClose }: { onClose: () => void }) {
   const [topicIds, setTopicIds] = useState<string[]>([]);
   const [status, setStatus] = useState<"url" | "extracting" | "compose" | "publishing">("url");
   const [error, setError] = useState<string | null>(null);
+
+  const browser = useBrowserInfo();
+  const dialogRef = useDialogA11y(onClose);
+
+  // The content script (once shipped) marks the document; until then this stays
+  // false and the install upsell always shows for supported desktop browsers.
+  const [extensionInstalled, setExtensionInstalled] = useState(false);
+  useEffect(() => {
+    if (document.documentElement.getAttribute("data-annotated-extension") === "1") {
+      setExtensionInstalled(true);
+    }
+  }, []);
+
+  // Upsell only where the extension is actually installable and not already on.
+  const showUpsell = browser.supported && !extensionInstalled;
 
   async function handleExtract() {
     setError(null);
@@ -127,11 +194,15 @@ export function ArticleClipModal({ onClose }: { onClose: () => void }) {
       onClick={onClose}
     >
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="new-clip-title"
         className="w-full max-w-2xl border-[3px] border-[color:var(--b-line)] bg-[color:var(--b-card)] text-[color:var(--b-ink)] shadow-[8px_8px_0_0_var(--b-shadow)]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b-[3px] border-[color:var(--b-line)] bg-[color:var(--b-chrome)] px-4 py-3 text-[color:var(--b-card)]">
-          <span className="font-display text-lg tracking-tight">NEW CLIP</span>
+          <span id="new-clip-title" className="font-display text-lg tracking-tight">NEW CLIP</span>
           <button onClick={onClose} aria-label="Close" className="text-xl font-black">×</button>
         </div>
 
@@ -143,7 +214,53 @@ export function ArticleClipModal({ onClose }: { onClose: () => void }) {
           )}
 
           {status === "url" || status === "extracting" ? (
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-4">
+              <div>
+                <h2 className="font-display text-xl tracking-tight">Clip from anywhere.</h2>
+                <p className="mt-1 font-mono text-[12px] text-[color:var(--b-dim)]">
+                  Grab a passage, add your take, publish the receipt — with the source linked.
+                </p>
+              </div>
+
+              {showUpsell && (
+                <div className="border-[3px] border-[color:var(--b-line)] bg-[color:var(--b-acid)] text-[color:var(--b-acid-ink)] shadow-[5px_5px_0_0_var(--b-shadow)]">
+                  <div className="flex items-center justify-between border-b-2 border-[color:var(--b-line)] px-3 py-1.5">
+                    <span className="font-mono text-[11px] font-bold uppercase tracking-[0.14em]">
+                      ★ Easiest way
+                    </span>
+                    <span className="font-mono text-[10px]">~10s install</span>
+                  </div>
+                  <div className="flex items-center gap-3 p-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center border-2 border-[color:var(--b-line)] bg-[color:var(--b-card)] font-display text-xl text-[color:var(--b-ink)]">
+                      ⊕
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-display text-base leading-tight">
+                        Annotated for {BROWSER_NAMES[browser.kind]}
+                      </p>
+                      <p className="font-mono text-[11px]">Clip straight from any page — no copy-paste.</p>
+                    </div>
+                    <ExtensionCta
+                      href={browser.storeUrl}
+                      ariaLabel={browser.label}
+                      className="shrink-0 border-2 border-[color:var(--b-line)] bg-[color:var(--b-chrome)] px-3 py-2 font-mono text-[12px] font-bold uppercase tracking-wide text-[color:var(--b-acid)]"
+                    >
+                      {browser.label}
+                    </ExtensionCta>
+                  </div>
+                </div>
+              )}
+
+              {showUpsell && (
+                <div className="flex items-center gap-3">
+                  <span className="h-px flex-1 bg-[color:var(--b-line)]" />
+                  <span className="font-mono text-[11px] font-bold uppercase tracking-[0.16em] text-[color:var(--b-dim)]">
+                    Or do it manually
+                  </span>
+                  <span className="h-px flex-1 bg-[color:var(--b-line)]" />
+                </div>
+              )}
+
               <label className="font-mono text-[11px] font-bold uppercase tracking-[0.12em] text-[color:var(--b-dim)]">
                 Paste an article URL
               </label>
