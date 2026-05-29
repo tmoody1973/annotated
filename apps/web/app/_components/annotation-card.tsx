@@ -4,6 +4,7 @@ import Link from "next/link";
 import { slugId, formatRelativeTime } from "@annotated/shared";
 import { VoteButtons } from "./vote-buttons";
 import { WaveformPlayer } from "./waveform-player";
+import { AuthorAvatar, VerifiedBadge } from "./author-avatar";
 
 export interface FeedItem {
   _id: string;
@@ -30,6 +31,7 @@ export interface FeedItem {
     username: string;
     displayName: string;
     avatarUrl?: string;
+    isVerified?: boolean;
   } | null;
   topics?: { slug: string; name: string }[];
 }
@@ -54,19 +56,36 @@ export function AnnotationCard({ item }: { item: FeedItem }) {
       ? `/t/${slugId(source?.title ?? "thread", item.threadId)}`
       : `/a/${slugId(source?.title ?? "clip", item._id)}`;
   const age = item.publishedAt ? formatRelativeTime(item.publishedAt) : "";
-  const labelCls = "font-mono text-[11px] font-bold uppercase tracking-[0.14em]";
-
   return (
     <article className="mb-6 break-inside-avoid border-[3px] border-[color:var(--b-line)] bg-[color:var(--b-card)] text-[color:var(--b-ink)] shadow-[6px_6px_0_0_var(--b-shadow)]">
       <div className="flex items-center gap-2.5 px-4 pt-3.5">
-        <span className={`grid size-[22px] flex-none place-items-center text-xs font-black ${meta.box}`}>
+        {item.isAnonymous ? (
+          <AuthorAvatar displayName="Anonymous" avatarUrl={null} />
+        ) : author ? (
+          <Link href={`/u/${author.username}`} className="flex-none">
+            <AuthorAvatar displayName={author.displayName} avatarUrl={author.avatarUrl} />
+          </Link>
+        ) : (
+          <AuthorAvatar displayName="Unknown" avatarUrl={null} />
+        )}
+        <div className="min-w-0 leading-tight">
+          <div className="flex items-center gap-1">
+            {item.isAnonymous ? (
+              <span className="truncate text-[14px] font-extrabold">Anonymous</span>
+            ) : author ? (
+              <Link href={`/u/${author.username}`} className="truncate text-[14px] font-extrabold hover:underline">
+                {author.displayName}
+              </Link>
+            ) : (
+              <span className="truncate text-[14px] font-extrabold">Unknown</span>
+            )}
+            {!item.isAnonymous && author?.isVerified && <VerifiedBadge />}
+          </div>
+          <span className="font-mono text-[11px] text-[color:var(--b-dim)]">{age}</span>
+        </div>
+        <span className={`ml-auto grid size-[22px] flex-none place-items-center text-xs font-black ${meta.box}`}>
           {meta.glyph}
         </span>
-        <span className={labelCls}>
-          {meta.label}
-          {source?.siteName ? ` · ${source.siteName}` : ""}
-        </span>
-        <span className={`ml-auto ${labelCls} text-[color:var(--b-dim)]`}>{age}</span>
       </div>
 
       <h2 className="px-4 pb-0.5 pt-2.5 text-[21px] font-extrabold leading-[1.06] tracking-[-0.01em]">
@@ -75,26 +94,16 @@ export function AnnotationCard({ item }: { item: FeedItem }) {
         </Link>
       </h2>
 
-      <p className="flex items-center gap-1.5 px-4 pb-3 text-[13px] font-bold text-[color:var(--b-dim)]">
-        clipped by{" "}
-        {item.isAnonymous ? (
-          <span className="text-[color:var(--b-ink)]">Anonymous</span>
-        ) : author ? (
-          <Link href={`/u/${author.username}`} className="text-[color:var(--b-ink)] hover:underline">
-            {author.displayName}
-          </Link>
-        ) : (
-          <span className="text-[color:var(--b-ink)]">Unknown</span>
-        )}
-        {isThread && (
+      {isThread && (
+        <div className="px-4 pb-1">
           <Link
             href={detailHref}
-            className="ml-1 border-2 border-[color:var(--b-line)] bg-[color:var(--b-acid)] px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide text-[color:var(--b-acid-ink)]"
+            className="inline-block border-2 border-[color:var(--b-line)] bg-[color:var(--b-acid)] px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide text-[color:var(--b-acid-ink)]"
           >
             🧵 {item.clipCount} clips
           </Link>
-        )}
-      </p>
+        </div>
+      )}
 
       {type === "youtube" && item.clipUrl && (
         <video controls src={item.clipUrl} className="block w-full border-y-[3px] border-[color:var(--b-line)] bg-black" />
