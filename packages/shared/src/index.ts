@@ -29,3 +29,4 @@ export type { Chapter } from "./youtube-chapters";
 export { sliceTranscriptToSpan } from "./youtube-vtt";
 export { rankAnnotations, netScore } from "./rank-annotations";
 export type { Rankable, RankSort } from "./rank-annotations";
+export { authorInitials } from "./author-initials";
