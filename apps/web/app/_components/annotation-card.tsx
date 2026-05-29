@@ -5,6 +5,7 @@ import { slugId, formatRelativeTime } from "@annotated/shared";
 import { VoteButtons } from "./vote-buttons";
 import { WaveformPlayer } from "./waveform-player";
 import { AuthorAvatar, VerifiedBadge } from "./author-avatar";
+import { CardShareMenu } from "./card-share-menu";
 
 export interface FeedItem {
   _id: string;
@@ -55,6 +56,13 @@ export function AnnotationCard({ item }: { item: FeedItem }) {
     isThread && item.threadId
       ? `/t/${slugId(source?.title ?? "thread", item.threadId)}`
       : `/a/${slugId(source?.title ?? "clip", item._id)}`;
+  const cardSlug = slugId(source?.title ?? "clip", item._id);
+  const shareQuote =
+    item.selectedText ??
+    item.commentaryText ??
+    item.commentaryAudioTranscript ??
+    source?.title ??
+    "";
   const age = item.publishedAt ? formatRelativeTime(item.publishedAt) : "";
   return (
     <article className="mb-6 break-inside-avoid border-[3px] border-[color:var(--b-line)] bg-[color:var(--b-card)] text-[color:var(--b-ink)] shadow-[6px_6px_0_0_var(--b-shadow)]">
@@ -171,14 +179,12 @@ export function AnnotationCard({ item }: { item: FeedItem }) {
         </Link>
         <VoteButtons annotationId={item._id} upCount={item.likeCount} downCount={item.downCount} />
         <span className="flex-1" />
-        <a
-          href={source?.canonicalUrl ?? detailHref}
-          className="px-2.5 py-1.5 text-[13px] font-extrabold hover:bg-[color:var(--b-acid)]"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          ⤴ Share
-        </a>
+        <CardShareMenu
+          cardSlug={cardSlug}
+          detailPath={detailHref}
+          quote={shareQuote}
+          sourceUrl={source?.canonicalUrl}
+        />
       </div>
     </article>
   );
