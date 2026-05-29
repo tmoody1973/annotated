@@ -7,6 +7,7 @@ import { useConvexAuth, useMutation } from "convex/react";
 import { api } from "@annotated/backend/convex/_generated/api";
 import { ThemeToggle } from "../ThemeToggle";
 import { NewClipButton } from "./new-clip-button";
+import { MobileNav } from "./mobile-nav";
 
 /** Mirrors the Clerk user into Convex once auth is ready (idempotent). */
 function useEnsureUser(): void {
@@ -27,10 +28,11 @@ export function SiteHeader() {
   const { isAuthenticated } = useConvexAuth();
   return (
     <header className="sticky top-0 z-50 flex items-center gap-5 border-b-[3px] border-[color:var(--b-acid)] bg-[color:var(--b-chrome)] px-6 py-3 text-[color:var(--b-card)]">
+      <MobileNav />
       <Link href="/" aria-label="Annotated home" className="font-display text-[22px] leading-none tracking-tight">
         <span className="bg-[color:var(--b-acid)] px-1.5 text-[color:var(--b-acid-ink)]">A</span>NNOTATED
       </Link>
-      <nav className="flex gap-1">
+      <nav className="hidden gap-1 lg:flex">
         <Link
           href="/"
           className="bg-[color:var(--b-acid)] px-3 py-1.5 text-[13px] font-extrabold uppercase tracking-wide text-[color:var(--b-acid-ink)]"
@@ -50,7 +52,9 @@ export function SiteHeader() {
       </nav>
       <div className="ml-auto flex items-center gap-3">
         <NewClipButton />
-        <ThemeToggle />
+        <span className="hidden lg:block">
+          <ThemeToggle />
+        </span>
         {isAuthenticated ? (
           <UserButton>
             <UserButton.MenuItems>

@@ -1,10 +1,13 @@
 import Link from "next/link";
 
-const items = [
+/** Shared section-nav items, reused by the desktop rail and the mobile drawer. */
+export const NAV_ITEMS = [
   { label: "Latest", glyph: "◷", href: "/", active: true },
   { label: "Topics", glyph: "#", href: "/topics", active: false },
   { label: "For You", glyph: "✦", href: "/", active: false },
 ];
+
+const items = NAV_ITEMS;
 
 /** Brutalist left dashboard rail: section nav + an acid tagline block. */
 export function LeftNav() {
