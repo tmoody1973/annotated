@@ -539,6 +539,7 @@ export async function toLandingView(
           siteName: source.siteName,
           author: source.author,
           imageUrl: source.imageUrl,
+          youtubeThumbnailUrl: source.youtubeThumbnailUrl,
         }
       : null,
     author: author

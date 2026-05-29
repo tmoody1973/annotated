@@ -62,6 +62,8 @@ export const getWithClips = query({
             type: source.type,
             siteName: source.siteName,
             author: source.author,
+            imageUrl: source.imageUrl,
+            youtubeThumbnailUrl: source.youtubeThumbnailUrl,
           }
         : null,
       author: author

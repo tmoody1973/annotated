@@ -12,7 +12,10 @@ interface OgAnnotation {
   selectedText?: string;
   commentaryText?: string;
   commentaryAudioTranscript?: string;
-  source: { title: string; type: string; siteName?: string } | null;
+  screenshotUrl?: string | null;
+  source:
+    | { title: string; type: string; siteName?: string; imageUrl?: string | null; youtubeThumbnailUrl?: string | null }
+    | null;
   author: { displayName: string; username: string } | null;
 }
 
@@ -50,6 +53,11 @@ export default async function Image({
           author: annotation.author?.displayName,
           sourceTitle: annotation.source?.title,
           sourceType: annotation.source?.type ?? "",
+          imageUrl:
+            annotation.screenshotUrl ??
+            annotation.source?.imageUrl ??
+            annotation.source?.youtubeThumbnailUrl ??
+            undefined,
         };
       }
     } catch {

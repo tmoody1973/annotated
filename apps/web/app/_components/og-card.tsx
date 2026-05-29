@@ -5,6 +5,9 @@ export interface OgCardData {
   sourceTitle?: string;
   sourceType: string;
   clipCount?: number;
+  // Source visual (screenshot / article og:image / podcast cover / YouTube
+  // thumbnail). When present, the card splits into text + a full-height image.
+  imageUrl?: string | null;
 }
 
 function clamp(text: string, max: number): string {
@@ -31,84 +34,112 @@ function typeLabel(data: OgCardData): string {
  * explicit flexbox per Satori's constraints. No external fonts (default sans).
  */
 export function OgCard({ data }: { data: OgCardData }) {
+  const hasImage = !!data.imageUrl;
+  const quoteSize = hasImage ? 46 : 56;
+  const quoteMax = hasImage ? 130 : 160;
+  const commentaryMax = hasImage ? 80 : 120;
+
   return (
     <div
       style={{
         display: "flex",
-        flexDirection: "column",
         width: "100%",
         height: "100%",
         background: "#f4f1e8",
         color: "#111111",
-        padding: "56px 64px",
         borderLeft: "24px solid #ffe600",
       }}
     >
       <div
         style={{
           display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          fontSize: 26,
-          fontWeight: 700,
-          letterSpacing: 2,
-          textTransform: "uppercase",
+          flexDirection: "column",
+          flex: 1,
+          padding: "56px 64px",
         }}
       >
-        <div style={{ display: "flex" }}>Annotated</div>
         <div
           style={{
             display: "flex",
-            border: "3px solid #111111",
-            padding: "4px 16px",
+            justifyContent: "space-between",
+            alignItems: "center",
+            fontSize: 26,
+            fontWeight: 700,
+            letterSpacing: 2,
+            textTransform: "uppercase",
+          }}
+        >
+          <div style={{ display: "flex" }}>Annotated</div>
+          <div
+            style={{
+              display: "flex",
+              border: "3px solid #111111",
+              padding: "4px 16px",
+              fontSize: 22,
+            }}
+          >
+            {typeLabel(data)}
+          </div>
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            marginTop: 40,
+            fontSize: quoteSize,
+            fontWeight: 700,
+            lineHeight: 1.12,
+          }}
+        >
+          “{clamp(data.quote, quoteMax)}”
+        </div>
+
+        {data.commentary && (
+          <div
+            style={{
+              display: "flex",
+              marginTop: 20,
+              fontSize: 26,
+              lineHeight: 1.3,
+              color: "#333333",
+            }}
+          >
+            {clamp(data.commentary, commentaryMax)}
+          </div>
+        )}
+
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginTop: "auto",
             fontSize: 22,
           }}
         >
-          {typeLabel(data)}
+          <div style={{ display: "flex" }}>
+            {data.author ? `— ${data.author}` : ""}
+            {data.sourceTitle ? `  ·  ${clamp(data.sourceTitle, hasImage ? 30 : 48)}` : ""}
+          </div>
+          <div style={{ display: "flex", fontWeight: 700 }}>annotated.com</div>
         </div>
       </div>
 
-      <div
-        style={{
-          display: "flex",
-          marginTop: 44,
-          fontSize: 56,
-          fontWeight: 700,
-          lineHeight: 1.12,
-        }}
-      >
-        “{clamp(data.quote, 160)}”
-      </div>
-
-      {data.commentary && (
+      {hasImage && (
         <div
           style={{
             display: "flex",
-            marginTop: 24,
-            fontSize: 28,
-            lineHeight: 1.3,
-            color: "#333333",
+            width: 440,
+            height: "100%",
+            borderLeft: "4px solid #111111",
           }}
         >
-          {clamp(data.commentary, 120)}
+          <img
+            src={data.imageUrl ?? undefined}
+            style={{ width: 440, height: "100%", objectFit: "cover" }}
+          />
         </div>
       )}
-
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginTop: "auto",
-          fontSize: 24,
-        }}
-      >
-        <div style={{ display: "flex" }}>
-          {data.author ? `— ${data.author}` : ""}
-          {data.sourceTitle ? `  ·  ${clamp(data.sourceTitle, 48)}` : ""}
-        </div>
-        <div style={{ display: "flex", fontWeight: 700 }}>annotated.com</div>
-      </div>
     </div>
   );
 }

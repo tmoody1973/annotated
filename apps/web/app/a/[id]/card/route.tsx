@@ -10,7 +10,10 @@ interface CardAnnotation {
   commentaryText?: string;
   commentaryAudioTranscript?: string;
   isAnonymous?: boolean;
-  source: { title: string; type: string } | null;
+  screenshotUrl?: string | null;
+  source:
+    | { title: string; type: string; imageUrl?: string | null; youtubeThumbnailUrl?: string | null }
+    | null;
   author: { displayName: string; avatarUrl?: string | null; isVerified?: boolean } | null;
 }
 
@@ -56,6 +59,11 @@ export async function GET(
           isVerified: anonymous ? false : annotation.author?.isVerified,
           sourceTitle: annotation.source?.title,
           sourceType: annotation.source?.type ?? "",
+          imageUrl:
+            annotation.screenshotUrl ??
+            annotation.source?.imageUrl ??
+            annotation.source?.youtubeThumbnailUrl ??
+            undefined,
         };
         slug = slugId(annotation.source?.title ?? "clip", annotation._id);
       }

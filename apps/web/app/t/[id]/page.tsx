@@ -34,6 +34,8 @@ interface ThreadView {
     type: string;
     siteName?: string;
     author?: string;
+    imageUrl?: string | null;
+    youtubeThumbnailUrl?: string | null;
   } | null;
   author: { id: string; username: string; displayName: string } | null;
   clips: ThreadClip[];
@@ -138,6 +140,14 @@ export default async function ThreadPage({
 
         {thread.source && (
           <div className="mb-6 border-[3px] border-[color:var(--b-line)] bg-[color:var(--b-card)] p-5 text-[color:var(--b-ink)] shadow-[8px_8px_0_0_var(--b-shadow)]">
+            {(thread.source.imageUrl ?? thread.source.youtubeThumbnailUrl) && (
+              // eslint-disable-next-line @next/next/no-img-element -- source og:image, not a static asset
+              <img
+                src={thread.source.imageUrl ?? thread.source.youtubeThumbnailUrl ?? undefined}
+                alt="Source page visual"
+                className="-mx-5 -mt-5 mb-4 block max-h-[260px] w-[calc(100%+2.5rem)] max-w-none border-b-[3px] border-[color:var(--b-line)] object-cover object-top"
+              />
+            )}
             <p className="font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-[color:var(--b-dim)]">
               Thread{thread.source.siteName ? ` · ${thread.source.siteName}` : ""}
             </p>

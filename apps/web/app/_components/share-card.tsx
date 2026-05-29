@@ -10,6 +10,9 @@ export interface ShareCardData {
   isVerified?: boolean;
   sourceTitle?: string;
   sourceType: string;
+  // Source visual: clip screenshot, article og:image, podcast cover, or YouTube
+  // thumbnail. Mirrors the feed/landing fallback chain. Omitted when none exists.
+  imageUrl?: string | null;
 }
 
 const COLORS = {
@@ -177,6 +180,19 @@ export function ShareCard({
           gap: 16,
         }}
       >
+        {data.imageUrl && (
+          <div style={{ display: "flex" }}>
+            <img
+              src={data.imageUrl}
+              style={{
+                width: "100%",
+                height: isStory ? 460 : 300,
+                objectFit: "cover",
+                border: `4px solid ${COLORS.ink}`,
+              }}
+            />
+          </div>
+        )}
         <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
           {!anonymous && (
             <CardAvatar
