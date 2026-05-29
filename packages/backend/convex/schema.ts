@@ -183,6 +183,13 @@ export default defineSchema({
     .index("by_comment", ["commentId"])
     .index("by_comment_and_user", ["commentId", "userId"]),
 
+  // Publisher-accounts waitlist (the /publishers "coming soon" page). Public,
+  // unauthenticated capture; deduped by email.
+  publisherWaitlist: defineTable({
+    email: v.string(),
+    createdAt: v.number(),
+  }).index("by_email", ["email"]),
+
   // Follow relationships between users.
   follows: defineTable({
     followerId: v.id("users"),
