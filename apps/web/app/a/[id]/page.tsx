@@ -4,6 +4,7 @@ import { ConvexHttpClient } from "convex/browser";
 import { makeFunctionReference } from "convex/server";
 import { slugId, splitSlugId, sliceTranscriptToSpan } from "@annotated/shared";
 import { ClaimButton } from "./claim-button";
+import { SaveImageDialog } from "./save-image-dialog";
 import { VoteButtons } from "../../_components/vote-buttons";
 import { FollowButton } from "../../_components/follow-button";
 import { Comments } from "../../_components/comments";
@@ -35,7 +36,7 @@ interface AnnotationView {
     author?: string;
     imageUrl?: string | null;
   } | null;
-  author: { id: string; username: string; displayName: string } | null;
+  author: { id: string; username: string; displayName: string; avatarUrl?: string | null } | null;
 }
 
 const getById = makeFunctionReference<
@@ -219,6 +220,7 @@ export default async function AnnotationPage({
           {annotation.author && (
             <FollowButton targetUserId={annotation.author.id} />
           )}
+          <SaveImageDialog slug={canonicalParam} />
         </div>
 
         <Comments annotationId={annotation._id} />
