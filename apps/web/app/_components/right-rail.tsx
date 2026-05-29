@@ -24,11 +24,11 @@ export function RightRail() {
               i < people.length - 1 ? "border-b-2 border-[color:var(--b-line)]" : ""
             }`}
           >
-            <Link href={`/u/${p.username}`} className="flex-none">
+            <Link href={`/@${p.username}`} className="flex-none">
               <AuthorAvatar displayName={p.displayName} avatarUrl={p.avatarUrl} size={36} />
             </Link>
             <div className="min-w-0">
-              <Link href={`/u/${p.username}`} className="block truncate text-[14px] font-extrabold hover:underline">
+              <Link href={`/@${p.username}`} className="block truncate text-[14px] font-extrabold hover:underline">
                 {p.displayName}
               </Link>
               <span className="font-mono text-[11px] text-[color:var(--b-dim)]">@{p.username}</span>

@@ -5,9 +5,15 @@ import { api } from "@annotated/backend/convex/_generated/api";
 import { SiteHeader } from "../../_components/site-header";
 import { AnnotationCard, type FeedItem } from "../../_components/annotation-card";
 import { FollowButton } from "../../_components/follow-button";
-import { AuthorAvatar } from "../../_components/author-avatar";
+import { AuthorAvatar, VerifiedBadge } from "../../_components/author-avatar";
+import { absoluteUrl } from "../../_lib/urls";
 
 const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
+
+/** Build the public X/Twitter profile URL from a stored handle (with or without @). */
+function xProfileUrl(handle: string): string {
+  return `https://x.com/${handle.replace(/^@/, "")}`;
+}
 
 async function fetchProfile(username: string) {
   if (!convexUrl) throw new Error("Missing NEXT_PUBLIC_CONVEX_URL");
@@ -27,7 +33,10 @@ export async function generateMetadata({
   params: Promise<{ username: string }>;
 }): Promise<Metadata> {
   const { username } = await params;
-  return { title: `@${username} — Annotated` };
+  return {
+    title: `@${username} — Annotated`,
+    alternates: { canonical: absoluteUrl(`/@${username}`) },
+  };
 }
 
 export default async function ProfilePage({
@@ -44,18 +53,41 @@ export default async function ProfilePage({
     <main className="flex min-h-screen flex-1 flex-col bg-[color:var(--b-bg)] text-[color:var(--b-onbg)]">
       <SiteHeader />
       <section className="mx-auto w-full max-w-2xl p-6">
-        <div className="flex items-center gap-4 border-b-[3px] border-[color:var(--b-line)] pb-6">
-          <AuthorAvatar displayName={user.displayName} avatarUrl={user.avatarUrl} size={64} />
-          <div>
-            <h1 className="font-display text-3xl leading-none tracking-tight">{user.displayName}</h1>
-            <p className="mt-1 font-mono text-[13px] text-[color:var(--b-dim-onbg)]">@{user.username}</p>
-            <p className="font-mono text-[12px] uppercase tracking-wide text-[color:var(--b-dim-onbg)]">
-              {counts.followers} followers · {counts.following} following
+        <div className="border-b-[3px] border-[color:var(--b-line)] pb-6">
+          <div className="flex items-center gap-4">
+            <span className="inline-block flex-none shadow-[5px_5px_0_0_var(--b-shadow)]">
+              <AuthorAvatar displayName={user.displayName} avatarUrl={user.avatarUrl} size={64} />
+            </span>
+            <div className="min-w-0">
+              <h1 className="flex items-center gap-1.5 font-display text-3xl leading-none tracking-tight">
+                {user.displayName}
+                {user.isVerified && <VerifiedBadge />}
+              </h1>
+              <p className="mt-1 font-mono text-[13px] text-[color:var(--b-dim-onbg)]">@{user.username}</p>
+              <p className="font-mono text-[12px] uppercase tracking-wide text-[color:var(--b-dim-onbg)]">
+                {counts.followers} followers · {counts.following} following
+              </p>
+            </div>
+            <div className="ml-auto">
+              <FollowButton targetUserId={user._id} />
+            </div>
+          </div>
+
+          {user.bio && (
+            <p className="mt-4 max-w-prose text-[15px] leading-relaxed text-[color:var(--b-onbg)]">
+              {user.bio}
             </p>
-          </div>
-          <div className="ml-auto">
-            <FollowButton targetUserId={user._id} />
-          </div>
+          )}
+          {user.xHandle && (
+            <a
+              href={xProfileUrl(user.xHandle)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-flex items-center gap-1.5 font-mono text-[13px] font-bold text-[color:var(--b-dim-onbg)] hover:text-[color:var(--b-onbg)] hover:underline"
+            >
+              𝕏 @{user.xHandle.replace(/^@/, "")}
+            </a>
+          )}
         </div>
 
         <div className="mt-6 flex flex-col gap-5">

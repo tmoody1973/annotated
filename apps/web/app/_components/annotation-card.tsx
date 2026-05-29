@@ -74,7 +74,7 @@ export function AnnotationCard({ item }: { item: FeedItem }) {
         {item.isAnonymous ? (
           <AuthorAvatar displayName="Anonymous" avatarUrl={null} />
         ) : author ? (
-          <Link href={`/u/${author.username}`} className="flex-none">
+          <Link href={`/@${author.username}`} className="flex-none">
             <AuthorAvatar displayName={author.displayName} avatarUrl={author.avatarUrl} />
           </Link>
         ) : (
@@ -85,7 +85,7 @@ export function AnnotationCard({ item }: { item: FeedItem }) {
             {item.isAnonymous ? (
               <span className="truncate text-[14px] font-extrabold">Anonymous</span>
             ) : author ? (
-              <Link href={`/u/${author.username}`} className="truncate text-[14px] font-extrabold hover:underline">
+              <Link href={`/@${author.username}`} className="truncate text-[14px] font-extrabold hover:underline">
                 {author.displayName}
               </Link>
             ) : (
