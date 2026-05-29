@@ -1,6 +1,4 @@
 import { useMemo, useRef, useState } from "react";
-import { useMutation } from "convex/react";
-import { makeFunctionReference } from "convex/server";
 import {
   selectClipSpan,
   formatClipTimestamp,
@@ -8,44 +6,25 @@ import {
 } from "@annotated/shared";
 import {
   clipAudio,
-  getWorkerToken,
   getWebUrl,
   transcodeCommentary,
 } from "../lib/worker-client";
+import { publishPodcastAuthed, NotSignedInError } from "../lib/convex-publish";
 import {
   accent,
   accentTint,
   danger,
-  hair,
   ink,
   monoStack,
   muted,
   panel,
   sansStack,
-  serifStack,
   valid,
 } from "../lib/clip-styles";
 import { CommentaryComposer } from "./commentary-composer";
 import { AnonymousToggle } from "./anonymous-toggle";
+import { TopicPicker } from "./topic-picker";
 import { useThread } from "../lib/use-thread";
-
-const publishPodcastClip = makeFunctionReference<
-  "mutation",
-  {
-    sourceId: string;
-    clipStorageId: string;
-    clipStartMs: number;
-    clipEndMs: number;
-    selectedText: string;
-    commentaryText?: string;
-    commentaryAudioStorageId?: string;
-    commentaryAudioTranscript?: string;
-    isAnonymous?: boolean;
-    threadId?: string;
-    workerToken: string;
-  },
-  string
->("testing:publishPodcastClipDev");
 
 interface SpeakerSegment {
   speaker: string | undefined;
@@ -81,12 +60,12 @@ export function TranscriptCanvas({
   mp3Url: string;
   words: TranscriptWord[];
 }) {
-  const publish = useMutation(publishPodcastClip);
   const thread = useThread();
   const [anchor, setAnchor] = useState<number | null>(null);
   const [focus, setFocus] = useState<number | null>(null);
   const [take, setTake] = useState("");
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [topicIds, setTopicIds] = useState<string[]>([]);
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [status, setStatus] = useState<"idle" | "publishing" | "error">("idle");
   // The current step of a publish, so the button names what's happening: cutting
@@ -124,6 +103,7 @@ export function TranscriptCanvas({
     selection !== null &&
     selection.withinCap &&
     (take.trim().length > 0 || audioBlob !== null) &&
+    topicIds.length > 0 &&
     status !== "publishing";
 
   const onPublish = async (): Promise<void> => {
@@ -142,7 +122,7 @@ export function TranscriptCanvas({
         ? await transcodeCommentary(audioBlob)
         : null;
       setPhase("saving");
-      const annotationId = await publish({
+      const annotationId = await publishPodcastAuthed({
         sourceId,
         clipStorageId,
         clipStartMs: selection.clipStartMs,
@@ -153,7 +133,7 @@ export function TranscriptCanvas({
         commentaryAudioTranscript: commentaryAudio?.transcript ?? undefined,
         isAnonymous,
         threadId: thread.threadId ?? undefined,
-        workerToken: getWorkerToken(),
+        topicIds,
       });
       setPublishedId(annotationId);
       setLink(`${getWebUrl()}/a/${annotationId}`);
@@ -163,7 +143,11 @@ export function TranscriptCanvas({
       publishing.current = false;
       setStatus("error");
       setPhase(null);
-      setError(e instanceof Error ? e.message : "Publish failed");
+      if (e instanceof NotSignedInError) {
+        setError(e.message);
+      } else {
+        setError(e instanceof Error ? e.message : "Publish failed");
+      }
     }
   };
 
@@ -176,6 +160,7 @@ export function TranscriptCanvas({
       setFocus(null);
       setTake("");
       setAudioBlob(null);
+      setTopicIds([]);
       setLink(null);
       setPublishedId(null);
       setStatus("idle");
@@ -224,8 +209,8 @@ export function TranscriptCanvas({
           marginTop: 8,
           maxHeight: 260,
           overflowY: "auto",
-          border: `1px solid ${hair}`,
-          borderRadius: 7,
+          border: `2px solid ${ink}`,
+          borderRadius: 0,
           background: panel,
           padding: 12,
           lineHeight: 1.7,
@@ -247,10 +232,8 @@ export function TranscriptCanvas({
                 onClick={() => onWord(index)}
                 style={{
                   cursor: "pointer",
-                  background: isSelected(index) ? accentTint : "transparent",
-                  boxShadow: isSelected(index)
-                    ? `inset 0 -2px 0 ${accent}`
-                    : "none",
+                  background: isSelected(index) ? accent : "transparent",
+                  outline: isSelected(index) ? `1px solid ${ink}` : "none",
                   padding: "0 1px",
                 }}
               >
@@ -273,12 +256,15 @@ export function TranscriptCanvas({
           <p
             className="ann-quote"
             style={{
-              fontFamily: serifStack,
-              fontSize: 16,
+              fontFamily: sansStack,
+              fontSize: 15,
+              fontWeight: 600,
               lineHeight: 1.45,
-              borderLeft: `2px solid ${accent}`,
+              borderLeft: `4px solid ${ink}`,
               paddingLeft: 10,
               margin: "6px 0 0",
+              background: accentTint,
+              padding: "8px 10px",
             }}
           >
             “{selection.quote}”
@@ -293,6 +279,10 @@ export function TranscriptCanvas({
           onAudioChange={setAudioBlob}
           disabled={status === "publishing"}
         />
+      </div>
+
+      <div style={{ marginTop: 10 }}>
+        <TopicPicker selected={topicIds} onChange={setTopicIds} />
       </div>
 
       <AnonymousToggle
@@ -317,6 +307,10 @@ export function TranscriptCanvas({
             : "Saving annotation…"
           : "Publish clip"}
       </button>
+
+      {topicIds.length === 0 && (
+        <p style={{ marginTop: 6, fontSize: 12, color: muted }}>Pick at least one topic</p>
+      )}
     </section>
   );
 }

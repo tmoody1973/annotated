@@ -4,6 +4,9 @@ import Link from "next/link";
 import { slugId, formatRelativeTime } from "@annotated/shared";
 import { VoteButtons } from "./vote-buttons";
 import { WaveformPlayer } from "./waveform-player";
+import { AuthorAvatar, VerifiedBadge } from "./author-avatar";
+import { CardShareMenu } from "./card-share-menu";
+import { SourceByline } from "./source-byline";
 
 export interface FeedItem {
   _id: string;
@@ -19,18 +22,24 @@ export interface FeedItem {
   threadId?: string | null;
   clipCount?: number;
   isAnonymous?: boolean;
+  isEditorPick?: boolean;
   source: {
     type: string;
     title: string;
     canonicalUrl: string;
     siteName?: string;
     imageUrl?: string | null;
+    author?: string | null;
+    podcastName?: string | null;
+    youtubeChannelUrl?: string | null;
   } | null;
   author: {
     username: string;
     displayName: string;
     avatarUrl?: string;
+    isVerified?: boolean;
   } | null;
+  topics?: { slug: string; name: string }[];
 }
 
 type TypeKey = "youtube" | "podcast" | "article";
@@ -52,20 +61,51 @@ export function AnnotationCard({ item }: { item: FeedItem }) {
     isThread && item.threadId
       ? `/t/${slugId(source?.title ?? "thread", item.threadId)}`
       : `/a/${slugId(source?.title ?? "clip", item._id)}`;
+  const cardSlug = slugId(source?.title ?? "clip", item._id);
+  const shareQuote =
+    item.selectedText ??
+    item.commentaryText ??
+    item.commentaryAudioTranscript ??
+    source?.title ??
+    "";
   const age = item.publishedAt ? formatRelativeTime(item.publishedAt) : "";
-  const labelCls = "font-mono text-[11px] font-bold uppercase tracking-[0.14em]";
-
   return (
     <article className="mb-6 break-inside-avoid border-[3px] border-[color:var(--b-line)] bg-[color:var(--b-card)] text-[color:var(--b-ink)] shadow-[6px_6px_0_0_var(--b-shadow)]">
       <div className="flex items-center gap-2.5 px-4 pt-3.5">
-        <span className={`grid size-[22px] flex-none place-items-center text-xs font-black ${meta.box}`}>
-          {meta.glyph}
-        </span>
-        <span className={labelCls}>
-          {meta.label}
-          {source?.siteName ? ` · ${source.siteName}` : ""}
-        </span>
-        <span className={`ml-auto ${labelCls} text-[color:var(--b-dim)]`}>{age}</span>
+        {item.isAnonymous ? (
+          <AuthorAvatar displayName="Anonymous" avatarUrl={null} />
+        ) : author ? (
+          <Link href={`/@${author.username}`} className="flex-none">
+            <AuthorAvatar displayName={author.displayName} avatarUrl={author.avatarUrl} />
+          </Link>
+        ) : (
+          <AuthorAvatar displayName="Unknown" avatarUrl={null} />
+        )}
+        <div className="min-w-0 leading-tight">
+          <div className="flex items-center gap-1">
+            {item.isAnonymous ? (
+              <span className="truncate text-[14px] font-extrabold">Anonymous</span>
+            ) : author ? (
+              <Link href={`/@${author.username}`} className="truncate text-[14px] font-extrabold hover:underline">
+                {author.displayName}
+              </Link>
+            ) : (
+              <span className="truncate text-[14px] font-extrabold">Unknown</span>
+            )}
+            {!item.isAnonymous && author?.isVerified && <VerifiedBadge />}
+          </div>
+          <span className="font-mono text-[11px] text-[color:var(--b-dim)]">{age}</span>
+        </div>
+        <div className="ml-auto flex flex-none items-center gap-1.5">
+          {item.isEditorPick && (
+            <span className="border-2 border-[color:var(--b-line)] bg-[color:var(--b-acid)] px-1.5 py-0.5 font-mono text-[10px] font-black uppercase tracking-wide text-[color:var(--b-acid-ink)]">
+              ★ Pick
+            </span>
+          )}
+          <span className={`grid size-[22px] place-items-center text-xs font-black ${meta.box}`}>
+            {meta.glyph}
+          </span>
+        </div>
       </div>
 
       <h2 className="px-4 pb-0.5 pt-2.5 text-[21px] font-extrabold leading-[1.06] tracking-[-0.01em]">
@@ -74,26 +114,16 @@ export function AnnotationCard({ item }: { item: FeedItem }) {
         </Link>
       </h2>
 
-      <p className="flex items-center gap-1.5 px-4 pb-3 text-[13px] font-bold text-[color:var(--b-dim)]">
-        clipped by{" "}
-        {item.isAnonymous ? (
-          <span className="text-[color:var(--b-ink)]">Anonymous</span>
-        ) : author ? (
-          <Link href={`/u/${author.username}`} className="text-[color:var(--b-ink)] hover:underline">
-            {author.displayName}
-          </Link>
-        ) : (
-          <span className="text-[color:var(--b-ink)]">Unknown</span>
-        )}
-        {isThread && (
+      {isThread && (
+        <div className="px-4 pb-1">
           <Link
             href={detailHref}
-            className="ml-1 border-2 border-[color:var(--b-line)] bg-[color:var(--b-acid)] px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide text-[color:var(--b-acid-ink)]"
+            className="inline-block border-2 border-[color:var(--b-line)] bg-[color:var(--b-acid)] px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide text-[color:var(--b-acid-ink)]"
           >
             🧵 {item.clipCount} clips
           </Link>
-        )}
-      </p>
+        </div>
+      )}
 
       {type === "youtube" && item.clipUrl && (
         <video controls src={item.clipUrl} className="block w-full border-y-[3px] border-[color:var(--b-line)] bg-black" />
@@ -112,6 +142,8 @@ export function AnnotationCard({ item }: { item: FeedItem }) {
         </Link>
       )}
 
+      {source && <SourceByline source={source} className="mx-4 mt-3.5" />}
+
       {item.selectedText && (
         <blockquote className="mx-4 mt-4 border-l-[5px] border-[color:var(--b-acid)] pl-3 text-[17px] font-semibold leading-snug">
           “{item.selectedText}”
@@ -126,19 +158,21 @@ export function AnnotationCard({ item }: { item: FeedItem }) {
         </p>
       ) : null}
 
-      {source && (
-        <a
-          href={source.canonicalUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-3 block px-4 font-mono text-[12px] text-[color:var(--b-dim)] hover:text-[color:var(--b-ink)] hover:underline"
-        >
-          ↗ {source.siteName ? `${source.siteName} — ` : ""}
-          {source.title}
-        </a>
+      {item.topics && item.topics.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 px-4 pt-3">
+          {item.topics.map((t) => (
+            <Link
+              key={t.slug}
+              href={`/topics/${t.slug}`}
+              className="border-2 border-[color:var(--b-line)] bg-[color:var(--b-card)] px-1.5 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wide text-[color:var(--b-ink)] hover:bg-[color:var(--b-acid)]"
+            >
+              #{t.name}
+            </Link>
+          ))}
+        </div>
       )}
 
-      <div className="mt-3 flex items-center gap-2 border-t-[3px] border-[color:var(--b-line)] p-3">
+      <div className="mt-4 flex items-center gap-2 border-t-[3px] border-[color:var(--b-line)] p-3">
         <Link
           href={detailHref}
           className="inline-flex items-center gap-1.5 border-2 border-[color:var(--b-line)] px-2.5 py-1.5 text-[13px] font-extrabold hover:bg-[color:var(--b-acid)]"
@@ -147,14 +181,12 @@ export function AnnotationCard({ item }: { item: FeedItem }) {
         </Link>
         <VoteButtons annotationId={item._id} upCount={item.likeCount} downCount={item.downCount} />
         <span className="flex-1" />
-        <a
-          href={source?.canonicalUrl ?? detailHref}
-          className="px-2.5 py-1.5 text-[13px] font-extrabold hover:bg-[color:var(--b-acid)]"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          ⤴ Share
-        </a>
+        <CardShareMenu
+          cardSlug={cardSlug}
+          detailPath={detailHref}
+          quote={shareQuote}
+          sourceUrl={source?.canonicalUrl}
+        />
       </div>
     </article>
   );

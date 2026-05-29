@@ -1,7 +1,7 @@
-import { convexTest } from "convex-test";
+import { convexTest, type TestConvex } from "convex-test";
 import { beforeAll, expect, test } from "vitest";
 import schema from "./schema";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 
 const modules = import.meta.glob("./**/*.*s");
@@ -11,9 +11,21 @@ beforeAll(() => {
   process.env.WORKER_AUTH_TOKEN = WORKER_TOKEN;
 });
 
+async function oneTopic(t: TestConvex<typeof schema>): Promise<Id<"topics">[]> {
+  await t.mutation(internal.topics.seedTopics, {});
+  const id = await t.run(async (ctx) => {
+    const topic = await ctx.db
+      .query("topics")
+      .withIndex("by_slug", (q) => q.eq("slug", "tech"))
+      .first();
+    return topic!._id;
+  });
+  return [id];
+}
+
 /** Publishes a standalone article clip as the seed dev user, returning its id. */
 async function publishStandalone(
-  t: ReturnType<typeof convexTest>,
+  t: TestConvex<typeof schema>,
   quote: string,
   threadId?: Id<"threads">
 ): Promise<Id<"annotations">> {
@@ -25,6 +37,7 @@ async function publishStandalone(
     textEnd: quote.length,
     commentaryText: `take on ${quote}`,
     ...(threadId ? { threadId } : {}),
+    topicIds: await oneTopic(t),
     workerToken: WORKER_TOKEN,
   });
 }

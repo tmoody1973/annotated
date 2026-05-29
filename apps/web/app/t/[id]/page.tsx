@@ -8,6 +8,8 @@ import { VoteButtons } from "../../_components/vote-buttons";
 import { FollowButton } from "../../_components/follow-button";
 import { Comments } from "../../_components/comments";
 import { ClipArticle } from "../../_components/clip-article";
+import { SourceByline } from "../../_components/source-byline";
+import { AppShell } from "../../_components/app-shell";
 import { JsonLd } from "../../_components/json-ld";
 import { absoluteUrl, threadPath } from "../../_lib/urls";
 
@@ -34,6 +36,10 @@ interface ThreadView {
     type: string;
     siteName?: string;
     author?: string;
+    imageUrl?: string | null;
+    youtubeThumbnailUrl?: string | null;
+    podcastName?: string | null;
+    youtubeChannelUrl?: string | null;
   } | null;
   author: { id: string; username: string; displayName: string } | null;
   clips: ThreadClip[];
@@ -124,24 +130,35 @@ export default async function ThreadPage({
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center bg-[color:var(--b-bg)] px-4 py-10 text-[color:var(--b-onbg)]">
+    <AppShell narrow>
       <JsonLd data={jsonLd} />
-      <div className="w-full max-w-2xl">
-        <header className="mb-6 flex items-center justify-between">
-          <a href="/" className="font-display text-lg leading-none tracking-tight">
-            <span className="bg-[color:var(--b-acid)] px-1.5 text-[color:var(--b-acid-ink)]">A</span>NNOTATED
-          </a>
-          <span className="border-2 border-[color:var(--b-line)] bg-[color:var(--b-acid)] px-2.5 py-1 font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-[color:var(--b-acid-ink)]">
-            🧵 {thread.clips.length} clips
-          </span>
-        </header>
+      <div className="mb-4 flex justify-end">
+        <span className="border-2 border-[color:var(--b-line)] bg-[color:var(--b-acid)] px-2.5 py-1 font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-[color:var(--b-acid-ink)]">
+          🧵 {thread.clips.length} clips
+        </span>
+      </div>
 
         {thread.source && (
           <div className="mb-6 border-[3px] border-[color:var(--b-line)] bg-[color:var(--b-card)] p-5 text-[color:var(--b-ink)] shadow-[8px_8px_0_0_var(--b-shadow)]">
-            <p className="font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-[color:var(--b-dim)]">
-              Thread{thread.source.siteName ? ` · ${thread.source.siteName}` : ""}
-            </p>
-            <p className="mt-1 text-[26px] font-extrabold leading-[1.08] tracking-[-0.01em]">
+            {(thread.source.imageUrl ?? thread.source.youtubeThumbnailUrl) && (
+              // eslint-disable-next-line @next/next/no-img-element -- source og:image, not a static asset
+              <img
+                src={thread.source.imageUrl ?? thread.source.youtubeThumbnailUrl ?? undefined}
+                alt="Source page visual"
+                className="-mx-5 -mt-5 mb-4 block max-h-[260px] w-[calc(100%+2.5rem)] max-w-none border-b-[3px] border-[color:var(--b-line)] object-cover object-top"
+              />
+            )}
+            <SourceByline
+              source={{
+                type: thread.source.type,
+                canonicalUrl: thread.source.canonicalUrl,
+                siteName: thread.source.siteName,
+                author: thread.source.author,
+                podcastName: thread.source.podcastName,
+                youtubeChannelUrl: thread.source.youtubeChannelUrl,
+              }}
+            />
+            <p className="mt-3 text-[26px] font-extrabold leading-[1.08] tracking-[-0.01em]">
               {thread.source.title}
             </p>
             <div className="mt-3 flex items-center gap-3">
@@ -152,14 +169,6 @@ export default async function ThreadPage({
               )}
               {thread.author && <FollowButton targetUserId={thread.author.id} />}
             </div>
-            <a
-              href={thread.source.canonicalUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-3 inline-flex items-center gap-1 border-2 border-[color:var(--b-line)] bg-[color:var(--b-acid)] px-3 py-1.5 text-sm font-black uppercase tracking-wide text-[color:var(--b-acid-ink)]"
-            >
-              View original ↗
-            </a>
           </div>
         )}
 
@@ -203,7 +212,6 @@ export default async function ThreadPage({
         <footer className="mt-10 text-center font-mono text-xs text-[color:var(--b-dim-onbg)]">
           annotated.com
         </footer>
-      </div>
-    </main>
+    </AppShell>
   );
 }

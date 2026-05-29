@@ -7,7 +7,12 @@ import {
   type Chapter,
   type ClipSpanResult,
 } from "@annotated/shared";
-import { requestPlayerTimeMs, getActiveVideoTitle } from "../lib/player-time";
+import {
+  requestPlayerTimeMs,
+  getActiveVideoTitle,
+  getActiveVideoChannel,
+} from "../lib/player-time";
+import { ProgressIndicator } from "./progress-indicator";
 import {
   clipYoutube,
   fetchYoutubeChapters,
@@ -16,9 +21,10 @@ import {
   transcribeYoutube,
 } from "../lib/worker-client";
 import { publishYoutubeAuthed } from "../lib/convex-publish";
-import { accent, danger, hair, ink, muted, monoStack, panel, sansStack, surface, valid } from "../lib/clip-styles";
+import { accent, danger, ink, muted, monoStack, panel, sansStack, surface, valid } from "../lib/clip-styles";
 import { CommentaryComposer } from "./commentary-composer";
 import { AnonymousToggle } from "./anonymous-toggle";
+import { TopicPicker } from "./topic-picker";
 import { useThread } from "../lib/use-thread";
 
 type Status = "idle" | "clipping" | "publishing" | "done" | "error";
@@ -58,13 +64,13 @@ function ChapterList({
     <div style={{ marginBottom: 16 }}>
       <div style={label}>Chapters · tap to set in/out</div>
       <div
-        className="ann-shadow"
         style={{
-          border: `1px solid ${hair}`,
-          borderRadius: 8,
+          border: `2px solid ${ink}`,
+          borderRadius: 0,
           background: surface,
           maxHeight: 168,
           overflowY: "auto",
+          boxShadow: `4px 4px 0 0 ${ink}`,
         }}
       >
         {chapters.map((chapter, index) => (
@@ -81,7 +87,7 @@ function ChapterList({
               gap: 10,
               padding: "9px 11px",
               border: "none",
-              borderTop: index === 0 ? "none" : `1px solid ${hair}`,
+              borderTop: index === 0 ? "none" : `1px solid ${ink}`,
               background: "transparent",
               cursor: "pointer",
               textAlign: "left",
@@ -139,8 +145,10 @@ export function ClipComposer({ videoId }: { videoId: string }) {
   const [endInput, setEndInput] = useState("");
   const [commentary, setCommentary] = useState("");
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [topicIds, setTopicIds] = useState<string[]>([]);
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [status, setStatus] = useState<Status>("idle");
+  const [processingStartedAt, setProcessingStartedAt] = useState<number | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [annotationId, setAnnotationId] = useState<string | null>(null);
   const [captureHint, setCaptureHint] = useState<string | null>(null);
@@ -200,9 +208,11 @@ export function ClipComposer({ videoId }: { videoId: string }) {
   async function handlePublish() {
     if (startMs === null || endMs === null) return;
     setStatus("clipping");
+    setProcessingStartedAt(Date.now());
     setErrorMsg(null);
     try {
       const title = await getActiveVideoTitle();
+      const channel = await getActiveVideoChannel();
       const { storageId } = await clipYoutube({ videoId, startMs, endMs });
       const commentaryAudio = audioBlob
         ? await transcodeCommentary(audioBlob)
@@ -211,6 +221,8 @@ export function ClipComposer({ videoId }: { videoId: string }) {
       const id = await publishYoutubeAuthed({
         videoId,
         title,
+        author: channel.name ?? undefined,
+        channelUrl: channel.url ?? undefined,
         clipStorageId: storageId,
         clipStartMs: startMs,
         clipEndMs: endMs,
@@ -219,6 +231,7 @@ export function ClipComposer({ videoId }: { videoId: string }) {
         commentaryAudioTranscript: commentaryAudio?.transcript ?? undefined,
         isAnonymous,
         threadId: thread.threadId ?? undefined,
+        topicIds,
       });
       setAnnotationId(id);
       setStatus("done");
@@ -237,6 +250,7 @@ export function ClipComposer({ videoId }: { videoId: string }) {
     setEndInput("");
     setCommentary("");
     setAudioBlob(null);
+    setTopicIds([]);
     setIsAnonymous(false);
     setAnnotationId(null);
   };
@@ -244,7 +258,7 @@ export function ClipComposer({ videoId }: { videoId: string }) {
   if (status === "done" && annotationId) {
     const publishedId = annotationId;
     return (
-      <section className="ann-shadow" style={{ border: `1px solid ${hair}`, borderRadius: 10, background: panel, padding: 16 }}>
+      <section style={{ border: `2px solid ${ink}`, borderRadius: 0, background: panel, padding: 16, boxShadow: `6px 6px 0 0 ${ink}` }}>
         <div style={{ ...label, color: valid }}>Published</div>
         <a className="ann-link" href={`${getWebUrl()}/a/${publishedId}`} target="_blank" rel="noreferrer">
           View annotation ⟶
@@ -311,6 +325,10 @@ export function ClipComposer({ videoId }: { videoId: string }) {
         />
       </div>
 
+      <div style={{ marginTop: 16 }}>
+        <TopicPicker selected={topicIds} onChange={setTopicIds} />
+      </div>
+
       <AnonymousToggle
         checked={isAnonymous}
         onChange={setIsAnonymous}
@@ -321,14 +339,26 @@ export function ClipComposer({ videoId }: { videoId: string }) {
         type="button"
         className="ann-publish ann-press ann-shadow"
         style={{ marginTop: 16 }}
-        disabled={!canPublish}
+        disabled={!canPublish || topicIds.length === 0}
         onClick={handlePublish}
       >
-        {status === "clipping" ? "Clipping… (~2s)" : status === "publishing" ? "Saving annotation…" : "Publish clip →"}
+        {status === "clipping" ? "Clipping…" : status === "publishing" ? "Saving annotation…" : "Publish clip →"}
       </button>
 
+      {busy && processingStartedAt !== null && (
+        <ProgressIndicator
+          label={status === "publishing" ? "Saving annotation…" : "Processing clip…"}
+          estimateMs={audioBlob ? 9000 : 6000}
+          startedAt={processingStartedAt}
+        />
+      )}
+
+      {topicIds.length === 0 && (
+        <p style={{ marginTop: 8, fontSize: 12, color: muted }}>Pick at least one topic</p>
+      )}
+
       {status === "error" && errorMsg && (
-        <p style={{ marginTop: 14, border: `1px solid ${hair}`, borderRadius: 7, background: surface, color: danger, padding: 10, fontSize: 13 }}>
+        <p style={{ marginTop: 14, border: `2px solid ${danger}`, borderRadius: 0, background: surface, color: danger, padding: 10, fontSize: 13 }}>
           {errorMsg}
         </p>
       )}

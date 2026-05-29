@@ -28,8 +28,26 @@ interface YoutubeSourceInput {
   videoId: string;
   title: string;
   author?: string;
+  channelUrl?: string;
   thumbnailUrl?: string;
   durationMs?: number;
+}
+
+/**
+ * The poster image for a YouTube source's share/OG card. Prefers a stored
+ * thumbnail, else derives YouTube's deterministic per-video still from the video
+ * id — so every video clip has a card image even though the extension doesn't
+ * send one (existing rows included, no migration). Undefined only when there's
+ * no video id (non-YouTube source).
+ */
+export function youtubeThumbnailFor(source: {
+  youtubeThumbnailUrl?: string;
+  youtubeVideoId?: string;
+}): string | undefined {
+  if (source.youtubeThumbnailUrl) return source.youtubeThumbnailUrl;
+  return source.youtubeVideoId
+    ? `https://i.ytimg.com/vi/${source.youtubeVideoId}/hqdefault.jpg`
+    : undefined;
 }
 
 /**
@@ -54,6 +72,7 @@ export async function upsertYoutubeSource(
     author: input.author,
     youtubeVideoId: input.videoId,
     youtubeThumbnailUrl: input.thumbnailUrl,
+    youtubeChannelUrl: input.channelUrl,
     youtubeDurationMs: input.durationMs,
     cachedAt: Date.now(),
   });
@@ -65,6 +84,7 @@ export const upsertYoutube = mutation({
     videoId: v.string(),
     title: v.string(),
     author: v.optional(v.string()),
+    channelUrl: v.optional(v.string()),
     thumbnailUrl: v.optional(v.string()),
     durationMs: v.optional(v.number()),
   },

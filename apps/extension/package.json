@@ -31,8 +31,7 @@
   "manifest": {
     "key": "$CRX_PUBLIC_KEY",
     "host_permissions": [
-      "https://*/*",
-      "http://localhost/*"
+      "https://*/*"
     ],
     "permissions": [
       "sidePanel",

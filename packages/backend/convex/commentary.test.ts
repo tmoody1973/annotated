@@ -1,7 +1,8 @@
-import { convexTest } from "convex-test";
+import { convexTest, type TestConvex } from "convex-test";
 import { beforeAll, expect, test } from "vitest";
 import schema from "./schema";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
+import type { Id } from "./_generated/dataModel";
 
 const modules = import.meta.glob("./**/*.*s");
 const WORKER_TOKEN = "test-worker-token";
@@ -9,6 +10,18 @@ const WORKER_TOKEN = "test-worker-token";
 beforeAll(() => {
   process.env.WORKER_AUTH_TOKEN = WORKER_TOKEN;
 });
+
+async function oneTopic(t: TestConvex<typeof schema>): Promise<Id<"topics">[]> {
+  await t.mutation(internal.topics.seedTopics, {});
+  const id = await t.run(async (ctx) => {
+    const topic = await ctx.db
+      .query("topics")
+      .withIndex("by_slug", (q) => q.eq("slug", "tech"))
+      .first();
+    return topic!._id;
+  });
+  return [id];
+}
 
 const quote = "a quoted passage";
 const articleBase = {
@@ -22,11 +35,13 @@ const articleBase = {
 
 test("article publish: text-only lands, audio-only lands, neither is rejected", async () => {
   const t = convexTest(schema, modules);
+  const topics = await oneTopic(t);
 
   // text-only — unchanged behavior
   const textId = await t.mutation(api.testing.publishArticleClipDev, {
     ...articleBase,
     commentaryText: "my take",
+    topicIds: topics,
   });
   expect(textId).toBeTruthy();
 
@@ -37,6 +52,7 @@ test("article publish: text-only lands, audio-only lands, neither is rejected", 
   const audioAnnId = await t.mutation(api.testing.publishArticleClipDev, {
     ...articleBase,
     commentaryAudioStorageId: audioStorageId,
+    topicIds: topics,
   });
   const row = await t.run((ctx) => ctx.db.get(audioAnnId));
   expect(row?.commentaryAudioStorageId).toBe(audioStorageId);
@@ -46,14 +62,15 @@ test("article publish: text-only lands, audio-only lands, neither is rejected", 
   const view = await t.query(api.annotations.getById, { annotationId: audioAnnId });
   expect(view?.commentaryAudioUrl).toBeTruthy();
 
-  // neither text nor audio — rejected
+  // neither text nor audio — rejected (commentary check runs before topic check)
   await expect(
-    t.mutation(api.testing.publishArticleClipDev, { ...articleBase })
+    t.mutation(api.testing.publishArticleClipDev, { ...articleBase, topicIds: topics })
   ).rejects.toThrow();
 });
 
 test("article publish: a quote over the 100-word fair-use ceiling is rejected", async () => {
   const t = convexTest(schema, modules);
+  const topics = await oneTopic(t);
   const overLimit = Array.from({ length: 101 }, (_, i) => `w${i}`).join(" ");
   await expect(
     t.mutation(api.testing.publishArticleClipDev, {
@@ -62,6 +79,7 @@ test("article publish: a quote over the 100-word fair-use ceiling is rejected", 
       textStart: 0,
       textEnd: overLimit.length,
       commentaryText: "too long",
+      topicIds: topics,
     })
   ).rejects.toThrow(/fair-use/);
 
@@ -73,12 +91,14 @@ test("article publish: a quote over the 100-word fair-use ceiling is rejected", 
     textStart: 0,
     textEnd: atLimit.length,
     commentaryText: "ok",
+    topicIds: topics,
   });
   expect(id).toBeTruthy();
 });
 
 test("youtube publish: audio-only lands via assertPublishable, neither is rejected", async () => {
   const t = convexTest(schema, modules);
+  const topics = await oneTopic(t);
   const clipStorageId = await t.run((ctx) =>
     ctx.storage.store(new Blob(["video"], { type: "video/mp4" }))
   );
@@ -93,6 +113,7 @@ test("youtube publish: audio-only lands via assertPublishable, neither is reject
     clipStartMs: 0,
     clipEndMs: 10_000,
     commentaryAudioStorageId: audioStorageId,
+    topicIds: topics,
     workerToken: WORKER_TOKEN,
   });
   expect(annId).toBeTruthy();
@@ -104,6 +125,7 @@ test("youtube publish: audio-only lands via assertPublishable, neither is reject
       clipStorageId,
       clipStartMs: 0,
       clipEndMs: 10_000,
+      topicIds: topics,
       workerToken: WORKER_TOKEN,
     })
   ).rejects.toThrow();

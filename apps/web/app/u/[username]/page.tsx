@@ -2,11 +2,19 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "@annotated/backend/convex/_generated/api";
-import { SiteHeader } from "../../_components/site-header";
+import { AppShell } from "../../_components/app-shell";
 import { AnnotationCard, type FeedItem } from "../../_components/annotation-card";
 import { FollowButton } from "../../_components/follow-button";
+import { AuthorAvatar, VerifiedBadge } from "../../_components/author-avatar";
+import { ProfileEmptyState } from "../../_components/profile-empty-state";
+import { absoluteUrl } from "../../_lib/urls";
 
 const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
+
+/** Build the public X/Twitter profile URL from a stored handle (with or without @). */
+function xProfileUrl(handle: string): string {
+  return `https://x.com/${handle.replace(/^@/, "")}`;
+}
 
 async function fetchProfile(username: string) {
   if (!convexUrl) throw new Error("Missing NEXT_PUBLIC_CONVEX_URL");
@@ -20,23 +28,16 @@ async function fetchProfile(username: string) {
   return { user, annotations, counts };
 }
 
-function initials(name: string): string {
-  return name
-    .split(/\s+/)
-    .map((w) => w[0])
-    .filter(Boolean)
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-}
-
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ username: string }>;
 }): Promise<Metadata> {
   const { username } = await params;
-  return { title: `@${username} — Annotated` };
+  return {
+    title: `@${username} — Annotated`,
+    alternates: { canonical: absoluteUrl(`/@${username}`) },
+  };
 }
 
 export default async function ProfilePage({
@@ -50,35 +51,67 @@ export default async function ProfilePage({
   const { user, annotations, counts } = profile;
 
   return (
-    <main className="flex min-h-screen flex-1 flex-col bg-[color:var(--b-bg)] text-[color:var(--b-onbg)]">
-      <SiteHeader />
-      <section className="mx-auto w-full max-w-2xl p-6">
-        <div className="flex items-center gap-4 border-b-[3px] border-[color:var(--b-line)] pb-6">
-          <div className="flex size-16 items-center justify-center border-2 border-[color:var(--b-line)] bg-[color:var(--b-acid)] text-xl font-black text-[color:var(--b-acid-ink)] shadow-[5px_5px_0_0_var(--b-shadow)]">
-            {initials(user.displayName)}
+    <AppShell narrow>
+        <div className="border-b-[3px] border-[color:var(--b-line)] pb-6">
+          <div className="flex items-center gap-4">
+            <span className="inline-block flex-none shadow-[5px_5px_0_0_var(--b-shadow)]">
+              <AuthorAvatar displayName={user.displayName} avatarUrl={user.avatarUrl} size={64} />
+            </span>
+            <div className="min-w-0">
+              <h1 className="flex items-center gap-1.5 font-display text-3xl leading-none tracking-tight">
+                {user.displayName}
+                {user.isVerified && <VerifiedBadge />}
+              </h1>
+              <p className="mt-1 font-mono text-[13px] text-[color:var(--b-dim-onbg)]">@{user.username}</p>
+              <p className="font-mono text-[12px] uppercase tracking-wide text-[color:var(--b-dim-onbg)]">
+                {counts.followers} followers · {counts.following} following
+              </p>
+            </div>
+            <div className="ml-auto">
+              <FollowButton targetUserId={user._id} />
+            </div>
           </div>
-          <div>
-            <h1 className="font-display text-3xl leading-none tracking-tight">{user.displayName}</h1>
-            <p className="mt-1 font-mono text-[13px] text-[color:var(--b-dim-onbg)]">@{user.username}</p>
-            <p className="font-mono text-[12px] uppercase tracking-wide text-[color:var(--b-dim-onbg)]">
-              {counts.followers} followers · {counts.following} following
+
+          {user.bio && (
+            <p className="mt-4 max-w-prose text-[15px] leading-relaxed text-[color:var(--b-onbg)]">
+              {user.bio}
             </p>
-          </div>
-          <div className="ml-auto">
-            <FollowButton targetUserId={user._id} />
-          </div>
+          )}
+          {(user.xHandle || user.website) && (
+            <div className="mt-2 flex flex-wrap items-center gap-4">
+              {user.xHandle && (
+                <a
+                  href={xProfileUrl(user.xHandle)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 font-mono text-[13px] font-bold text-[color:var(--b-dim-onbg)] hover:text-[color:var(--b-onbg)] hover:underline"
+                >
+                  𝕏 @{user.xHandle.replace(/^@/, "")}
+                </a>
+              )}
+              {user.website && (
+                <a
+                  href={user.website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 font-mono text-[13px] font-bold text-[color:var(--b-dim-onbg)] hover:text-[color:var(--b-onbg)] hover:underline"
+                >
+                  🔗 {user.website.replace(/^https?:\/\//, "").replace(/\/$/, "")}
+                </a>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="mt-6 flex flex-col gap-5">
           {annotations.length === 0 ? (
-            <p className="font-mono text-sm text-[color:var(--b-dim-onbg)]">No annotations yet.</p>
+            <ProfileEmptyState username={user.username} />
           ) : (
             annotations.map((item) => (
               <AnnotationCard key={item._id} item={item as FeedItem} />
             ))
           )}
         </div>
-      </section>
-    </main>
+    </AppShell>
   );
 }

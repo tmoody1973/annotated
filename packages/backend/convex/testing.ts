@@ -3,7 +3,7 @@ import { countWords, MAX_QUOTE_WORDS } from "@annotated/shared";
 import { mutation, type MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { upsertArticleSource, upsertYoutubeSource } from "./sources";
-import { assertPublishable, insertAnnotation } from "./annotations";
+import { assertPublishable, assertTopics, insertAnnotation } from "./annotations";
 
 /** Clerk subject used for the dev seed author until extension auth ships. */
 const SEED_CLERK_ID = "seed-dev-user";
@@ -146,6 +146,7 @@ export const publishYoutubeClipDev = mutation({
     commentaryAudioTranscript: v.optional(v.string()),
     isAnonymous: v.optional(v.boolean()),
     threadId: v.optional(v.id("threads")),
+    topicIds: v.array(v.id("topics")),
     workerToken: v.string(),
   },
   returns: v.id("annotations"),
@@ -154,6 +155,7 @@ export const publishYoutubeClipDev = mutation({
       throw new Error("Unauthorized");
     }
     assertPublishable(args);
+    await assertTopics(ctx, args.topicIds);
 
     const authorId = await resolveSeedUser(ctx);
     const sourceId = await upsertYoutubeSource(ctx, args);
@@ -169,6 +171,7 @@ export const publishYoutubeClipDev = mutation({
       commentaryAudioTranscript: args.commentaryAudioTranscript,
       isAnonymous: args.isAnonymous,
       threadId: args.threadId,
+      topicIds: args.topicIds,
     });
   },
 });
@@ -192,6 +195,7 @@ export const publishPodcastClipDev = mutation({
     commentaryAudioTranscript: v.optional(v.string()),
     isAnonymous: v.optional(v.boolean()),
     threadId: v.optional(v.id("threads")),
+    topicIds: v.array(v.id("topics")),
     workerToken: v.string(),
   },
   returns: v.id("annotations"),
@@ -207,6 +211,7 @@ export const publishPodcastClipDev = mutation({
       throw new Error("A transcript quote is required");
     }
     assertPublishable(args);
+    await assertTopics(ctx, args.topicIds);
 
     const authorId = await resolveSeedUser(ctx);
     return await insertAnnotation(ctx, {
@@ -221,6 +226,7 @@ export const publishPodcastClipDev = mutation({
       commentaryAudioTranscript: args.commentaryAudioTranscript,
       isAnonymous: args.isAnonymous,
       threadId: args.threadId,
+      topicIds: args.topicIds,
     });
   },
 });
@@ -249,6 +255,7 @@ export const publishArticleClipDev = mutation({
     screenshotStorageId: v.optional(v.id("_storage")),
     isAnonymous: v.optional(v.boolean()),
     threadId: v.optional(v.id("threads")),
+    topicIds: v.array(v.id("topics")),
     workerToken: v.string(),
   },
   returns: v.id("annotations"),
@@ -282,6 +289,7 @@ export const publishArticleClipDev = mutation({
     if (countWords(args.selectedText) > MAX_QUOTE_WORDS) {
       throw new Error(`Highlight exceeds the ${MAX_QUOTE_WORDS}-word fair-use limit`);
     }
+    await assertTopics(ctx, args.topicIds);
 
     const authorId = await resolveSeedUser(ctx);
     const sourceId = await upsertArticleSource(ctx, {
@@ -304,6 +312,7 @@ export const publishArticleClipDev = mutation({
       screenshotStorageId: args.screenshotStorageId,
       isAnonymous: args.isAnonymous,
       threadId: args.threadId,
+      topicIds: args.topicIds,
     });
   },
 });
@@ -338,5 +347,42 @@ export const startThreadDev = mutation({
     });
     await ctx.db.patch(args.annotationId, { threadId, threadOrder: 0 });
     return threadId;
+  },
+});
+
+/**
+ * Test-only: (re)assign topics to an existing annotation so launch rooms aren't
+ * empty before the composer flow has tagged content. Token-guarded; idempotent
+ * (clears prior topic rows first). DEBT: a launch-bootstrap helper, not production.
+ */
+export const assignTopicsDev = mutation({
+  args: {
+    annotationId: v.id("annotations"),
+    topicIds: v.array(v.id("topics")),
+    workerToken: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    if (args.workerToken !== process.env.WORKER_AUTH_TOKEN) {
+      throw new Error("Unauthorized");
+    }
+    const annotation = await ctx.db.get(args.annotationId);
+    if (!annotation) throw new Error("Annotation not found");
+    // Hold the same 1-3 / valid-topic invariant the publish paths enforce, so
+    // backfill can't seed rows that violate the model.
+    await assertTopics(ctx, args.topicIds);
+    const existing = await ctx.db
+      .query("annotationTopics")
+      .withIndex("by_annotation", (q) => q.eq("annotationId", args.annotationId))
+      .collect();
+    for (const row of existing) await ctx.db.delete(row._id);
+    for (const topicId of args.topicIds) {
+      await ctx.db.insert("annotationTopics", {
+        annotationId: args.annotationId,
+        topicId,
+        publishedAt: annotation.publishedAt ?? Date.now(),
+      });
+    }
+    return null;
   },
 });

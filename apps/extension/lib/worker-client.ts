@@ -131,10 +131,14 @@ export async function extractArticle(
     body: JSON.stringify({ url, html }),
   });
   if (!response.ok) {
-    const detail = await response.text().catch(() => "");
-    throw new Error(
-      `Extract failed (${response.status})${detail ? `: ${detail}` : ""}`
-    );
+    // 422 is the worker's "this page has no readable article" signal — show a
+    // friendly, actionable message instead of the raw JSON error.
+    if (response.status === 422) {
+      throw new Error(
+        "This page doesn't have a clippable article. Try a news story or blog post — or clip a YouTube video or podcast instead."
+      );
+    }
+    throw new Error("Couldn't read this article. Please try again in a moment.");
   }
   const body = (await response.json()) as Partial<ExtractedArticle>;
   if (typeof body.title !== "string" || typeof body.textContent !== "string") {

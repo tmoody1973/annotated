@@ -1,14 +1,26 @@
-import { convexTest } from "convex-test";
+import { convexTest, type TestConvex } from "convex-test";
 import { expect, test } from "vitest";
 import schema from "./schema";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 
 const modules = import.meta.glob("./**/*.*s");
 
+async function oneTopic(t: TestConvex<typeof schema>): Promise<Id<"topics">[]> {
+  await t.mutation(internal.topics.seedTopics, {});
+  const id = await t.run(async (ctx) => {
+    const topic = await ctx.db
+      .query("topics")
+      .withIndex("by_slug", (q) => q.eq("slug", "tech"))
+      .first();
+    return topic!._id;
+  });
+  return [id];
+}
+
 /** A throwaway storage blob so the clip-bearing mutation has a real storageId. */
 async function seedClipStorage(
-  t: ReturnType<typeof convexTest>
+  t: TestConvex<typeof schema>
 ): Promise<Id<"_storage">> {
   return await t.run(async (ctx) => ctx.storage.store(new Blob(["clip"])));
 }
@@ -26,6 +38,7 @@ test("createYoutube attributes the clip to the signed-in Clerk identity", async 
     clipStartMs: 0,
     clipEndMs: 10_000,
     commentaryText: "my take",
+    topicIds: await oneTopic(t),
   });
 
   const stored = await t.run((ctx) => ctx.db.get(annotationId));
@@ -45,6 +58,7 @@ test("createYoutube rejects an unauthenticated caller", async () => {
       clipStartMs: 0,
       clipEndMs: 10_000,
       commentaryText: "my take",
+      topicIds: await oneTopic(t),
     })
   ).rejects.toThrow("Not authenticated");
 });
@@ -66,6 +80,7 @@ test("createYoutube accepts audio commentary, anonymity, and a thread", async ()
     commentaryAudioStorageId: audioStorageId,
     commentaryAudioTranscript: "spoken take",
     isAnonymous: true,
+    topicIds: await oneTopic(t),
   });
 
   const stored = await t.run((ctx) => ctx.db.get(annotationId));
@@ -95,6 +110,8 @@ test("createYoutube refuses to append to a thread the caller does not own", asyn
     });
   });
 
+  const topics = await oneTopic(t);
+
   // Bob cannot append his clip to Alice's thread.
   await expect(
     bob.mutation(api.annotations.createYoutube, {
@@ -105,6 +122,7 @@ test("createYoutube refuses to append to a thread the caller does not own", asyn
       clipEndMs: 10_000,
       commentaryText: "sneaky",
       threadId: aliceThreadId,
+      topicIds: topics,
     })
   ).rejects.toThrow("thread you do not own");
 
@@ -117,6 +135,7 @@ test("createYoutube refuses to append to a thread the caller does not own", asyn
     clipEndMs: 10_000,
     commentaryText: "mine",
     threadId: aliceThreadId,
+    topicIds: topics,
   });
   expect(ok).toBeTruthy();
 });
@@ -134,6 +153,7 @@ test("createYoutube rejects a clip with no commentary at all", async () => {
       clipStorageId,
       clipStartMs: 0,
       clipEndMs: 10_000,
+      topicIds: await oneTopic(t),
     })
   ).rejects.toThrow("Commentary is required");
 });

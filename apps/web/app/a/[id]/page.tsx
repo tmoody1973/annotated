@@ -4,10 +4,12 @@ import { ConvexHttpClient } from "convex/browser";
 import { makeFunctionReference } from "convex/server";
 import { slugId, splitSlugId, sliceTranscriptToSpan } from "@annotated/shared";
 import { ClaimButton } from "./claim-button";
+import { SaveImageDialog } from "./save-image-dialog";
 import { VoteButtons } from "../../_components/vote-buttons";
 import { FollowButton } from "../../_components/follow-button";
 import { Comments } from "../../_components/comments";
 import { ClipArticle } from "../../_components/clip-article";
+import { AppShell } from "../../_components/app-shell";
 import { JsonLd } from "../../_components/json-ld";
 import { absoluteUrl, clipPath, threadPath } from "../../_lib/urls";
 
@@ -34,8 +36,10 @@ interface AnnotationView {
     siteName?: string;
     author?: string;
     imageUrl?: string | null;
+    podcastName?: string | null;
+    youtubeChannelUrl?: string | null;
   } | null;
-  author: { id: string; username: string; displayName: string } | null;
+  author: { id: string; username: string; displayName: string; avatarUrl?: string | null } | null;
 }
 
 const getById = makeFunctionReference<
@@ -47,7 +51,7 @@ const getById = makeFunctionReference<
 const getTranscriptBySource = makeFunctionReference<
   "query",
   { sourceId: string },
-  { wordsJson?: string } | null
+  { wordsJson?: string; words?: { word: string; startMs: number; endMs: number }[] } | null
 >("transcripts:getBySource");
 
 const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
@@ -66,12 +70,14 @@ async function fetchClipTranscript(
   try {
     const client = new ConvexHttpClient(convexUrl);
     const row = await client.query(getTranscriptBySource, { sourceId });
-    if (!row?.wordsJson) return undefined;
-    const words = JSON.parse(row.wordsJson) as {
-      word: string;
-      startMs: number;
-      endMs: number;
-    }[];
+    if (!row) return undefined;
+    // New transcripts store wordsJson (bypasses Convex's 8192-array cap); older
+    // rows used the `words` array. Support both so podcast + legacy clips work.
+    type TranscriptWord = { word: string; startMs: number; endMs: number };
+    const words: TranscriptWord[] = row.wordsJson
+      ? (JSON.parse(row.wordsJson) as TranscriptWord[])
+      : (row.words ?? []);
+    if (words.length === 0) return undefined;
     const text = sliceTranscriptToSpan(words, startMs, endMs)
       .map((w) => w.word)
       .join(" ")
@@ -144,8 +150,12 @@ export default async function AnnotationPage({
     permanentRedirect(clipPath(annotation.source?.title ?? "clip", annotation._id));
   }
 
-  // YouTube clips show the spoken transcript for the clip window (best-effort —
-  // backfilled at publish, absent if captions were unavailable or still pending).
+  // YouTube clips show the spoken transcript for the clip window: the clip is
+  // selected by playback time, so the VTT (video-relative, no ad-insertion
+  // drift) is the only place that text surfaces. Podcasts are intentionally NOT
+  // re-sliced here — their quote is already the transcript words the user
+  // dragged in the sidebar, and the episode transcript can drift from the cut
+  // audio. An accurate podcast clip transcript needs Deepgram on the clipped mp3.
   const clipTranscript =
     annotation.source?.type === "youtube" &&
     annotation.clipStartMs != null &&
@@ -179,25 +189,19 @@ export default async function AnnotationPage({
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center bg-[color:var(--b-bg)] px-4 py-10 text-[color:var(--b-onbg)]">
+    <AppShell narrow>
       <JsonLd data={jsonLd} />
-      <div className="w-full max-w-2xl">
-        <header className="mb-6 flex items-center justify-between">
-          <a href="/" className="font-display text-lg leading-none tracking-tight">
-            <span className="bg-[color:var(--b-acid)] px-1.5 text-[color:var(--b-acid-ink)]">A</span>NNOTATED
-          </a>
-          <span className="border-2 border-[color:var(--b-line)] bg-[color:var(--b-acid)] px-2.5 py-1 font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-[color:var(--b-acid-ink)]">
-            Clip
-          </span>
-        </header>
-
-        <ClipArticle
+      <ClipArticle
           data={{
             selectedText: annotation.selectedText,
             commentaryText: annotation.commentaryText,
             commentaryAudioUrl: annotation.commentaryAudioUrl,
             commentaryAudioTranscript: annotation.commentaryAudioTranscript,
             clipTranscript,
+            captionsUrl:
+              annotation.source?.type === "youtube" && clipTranscript
+                ? `/a/${canonicalParam}/captions`
+                : undefined,
             clipStartMs: annotation.clipStartMs,
             clipEndMs: annotation.clipEndMs,
             clipUrl: annotation.clipUrl,
@@ -219,6 +223,7 @@ export default async function AnnotationPage({
           {annotation.author && (
             <FollowButton targetUserId={annotation.author.id} />
           )}
+          <SaveImageDialog slug={canonicalParam} />
         </div>
 
         <Comments annotationId={annotation._id} />
@@ -230,7 +235,6 @@ export default async function AnnotationPage({
         <footer className="mt-8 text-center font-mono text-xs text-[color:var(--b-dim-onbg)]">
           annotated.com
         </footer>
-      </div>
-    </main>
+    </AppShell>
   );
 }

@@ -51,3 +51,34 @@ export async function getActiveVideoTitle(): Promise<string> {
   const tab = await getActiveTab();
   return cleanYoutubeTitle(tab?.title ?? "YouTube video");
 }
+
+/**
+ * Reads the channel name + absolute channel URL from the active YouTube watch
+ * page (the creator the clip points at). Injected on demand — the owner link is
+ * the same anchor YouTube renders under the video. Returns nulls when not a
+ * watch page or the DOM shape changed, so publish degrades gracefully.
+ */
+export async function getActiveVideoChannel(): Promise<{
+  name: string | null;
+  url: string | null;
+}> {
+  const tab = await getActiveTab();
+  if (!tab?.id) return { name: null, url: null };
+  try {
+    const [injection] = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: () => {
+        const anchor = document.querySelector<HTMLAnchorElement>(
+          "ytd-video-owner-renderer a.yt-simple-endpoint, #owner #channel-name a, ytd-channel-name a"
+        );
+        const name = anchor?.textContent?.trim() || null;
+        const href = anchor?.getAttribute("href") || null;
+        const url = href ? new URL(href, location.origin).href : null;
+        return { name, url };
+      },
+    });
+    return injection?.result ?? { name: null, url: null };
+  } catch {
+    return { name: null, url: null };
+  }
+}

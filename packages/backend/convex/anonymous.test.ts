@@ -1,7 +1,8 @@
-import { convexTest } from "convex-test";
+import { convexTest, type TestConvex } from "convex-test";
 import { beforeAll, expect, test } from "vitest";
 import schema from "./schema";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
+import type { Id } from "./_generated/dataModel";
 
 const modules = import.meta.glob("./**/*.*s");
 const WORKER_TOKEN = "test-worker-token";
@@ -9,6 +10,18 @@ const WORKER_TOKEN = "test-worker-token";
 beforeAll(() => {
   process.env.WORKER_AUTH_TOKEN = WORKER_TOKEN;
 });
+
+async function oneTopic(t: TestConvex<typeof schema>): Promise<Id<"topics">[]> {
+  await t.mutation(internal.topics.seedTopics, {});
+  const id = await t.run(async (ctx) => {
+    const topic = await ctx.db
+      .query("topics")
+      .withIndex("by_slug", (q) => q.eq("slug", "tech"))
+      .first();
+    return topic!._id;
+  });
+  return [id];
+}
 
 const quote = "an anonymous quote";
 const articleBase = {
@@ -27,6 +40,7 @@ test("anonymous annotation masks the author everywhere and never projects author
   const annId = await t.mutation(api.testing.publishArticleClipDev, {
     ...articleBase,
     isAnonymous: true,
+    topicIds: await oneTopic(t),
   });
 
   // The row keeps authorId server-side (for claims/moderation).
@@ -61,6 +75,7 @@ test("a non-anonymous annotation still projects the author (default-off unchange
 
   const annId = await t.mutation(api.testing.publishArticleClipDev, {
     ...articleBase,
+    topicIds: await oneTopic(t),
   });
 
   const view = await t.query(api.annotations.getById, { annotationId: annId });

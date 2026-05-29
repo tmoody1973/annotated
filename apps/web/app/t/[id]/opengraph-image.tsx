@@ -14,7 +14,9 @@ interface OgThreadClip {
 }
 interface OgThread {
   title: string | null;
-  source: { title: string; type: string } | null;
+  source:
+    | { title: string; type: string; imageUrl?: string | null; youtubeThumbnailUrl?: string | null }
+    | null;
   author: { displayName: string } | null;
   clips: OgThreadClip[];
 }
@@ -53,6 +55,10 @@ export default async function Image({
           sourceTitle: thread.source?.title,
           sourceType: thread.source?.type ?? "",
           clipCount: thread.clips.length,
+          imageUrl:
+            thread.source?.imageUrl ??
+            thread.source?.youtubeThumbnailUrl ??
+            undefined,
         };
       }
     } catch {

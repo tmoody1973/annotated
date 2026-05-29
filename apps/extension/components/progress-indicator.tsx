@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { progressFraction } from "@annotated/shared";
-import { accent, hair, ink, monoStack, muted, surface } from "../lib/clip-styles";
+import { accent, ink, monoStack, muted, surface } from "../lib/clip-styles";
 
 /**
  * A determinate-feeling progress bar for an operation with no measurable percent
@@ -37,10 +37,10 @@ export function ProgressIndicator({
       <div
         style={{
           marginTop: 6,
-          height: 8,
-          borderRadius: 999,
+          height: 10,
+          borderRadius: 0,
           overflow: "hidden",
-          border: `1px solid ${hair}`,
+          border: `2px solid ${ink}`,
           background: surface,
         }}
       >

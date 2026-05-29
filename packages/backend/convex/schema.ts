@@ -10,6 +10,8 @@ export default defineSchema({
     avatarUrl: v.optional(v.string()),
     bio: v.optional(v.string()),
     xHandle: v.optional(v.string()),
+    website: v.optional(v.string()),
+    isVerified: v.optional(v.boolean()),
   })
     .index("by_clerk_id", ["clerkId"])
     .index("by_username", ["username"]),
@@ -29,6 +31,10 @@ export default defineSchema({
     youtubeVideoId: v.optional(v.string()),
     youtubeThumbnailUrl: v.optional(v.string()),
     youtubeDurationMs: v.optional(v.number()),
+    // Channel name lives in `author` (shared with article journalist); the
+    // channel URL is YouTube-specific. Captured at clip time going forward —
+    // optional so pre-existing rows validate (channel name only, no link).
+    youtubeChannelUrl: v.optional(v.string()),
     // Podcast
     podcastName: v.optional(v.string()),
     podcastEpisodeGuid: v.optional(v.string()),
@@ -123,6 +129,12 @@ export default defineSchema({
     // the row server-side for claims/moderation but never projected. Optional,
     // default off, so pre-§9 rows validate and behave exactly as before.
     isAnonymous: v.optional(v.boolean()),
+    // Editorial curation (§1 cold-start): hand-picked clips that lead the
+    // signed-out "Curated / Editor's Picks" default feed, so a first-time
+    // visitor lands on a highlight reel instead of an empty "For You". Optional,
+    // default off, so every pre-§1 row validates and stays uncurated. Toggled
+    // via the internal `annotations.setEditorPick` (CLI/dashboard only).
+    isEditorPick: v.optional(v.boolean()),
     // Publishing
     isPublic: v.boolean(),
     publishedAt: v.optional(v.number()),
@@ -141,6 +153,7 @@ export default defineSchema({
     .index("by_author", ["authorId"])
     .index("by_source", ["sourceId"])
     .index("by_feed", ["isPublic", "publishedAt"])
+    .index("by_curated", ["isEditorPick", "publishedAt"])
     .index("by_thread", ["threadId"]),
 
   // Threads: an ordered series of annotations from one source by one author,
@@ -167,6 +180,22 @@ export default defineSchema({
     .index("by_annotation", ["annotationId"])
     .index("by_author", ["authorId"])
     .index("by_parent", ["parentId"]),
+
+  // Likes on individual comments. Drift-proof: the count is derived from rows,
+  // never stored. One row per (comment, user).
+  commentLikes: defineTable({
+    commentId: v.id("comments"),
+    userId: v.id("users"),
+  })
+    .index("by_comment", ["commentId"])
+    .index("by_comment_and_user", ["commentId", "userId"]),
+
+  // Publisher-accounts waitlist (the /publishers "coming soon" page). Public,
+  // unauthenticated capture; deduped by email.
+  publisherWaitlist: defineTable({
+    email: v.string(),
+    createdAt: v.number(),
+  }).index("by_email", ["email"]),
 
   // Follow relationships between users.
   follows: defineTable({
@@ -199,4 +228,22 @@ export default defineSchema({
   })
     .index("by_annotation", ["annotationId"])
     .index("by_status", ["status"]),
+
+  // Canonical, curated topics. Addressable rooms (/topics/[slug]).
+  topics: defineTable({
+    slug: v.string(),
+    name: v.string(),
+    description: v.optional(v.string()),
+    sortOrder: v.optional(v.number()),
+  }).index("by_slug", ["slug"]),
+
+  // Annotation↔topic join. `publishedAt` is denormalized from the annotation
+  // (immutable, set once) so a topic room reads its most-recent candidates by index.
+  annotationTopics: defineTable({
+    annotationId: v.id("annotations"),
+    topicId: v.id("topics"),
+    publishedAt: v.number(),
+  })
+    .index("by_topic", ["topicId", "publishedAt"])
+    .index("by_annotation", ["annotationId"]),
 });

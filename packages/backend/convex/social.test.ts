@@ -51,6 +51,28 @@ test("auth-gated social flow with mocked Clerk identities", async () => {
   expect(comments).toHaveLength(1);
   expect(comments[0]?.text).toBe("great clip");
   expect(comments[0]?.author?.username).toBeTruthy();
+  expect(comments[0]?.likeCount).toBe(0);
+  expect(comments[0]?.viewerHasLiked).toBe(false);
+
+  // Per-comment like: drift-proof toggle, recomputed count, per-viewer state.
+  const commentId = comments[0]!._id;
+  expect(await bob.mutation(api.comments.toggleCommentLike, { commentId })).toEqual({
+    liked: true,
+    likeCount: 1,
+  });
+  expect(await alice.mutation(api.comments.toggleCommentLike, { commentId })).toEqual({
+    liked: true,
+    likeCount: 2,
+  });
+  expect(await bob.mutation(api.comments.toggleCommentLike, { commentId })).toEqual({
+    liked: false,
+    likeCount: 1,
+  });
+  const seenByAlice = await alice.query(api.comments.listByAnnotation, { annotationId });
+  expect(seenByAlice[0]?.likeCount).toBe(1);
+  expect(seenByAlice[0]?.viewerHasLiked).toBe(true);
+  const seenByBob = await bob.query(api.comments.listByAnnotation, { annotationId });
+  expect(seenByBob[0]?.viewerHasLiked).toBe(false);
 
   // Empty comment is rejected.
   await expect(
@@ -77,4 +99,34 @@ test("auth-gated social flow with mocked Clerk identities", async () => {
   await expect(t.mutation(api.likes.toggleLike, { annotationId })).rejects.toThrow(
     /Not authenticated/
   );
+});
+
+test("feed projects an author's verified flag", async () => {
+  const t = convexTest(schema, modules);
+  await t.run(async (ctx) => {
+    const uid = await ctx.db.insert("users", {
+      clerkId: "clerk_verified",
+      username: "verified_user",
+      displayName: "Verified User",
+      isVerified: true,
+    });
+    const sourceId = await ctx.db.insert("sources", {
+      type: "article",
+      canonicalUrl: "https://example.com/v",
+      title: "V",
+    });
+    await ctx.db.insert("annotations", {
+      authorId: uid,
+      sourceId,
+      selectedText: "q",
+      commentaryText: "c",
+      isPublic: true,
+      publishedAt: Date.now(),
+      commentCount: 0,
+      likeCount: 0,
+    });
+  });
+  const feed = await t.query(api.annotations.listFeed, { paginationOpts: { numItems: 10, cursor: null } });
+  const card = feed.page.find((c) => c.author?.username === "verified_user");
+  expect(card?.author?.isVerified).toBe(true);
 });

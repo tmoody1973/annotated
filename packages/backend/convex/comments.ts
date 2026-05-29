@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import type { QueryCtx } from "./_generated/server";
-import { requireCurrentUser } from "./users";
+import { getCurrentUser, requireCurrentUser } from "./users";
 import type { Id } from "./_generated/dataModel";
 
 /**
@@ -70,26 +70,75 @@ async function resolveTopLevelParent(
 }
 
 /**
+ * Toggles the signed-in user's like on a comment. Idempotent per (comment,
+ * user); the like count is always recomputed from rows, so it can't drift or go
+ * negative. Returns the new liked state + count for an optimistic UI.
+ */
+export const toggleCommentLike = mutation({
+  args: { commentId: v.id("comments") },
+  returns: v.object({ liked: v.boolean(), likeCount: v.number() }),
+  handler: async (ctx, args) => {
+    const user = await requireCurrentUser(ctx);
+    const comment = await ctx.db.get(args.commentId);
+    if (!comment) {
+      throw new Error("Comment not found");
+    }
+
+    const existing = await ctx.db
+      .query("commentLikes")
+      .withIndex("by_comment_and_user", (q) =>
+        q.eq("commentId", args.commentId).eq("userId", user._id)
+      )
+      .first();
+    if (existing) {
+      await ctx.db.delete(existing._id);
+    } else {
+      await ctx.db.insert("commentLikes", {
+        commentId: args.commentId,
+        userId: user._id,
+      });
+    }
+
+    const rows = await ctx.db
+      .query("commentLikes")
+      .withIndex("by_comment", (q) => q.eq("commentId", args.commentId))
+      .collect();
+    return { liked: existing === null, likeCount: rows.length };
+  },
+});
+
+/**
  * Comments on an annotation as a one-level thread: top-level comments
  * oldest-first, each with an ordered `replies[]`. Each entry is joined with its
- * author.
+ * author and carries `likeCount` + `viewerHasLiked` (false when signed out).
  */
 export const listByAnnotation = query({
   args: { annotationId: v.id("annotations") },
   handler: async (ctx, args) => {
+    const viewer = await getCurrentUser(ctx);
+    const viewerId = viewer?._id ?? null;
+
     const comments = await ctx.db
       .query("comments")
       .withIndex("by_annotation", (q) => q.eq("annotationId", args.annotationId))
       .collect();
 
-    const withAuthors = await Promise.all(
+    const enriched = await Promise.all(
       comments.map(async (comment) => {
         const author = await ctx.db.get(comment.authorId);
+        const likes = await ctx.db
+          .query("commentLikes")
+          .withIndex("by_comment", (q) => q.eq("commentId", comment._id))
+          .collect();
         return {
           _id: comment._id,
           parentId: comment.parentId ?? null,
           text: comment.text,
           createdAt: comment.createdAt,
+          likeCount: likes.length,
+          viewerHasLiked: viewerId
+            ? likes.some((like) => like.userId === viewerId)
+            : false,
           author: author
             ? {
                 username: author.username,
@@ -103,13 +152,13 @@ export const listByAnnotation = query({
 
     const byCreatedAt = (a: { createdAt: number }, b: { createdAt: number }) =>
       a.createdAt - b.createdAt;
-    const topLevel = withAuthors
+    const topLevel = enriched
       .filter((c) => c.parentId === null)
       .sort(byCreatedAt);
 
     return topLevel.map((top) => ({
       ...top,
-      replies: withAuthors
+      replies: enriched
         .filter((c) => c.parentId === top._id)
         .sort(byCreatedAt),
     }));

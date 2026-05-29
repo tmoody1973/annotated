@@ -4,18 +4,15 @@ import { useState } from "react";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { SignInButton } from "@clerk/nextjs";
 import type { FunctionReturnType } from "convex/server";
+import { formatRelativeTime } from "@annotated/shared";
 import { api } from "@annotated/backend/convex/_generated/api";
 import type { Id } from "@annotated/backend/convex/_generated/dataModel";
+import { AuthorAvatar } from "./author-avatar";
 
 type Thread = FunctionReturnType<typeof api.comments.listByAnnotation>;
 type ThreadComment = Thread[number];
 type Reply = ThreadComment["replies"][number];
-
-function byline(author: ThreadComment["author"]): string {
-  return `${author?.displayName ?? "Unknown"} @${author?.username ?? "?"}`;
-}
-
-const bylineCls = "font-mono text-[13px] text-[color:var(--b-dim-onbg)]";
+type AnyComment = ThreadComment | Reply;
 
 /** Real-time comment thread + composer for an annotation (one level of replies). */
 export function Comments({ annotationId }: { annotationId: string }) {
@@ -42,7 +39,7 @@ export function Comments({ annotationId }: { annotationId: string }) {
         </p>
       )}
 
-      <ul className="mt-6 flex flex-col gap-5">
+      <ul className="mt-6 flex flex-col gap-4">
         {comments?.length === 0 && (
           <li className="text-sm text-[color:var(--b-dim-onbg)]">No comments yet — start the thread.</li>
         )}
@@ -51,7 +48,7 @@ export function Comments({ annotationId }: { annotationId: string }) {
             key={comment._id}
             annotationId={id}
             comment={comment}
-            canReply={isAuthenticated}
+            canInteract={isAuthenticated}
           />
         ))}
       </ul>
@@ -62,34 +59,37 @@ export function Comments({ annotationId }: { annotationId: string }) {
 function CommentItem({
   annotationId,
   comment,
-  canReply,
+  canInteract,
 }: {
   annotationId: Id<"annotations">;
   comment: ThreadComment;
-  canReply: boolean;
+  canInteract: boolean;
 }) {
   const [replying, setReplying] = useState(false);
 
   return (
-    <li className="border-l-[5px] border-[color:var(--b-acid)] pl-4">
-      <p className={bylineCls}>{byline(comment.author)}</p>
-      <p className="mt-0.5 text-[15px] leading-relaxed">{comment.text}</p>
-
-      {canReply && (
-        <button
-          className="mt-1 font-mono text-xs font-bold uppercase tracking-wide text-[color:var(--b-dim-onbg)] underline decoration-[color:var(--b-acid)] decoration-2 underline-offset-2"
-          onClick={() => setReplying((v) => !v)}
-        >
-          {replying ? "Cancel" : "Reply"}
-        </button>
-      )}
+    <li className="border-[3px] border-[color:var(--b-line)] bg-[color:var(--b-card)] p-3 text-[color:var(--b-ink)] shadow-[4px_4px_0_0_var(--b-shadow)]">
+      <CommentRow
+        comment={comment}
+        canInteract={canInteract}
+        avatarSize={36}
+        extraAction={
+          canInteract ? (
+            <button
+              className="font-mono text-[11px] font-bold uppercase tracking-wide text-[color:var(--b-dim)] hover:text-[color:var(--b-ink)]"
+              onClick={() => setReplying((v) => !v)}
+            >
+              {replying ? "Cancel" : "Reply"}
+            </button>
+          ) : null
+        }
+      />
 
       {(replying || comment.replies.length > 0) && (
-        <ul className="mt-3 flex flex-col gap-3 border-l-[5px] border-[color:var(--b-line)] pl-4">
-          {comment.replies.map((reply: Reply) => (
+        <ul className="mt-3 flex flex-col gap-3 border-l-[3px] border-[color:var(--b-line)] pl-3">
+          {comment.replies.map((reply) => (
             <li key={reply._id}>
-              <p className={bylineCls}>{byline(reply.author)}</p>
-              <p className="mt-0.5 text-[15px] leading-relaxed">{reply.text}</p>
+              <CommentRow comment={reply} canInteract={canInteract} avatarSize={28} />
             </li>
           ))}
           {replying && (
@@ -106,6 +106,106 @@ function CommentItem({
         </ul>
       )}
     </li>
+  );
+}
+
+/** One comment or reply: avatar, byline (name · @user · relative date), text,
+ *  and an action row (Like + an optional extra action like Reply). */
+function CommentRow({
+  comment,
+  canInteract,
+  avatarSize,
+  extraAction,
+}: {
+  comment: AnyComment;
+  canInteract: boolean;
+  avatarSize: number;
+  extraAction?: React.ReactNode;
+}) {
+  const name = comment.author?.displayName ?? "Unknown";
+  return (
+    <div className="flex gap-3">
+      <AuthorAvatar displayName={name} avatarUrl={comment.author?.avatarUrl} size={avatarSize} />
+      <div className="min-w-0 flex-1">
+        <p className="flex flex-wrap items-baseline gap-x-2 leading-tight">
+          <span className="text-[14px] font-extrabold">{name}</span>
+          <span className="font-mono text-[12px] text-[color:var(--b-dim)]">
+            @{comment.author?.username ?? "?"}
+          </span>
+          <span className="font-mono text-[11px] text-[color:var(--b-dim)]">
+            · {formatRelativeTime(comment.createdAt)}
+          </span>
+        </p>
+        <p className="mt-1 text-[15px] leading-relaxed">{comment.text}</p>
+        <div className="mt-1.5 flex items-center gap-4">
+          <CommentLikeButton
+            commentId={comment._id}
+            likeCount={comment.likeCount}
+            liked={comment.viewerHasLiked}
+            canInteract={canInteract}
+          />
+          {extraAction}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Heart + count for a single comment. Reactive: the toggle mutation re-runs the
+ *  thread query, so count/state update without local optimism. Signed-out clicks
+ *  open the sign-in modal instead. */
+function CommentLikeButton({
+  commentId,
+  likeCount,
+  liked,
+  canInteract,
+}: {
+  commentId: Id<"comments">;
+  likeCount: number;
+  liked: boolean;
+  canInteract: boolean;
+}) {
+  const toggle = useMutation(api.comments.toggleCommentLike);
+  const [pending, setPending] = useState(false);
+
+  const label = (
+    <span
+      className={`flex items-center gap-1 font-mono text-[12px] font-bold ${
+        liked ? "text-[color:var(--b-ink)]" : "text-[color:var(--b-dim)]"
+      }`}
+    >
+      <span aria-hidden>{liked ? "♥" : "♡"}</span>
+      {likeCount > 0 ? likeCount : ""}
+    </span>
+  );
+
+  if (!canInteract) {
+    return (
+      <SignInButton mode="modal">
+        <button aria-label="Like (sign in)" className="hover:text-[color:var(--b-ink)]">
+          {label}
+        </button>
+      </SignInButton>
+    );
+  }
+
+  return (
+    <button
+      aria-label={liked ? "Unlike comment" : "Like comment"}
+      aria-pressed={liked}
+      disabled={pending}
+      className="hover:opacity-70 disabled:opacity-50"
+      onClick={async () => {
+        setPending(true);
+        try {
+          await toggle({ commentId });
+        } finally {
+          setPending(false);
+        }
+      }}
+    >
+      {label}
+    </button>
   );
 }
 

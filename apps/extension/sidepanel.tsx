@@ -8,15 +8,13 @@ import { PodcastPanel } from "./components/podcast-panel";
 import { ArticlePanel } from "./components/article-panel";
 import { AuthSlot } from "./components/auth-slot";
 import {
+  accent,
   clipPanelCss,
-  faint,
-  hair,
   ink,
   monoStack,
   muted,
   paper,
   sansStack,
-  serifStack,
 } from "./lib/clip-styles";
 
 const convexUrl = process.env.PLASMO_PUBLIC_CONVEX_URL;
@@ -51,33 +49,34 @@ function Header() {
   return (
     <header
       style={{
-        borderBottom: `1px solid ${hair}`,
-        paddingBottom: 12,
+        background: "#000000",
+        color: "#ffffff",
+        padding: "10px 14px",
         marginBottom: 16,
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
+        borderBottom: `3px solid ${ink}`,
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         <span
           style={{
-            width: 24,
-            height: 24,
-            background: ink,
-            color: paper,
-            borderRadius: 6,
+            width: 22,
+            height: 22,
+            background: accent,
+            color: ink,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            fontFamily: serifStack,
-            fontWeight: 600,
-            fontSize: 14,
+            fontFamily: sansStack,
+            fontWeight: 900,
+            fontSize: 13,
           }}
         >
           A
         </span>
-        <h1 style={{ margin: 0, fontFamily: serifStack, fontWeight: 600, fontSize: 18, letterSpacing: "-0.01em" }}>
+        <h1 style={{ margin: 0, fontFamily: sansStack, fontWeight: 900, fontSize: 14, letterSpacing: "0.12em", textTransform: "uppercase", color: "#ffffff" }}>
           Annotated
         </h1>
       </div>
@@ -104,17 +103,17 @@ function Sidepanel() {
         className="ann-root"
         style={{
           minHeight: "100vh",
-          padding: 18,
           background: paper,
           color: ink,
           fontFamily: sansStack,
         }}
       >
         <Header />
+        <div style={{ padding: "0 16px 16px" }}>
         {videoId ? (
           <>
             <section style={{ marginBottom: 18 }}>
-              <div style={{ fontFamily: sansStack, fontSize: 11, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: faint }}>
+              <div style={{ fontFamily: sansStack, fontSize: 11, fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: muted }}>
                 YouTube clip
               </div>
               <code style={{ fontFamily: monoStack, fontSize: 13, fontWeight: 700 }}>{videoId}</code>
@@ -133,6 +132,7 @@ function Sidepanel() {
             Open a YouTube video, podcast, or article to clip it.
           </p>
         )}
+        </div>
       </main>
     </ConvexProvider>
   );

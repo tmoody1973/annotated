@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation } from "convex/react";
-import { makeFunctionReference } from "convex/server";
 import {
   selectArticleHighlight,
   MAX_QUOTE_WORDS,
@@ -14,16 +13,16 @@ import {
   transcodeCommentary,
   type ExtractedArticle,
 } from "../lib/worker-client";
+import { publishArticleAuthed, NotSignedInError } from "../lib/convex-publish";
 import {
   accent,
+  accentTint,
   danger,
-  hair,
   ink,
   monoStack,
   muted,
   panel,
   sansStack,
-  serifStack,
   valid,
 } from "../lib/clip-styles";
 import {
@@ -33,29 +32,8 @@ import {
 } from "../lib/screenshot";
 import { CommentaryComposer } from "./commentary-composer";
 import { AnonymousToggle } from "./anonymous-toggle";
+import { TopicPicker } from "./topic-picker";
 import { useThread } from "../lib/use-thread";
-
-const publishArticleClip = makeFunctionReference<
-  "mutation",
-  {
-    canonicalUrl: string;
-    title: string;
-    siteName?: string;
-    author?: string;
-    selectedText: string;
-    textStart: number;
-    textEnd: number;
-    commentaryText?: string;
-    commentaryAudioStorageId?: string;
-    commentaryAudioTranscript?: string;
-    screenshotStorageId?: string;
-    sourceImageUrl?: string;
-    isAnonymous?: boolean;
-    threadId?: string;
-    workerToken: string;
-  },
-  string
->("testing:publishArticleClipDev");
 
 const label = {
   fontFamily: sansStack,
@@ -93,7 +71,6 @@ function readSelectionOffsets(
  * publish to a source-linked landing page. No transcription, no ffmpeg.
  */
 export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
-  const publish = useMutation(publishArticleClip);
   const generateUploadUrl = useMutation(generateUploadUrlRef);
   const thread = useThread();
   const textRef = useRef<HTMLDivElement | null>(null);
@@ -104,6 +81,7 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
   const [highlight, setHighlight] = useState<ArticleHighlight | null>(null);
   const [take, setTake] = useState("");
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [topicIds, setTopicIds] = useState<string[]>([]);
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [status, setStatus] = useState<"idle" | "publishing" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
@@ -168,6 +146,7 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
     highlight !== null &&
     highlight.valid &&
     (take.trim().length > 0 || audioBlob !== null) &&
+    topicIds.length > 0 &&
     status !== "publishing";
 
   const onPublish = async (): Promise<void> => {
@@ -180,7 +159,7 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
         ? await transcodeCommentary(audioBlob)
         : null;
       const screenshotStorageId = await captureSourceScreenshot();
-      const annotationId = await publish({
+      const annotationId = await publishArticleAuthed({
         canonicalUrl: detection.url,
         title: article.title || detection.title,
         ...(article.siteName ? { siteName: article.siteName } : {}),
@@ -195,7 +174,7 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
         ...(article.imageUrl ? { sourceImageUrl: article.imageUrl } : {}),
         isAnonymous,
         threadId: thread.threadId ?? undefined,
-        workerToken: getWorkerToken(),
+        topicIds,
       });
       setPublishedId(annotationId);
       setLink(`${getWebUrl()}/a/${annotationId}`);
@@ -203,7 +182,11 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
     } catch (e) {
       publishing.current = false;
       setStatus("error");
-      setError(e instanceof Error ? e.message : "Publish failed");
+      if (e instanceof NotSignedInError) {
+        setError(e.message);
+      } else {
+        setError(e instanceof Error ? e.message : "Publish failed");
+      }
     }
   };
 
@@ -215,6 +198,7 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
       setHighlight(null);
       setTake("");
       setAudioBlob(null);
+      setTopicIds([]);
       setIsAnonymous(false);
       setLink(null);
       setPublishedId(null);
@@ -275,12 +259,13 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
       <div style={label}>📰 Article detected</div>
       <h2
         style={{
-          fontFamily: serifStack,
-          fontSize: 18,
-          fontWeight: 600,
+          fontFamily: sansStack,
+          fontSize: 16,
+          fontWeight: 900,
           color: ink,
           margin: "8px 0 4px",
           lineHeight: 1.3,
+          letterSpacing: "-0.01em",
         }}
       >
         {article.title}
@@ -302,8 +287,8 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
           marginTop: 8,
           maxHeight: 240,
           overflowY: "auto",
-          border: `1px solid ${hair}`,
-          borderRadius: 7,
+          border: `2px solid ${ink}`,
+          borderRadius: 0,
           background: panel,
           padding: 12,
           lineHeight: 1.6,
@@ -320,11 +305,13 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
           <p
             className="ann-quote"
             style={{
-              fontFamily: serifStack,
-              fontSize: 17,
+              fontFamily: sansStack,
+              fontSize: 14,
+              fontWeight: 600,
               lineHeight: 1.45,
-              borderLeft: `2px solid ${accent}`,
-              paddingLeft: 10,
+              borderLeft: `4px solid ${ink}`,
+              background: accentTint,
+              padding: "8px 10px",
               margin: "10px 0 0",
             }}
           >
@@ -354,6 +341,10 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
         />
       </div>
 
+      <div style={{ marginTop: 10 }}>
+        <TopicPicker selected={topicIds} onChange={setTopicIds} />
+      </div>
+
       <AnonymousToggle
         checked={isAnonymous}
         onChange={setIsAnonymous}
@@ -372,6 +363,10 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
       >
         {status === "publishing" ? "Publishing…" : "Publish highlight"}
       </button>
+
+      {topicIds.length === 0 && (
+        <p style={{ marginTop: 6, fontSize: 12, color: muted }}>Pick at least one topic</p>
+      )}
     </section>
   );
 }
