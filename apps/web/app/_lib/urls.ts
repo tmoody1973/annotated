@@ -2,7 +2,7 @@ import { slugId } from "@annotated/shared";
 
 /** Absolute site origin for canonical + Open Graph URLs (no trailing slash). */
 export const SITE_URL = (
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://annotated-eight.vercel.app"
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://annotated.sh"
 ).replace(/\/+$/, "");
 
 /** Canonical path for a standalone clip: /a/[slug]-[id]. */
