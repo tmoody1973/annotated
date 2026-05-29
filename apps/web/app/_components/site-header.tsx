@@ -6,6 +6,7 @@ import { SignInButton, UserButton } from "@clerk/nextjs";
 import { useConvexAuth, useMutation } from "convex/react";
 import { api } from "@annotated/backend/convex/_generated/api";
 import { ThemeToggle } from "../ThemeToggle";
+import { NewClipButton } from "./new-clip-button";
 
 /** Mirrors the Clerk user into Convex once auth is ready (idempotent). */
 function useEnsureUser(): void {
@@ -48,6 +49,7 @@ export function SiteHeader() {
         )}
       </nav>
       <div className="ml-auto flex items-center gap-3">
+        <NewClipButton />
         <ThemeToggle />
         {isAuthenticated ? (
           <UserButton />
