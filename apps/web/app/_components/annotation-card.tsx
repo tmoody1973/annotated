@@ -22,6 +22,7 @@ export interface FeedItem {
   threadId?: string | null;
   clipCount?: number;
   isAnonymous?: boolean;
+  isEditorPick?: boolean;
   source: {
     type: string;
     title: string;
@@ -95,9 +96,16 @@ export function AnnotationCard({ item }: { item: FeedItem }) {
           </div>
           <span className="font-mono text-[11px] text-[color:var(--b-dim)]">{age}</span>
         </div>
-        <span className={`ml-auto grid size-[22px] flex-none place-items-center text-xs font-black ${meta.box}`}>
-          {meta.glyph}
-        </span>
+        <div className="ml-auto flex flex-none items-center gap-1.5">
+          {item.isEditorPick && (
+            <span className="border-2 border-[color:var(--b-line)] bg-[color:var(--b-acid)] px-1.5 py-0.5 font-mono text-[10px] font-black uppercase tracking-wide text-[color:var(--b-acid-ink)]">
+              ★ Pick
+            </span>
+          )}
+          <span className={`grid size-[22px] place-items-center text-xs font-black ${meta.box}`}>
+            {meta.glyph}
+          </span>
+        </div>
       </div>
 
       <h2 className="px-4 pb-0.5 pt-2.5 text-[21px] font-extrabold leading-[1.06] tracking-[-0.01em]">

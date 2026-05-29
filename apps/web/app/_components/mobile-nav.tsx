@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { NAV_ITEMS } from "./left-nav";
+import { NAV_ITEMS, MARKETING_ITEMS } from "./left-nav";
 import { ThemeToggle } from "../ThemeToggle";
 
 /** Mobile-only (`lg:hidden`) hamburger that opens a brutalist left drawer with
@@ -48,7 +48,7 @@ export function MobileNav() {
               </button>
             </div>
 
-            {NAV_ITEMS.map((item) => (
+            {[...NAV_ITEMS, ...MARKETING_ITEMS].map((item) => (
               <Link
                 key={item.label}
                 href={item.href}

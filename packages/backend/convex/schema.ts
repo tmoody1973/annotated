@@ -129,6 +129,12 @@ export default defineSchema({
     // the row server-side for claims/moderation but never projected. Optional,
     // default off, so pre-§9 rows validate and behave exactly as before.
     isAnonymous: v.optional(v.boolean()),
+    // Editorial curation (§1 cold-start): hand-picked clips that lead the
+    // signed-out "Curated / Editor's Picks" default feed, so a first-time
+    // visitor lands on a highlight reel instead of an empty "For You". Optional,
+    // default off, so every pre-§1 row validates and stays uncurated. Toggled
+    // via the internal `annotations.setEditorPick` (CLI/dashboard only).
+    isEditorPick: v.optional(v.boolean()),
     // Publishing
     isPublic: v.boolean(),
     publishedAt: v.optional(v.number()),
@@ -147,6 +153,7 @@ export default defineSchema({
     .index("by_author", ["authorId"])
     .index("by_source", ["sourceId"])
     .index("by_feed", ["isPublic", "publishedAt"])
+    .index("by_curated", ["isEditorPick", "publishedAt"])
     .index("by_thread", ["threadId"]),
 
   // Threads: an ordered series of annotations from one source by one author,

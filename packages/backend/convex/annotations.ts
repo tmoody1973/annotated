@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import {
+  internalMutation,
   mutation,
   query,
   type MutationCtx,
@@ -70,6 +71,7 @@ async function toFeedItem(ctx: QueryCtx, annotation: Doc<"annotations">) {
     clipCount,
     topics,
     isAnonymous,
+    isEditorPick: annotation.isEditorPick ?? false,
     source: source
       ? {
           type: source.type,
@@ -437,6 +439,43 @@ export const listFeed = query({
       ...result,
       page: await Promise.all(heads.map((a) => toFeedItem(ctx, a))),
     };
+  },
+});
+
+/**
+ * The signed-out default feed (§1 cold-start): editor-picked clips only, newest
+ * first, threads collapsed to their head — a hand-picked highlight reel instead
+ * of an empty "For You". Same card shape as listFeed so the UI is interchangeable.
+ */
+export const listCurated = query({
+  args: { paginationOpts: paginationOptsValidator },
+  handler: async (ctx, args) => {
+    const result = await ctx.db
+      .query("annotations")
+      .withIndex("by_curated", (q) => q.eq("isEditorPick", true))
+      .order("desc")
+      .paginate(args.paginationOpts);
+    const heads = result.page.filter(
+      (a) => a.isPublic && (a.threadId === undefined || a.threadOrder === 0)
+    );
+    return {
+      ...result,
+      page: await Promise.all(heads.map((a) => toFeedItem(ctx, a))),
+    };
+  },
+});
+
+/**
+ * Curate (or un-curate) a clip for the signed-out Editor's Picks feed. Internal:
+ * reachable only via the dashboard or `npx convex run annotations:setEditorPick
+ * '{"annotationId":"…","isEditorPick":true}'` — never exposed to clients.
+ */
+export const setEditorPick = internalMutation({
+  args: { annotationId: v.id("annotations"), isEditorPick: v.boolean() },
+  handler: async (ctx, args) => {
+    const annotation = await ctx.db.get(args.annotationId);
+    if (!annotation) throw new Error("Annotation not found");
+    await ctx.db.patch(args.annotationId, { isEditorPick: args.isEditorPick });
   },
 });
 

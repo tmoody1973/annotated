@@ -16,13 +16,18 @@ import { ExtensionToast } from "./extension-toast";
 export function AppShell({
   children,
   narrow = false,
+  hero,
 }: {
   children: ReactNode;
   narrow?: boolean;
+  /** Optional full-width band rendered between the header and the grid (e.g.
+   *  the logged-out hero). The slot component owns its own auth gating. */
+  hero?: ReactNode;
 }) {
   return (
     <main className="flex min-h-screen flex-1 flex-col bg-[color:var(--b-bg)] text-[color:var(--b-onbg)]">
       <SiteHeader />
+      {hero}
       <div className="mx-auto grid w-full max-w-[2000px] grid-cols-1 gap-7 px-6 py-7 lg:grid-cols-[260px_minmax(0,1fr)] xl:grid-cols-[260px_minmax(0,1fr)_260px]">
         <LeftNav />
         <section className="min-w-0">
