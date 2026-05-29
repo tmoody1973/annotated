@@ -51,7 +51,7 @@ const getById = makeFunctionReference<
 const getTranscriptBySource = makeFunctionReference<
   "query",
   { sourceId: string },
-  { wordsJson?: string } | null
+  { wordsJson?: string; words?: { word: string; startMs: number; endMs: number }[] } | null
 >("transcripts:getBySource");
 
 const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
@@ -70,12 +70,14 @@ async function fetchClipTranscript(
   try {
     const client = new ConvexHttpClient(convexUrl);
     const row = await client.query(getTranscriptBySource, { sourceId });
-    if (!row?.wordsJson) return undefined;
-    const words = JSON.parse(row.wordsJson) as {
-      word: string;
-      startMs: number;
-      endMs: number;
-    }[];
+    if (!row) return undefined;
+    // New transcripts store wordsJson (bypasses Convex's 8192-array cap); older
+    // rows used the `words` array. Support both so podcast + legacy clips work.
+    type TranscriptWord = { word: string; startMs: number; endMs: number };
+    const words: TranscriptWord[] = row.wordsJson
+      ? (JSON.parse(row.wordsJson) as TranscriptWord[])
+      : (row.words ?? []);
+    if (words.length === 0) return undefined;
     const text = sliceTranscriptToSpan(words, startMs, endMs)
       .map((w) => w.word)
       .join(" ")
@@ -148,8 +150,12 @@ export default async function AnnotationPage({
     permanentRedirect(clipPath(annotation.source?.title ?? "clip", annotation._id));
   }
 
-  // YouTube clips show the spoken transcript for the clip window (best-effort —
-  // backfilled at publish, absent if captions were unavailable or still pending).
+  // YouTube clips show the spoken transcript for the clip window: the clip is
+  // selected by playback time, so the VTT (video-relative, no ad-insertion
+  // drift) is the only place that text surfaces. Podcasts are intentionally NOT
+  // re-sliced here — their quote is already the transcript words the user
+  // dragged in the sidebar, and the episode transcript can drift from the cut
+  // audio. An accurate podcast clip transcript needs Deepgram on the clipped mp3.
   const clipTranscript =
     annotation.source?.type === "youtube" &&
     annotation.clipStartMs != null &&
@@ -192,6 +198,10 @@ export default async function AnnotationPage({
             commentaryAudioUrl: annotation.commentaryAudioUrl,
             commentaryAudioTranscript: annotation.commentaryAudioTranscript,
             clipTranscript,
+            captionsUrl:
+              annotation.source?.type === "youtube" && clipTranscript
+                ? `/a/${canonicalParam}/captions`
+                : undefined,
             clipStartMs: annotation.clipStartMs,
             clipEndMs: annotation.clipEndMs,
             clipUrl: annotation.clipUrl,

@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireCurrentUser } from "./users";
 import { toLandingView } from "./annotations";
+import { youtubeThumbnailFor } from "./sources";
 
 /**
  * Starts a thread on a source as the signed-in user (gap §1). A thread is an
@@ -63,7 +64,7 @@ export const getWithClips = query({
             siteName: source.siteName,
             author: source.author,
             imageUrl: source.imageUrl,
-            youtubeThumbnailUrl: source.youtubeThumbnailUrl,
+            youtubeThumbnailUrl: youtubeThumbnailFor(source),
             podcastName: source.podcastName,
             youtubeChannelUrl: source.youtubeChannelUrl,
           }

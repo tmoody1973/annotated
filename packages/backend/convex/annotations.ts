@@ -8,7 +8,7 @@ import {
   type QueryCtx,
 } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
-import { upsertArticleSource, upsertYoutubeSource } from "./sources";
+import { upsertArticleSource, upsertYoutubeSource, youtubeThumbnailFor } from "./sources";
 import { requireCurrentUser } from "./users";
 import { countWords, MAX_QUOTE_WORDS, rankAnnotations } from "@annotated/shared";
 
@@ -584,7 +584,7 @@ export async function toLandingView(
           siteName: source.siteName,
           author: source.author,
           imageUrl: source.imageUrl,
-          youtubeThumbnailUrl: source.youtubeThumbnailUrl,
+          youtubeThumbnailUrl: youtubeThumbnailFor(source),
           podcastName: source.podcastName,
           youtubeChannelUrl: source.youtubeChannelUrl,
         }

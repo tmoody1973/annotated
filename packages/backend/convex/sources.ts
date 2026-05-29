@@ -34,6 +34,23 @@ interface YoutubeSourceInput {
 }
 
 /**
+ * The poster image for a YouTube source's share/OG card. Prefers a stored
+ * thumbnail, else derives YouTube's deterministic per-video still from the video
+ * id — so every video clip has a card image even though the extension doesn't
+ * send one (existing rows included, no migration). Undefined only when there's
+ * no video id (non-YouTube source).
+ */
+export function youtubeThumbnailFor(source: {
+  youtubeThumbnailUrl?: string;
+  youtubeVideoId?: string;
+}): string | undefined {
+  if (source.youtubeThumbnailUrl) return source.youtubeThumbnailUrl;
+  return source.youtubeVideoId
+    ? `https://i.ytimg.com/vi/${source.youtubeVideoId}/hqdefault.jpg`
+    : undefined;
+}
+
+/**
  * Inserts a YouTube source, or returns the existing one for this video id.
  * Sources are shared across users (the dedup moat) — idempotent by video id.
  * Plain helper so `annotations.createYoutube` and the test seed share one code path.

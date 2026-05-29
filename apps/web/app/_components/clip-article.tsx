@@ -35,8 +35,11 @@ export interface ClipArticleData {
   commentaryText?: string;
   commentaryAudioUrl?: string | null;
   commentaryAudioTranscript?: string;
-  // The transcript text for the clip window (youtube-vtt), shown in an accordion.
+  // The transcript text for the clip window (youtube-vtt / podcast deepgram),
+  // shown in an accordion — the WCAG text alternative for the clip's audio.
   clipTranscript?: string;
+  // Same-origin WebVTT URL for synchronized captions on the video <track>.
+  captionsUrl?: string;
   clipStartMs?: number;
   clipEndMs?: number;
   clipUrl: string | null;
@@ -88,7 +91,12 @@ export function ClipArticle({ data }: { data: ClipArticleData }) {
       {!isArticle && data.clipUrl && isPodcast && <WaveformPlayer src={data.clipUrl} />}
       {!isArticle && data.clipUrl && !isPodcast && (
         <div className="border-b-[3px] border-[color:var(--b-line)] bg-[color:var(--b-chrome)]">
-          <video controls src={data.clipUrl} className="block max-h-[60vh] w-full bg-black" />
+          <video controls className="block max-h-[60vh] w-full bg-black">
+            <source src={data.clipUrl} />
+            {data.captionsUrl && (
+              <track kind="captions" srcLang="en" label="English" src={data.captionsUrl} default />
+            )}
+          </video>
         </div>
       )}
 

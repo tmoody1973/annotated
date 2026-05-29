@@ -32,3 +32,5 @@ export type { Rankable, RankSort } from "./rank-annotations";
 export { authorInitials } from "./author-initials";
 export { classifyBrowser, browserLabel } from "./detect-browser";
 export type { BrowserKind, DetectedBrowser } from "./detect-browser";
+export { wordsToVtt } from "./words-to-vtt";
+export type { CaptionWord } from "./words-to-vtt";
