@@ -78,3 +78,33 @@ test("auth-gated social flow with mocked Clerk identities", async () => {
     /Not authenticated/
   );
 });
+
+test("feed projects an author's verified flag", async () => {
+  const t = convexTest(schema, modules);
+  await t.run(async (ctx) => {
+    const uid = await ctx.db.insert("users", {
+      clerkId: "clerk_verified",
+      username: "verified_user",
+      displayName: "Verified User",
+      isVerified: true,
+    });
+    const sourceId = await ctx.db.insert("sources", {
+      type: "article",
+      canonicalUrl: "https://example.com/v",
+      title: "V",
+    });
+    await ctx.db.insert("annotations", {
+      authorId: uid,
+      sourceId,
+      selectedText: "q",
+      commentaryText: "c",
+      isPublic: true,
+      publishedAt: Date.now(),
+      commentCount: 0,
+      likeCount: 0,
+    });
+  });
+  const feed = await t.query(api.annotations.listFeed, { paginationOpts: { numItems: 10, cursor: null } });
+  const card = feed.page.find((c) => c.author?.username === "verified_user");
+  expect(card?.author?.isVerified).toBe(true);
+});

@@ -10,6 +10,7 @@ export default defineSchema({
     avatarUrl: v.optional(v.string()),
     bio: v.optional(v.string()),
     xHandle: v.optional(v.string()),
+    isVerified: v.optional(v.boolean()),
   })
     .index("by_clerk_id", ["clerkId"])
     .index("by_username", ["username"]),

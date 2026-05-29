@@ -84,6 +84,7 @@ async function toFeedItem(ctx: QueryCtx, annotation: Doc<"annotations">) {
           username: author.username,
           displayName: author.displayName,
           avatarUrl: author.avatarUrl,
+          isVerified: author.isVerified ?? false,
         }
       : null,
   };
@@ -545,6 +546,7 @@ export async function toLandingView(
           id: author._id,
           username: author.username,
           displayName: author.displayName,
+          isVerified: author.isVerified ?? false,
         }
       : null,
   };
