@@ -9,7 +9,7 @@ const items = [
 /** Brutalist left dashboard rail: section nav + an acid tagline block. */
 export function LeftNav() {
   return (
-    <aside className="hidden lg:block">
+    <aside className="hidden lg:block lg:sticky lg:top-[76px] lg:self-start">
       <nav className="border-[3px] border-[color:var(--b-line)] bg-[color:var(--b-card)] text-[color:var(--b-ink)] shadow-[6px_6px_0_0_var(--b-shadow)]">
         {items.map((it, i) => (
           <Link

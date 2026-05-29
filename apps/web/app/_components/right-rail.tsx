@@ -12,7 +12,7 @@ export function RightRail() {
   if (!people || people.length === 0) return <aside className="hidden xl:block" />;
 
   return (
-    <aside className="hidden xl:block">
+    <aside className="hidden xl:block xl:sticky xl:top-[76px] xl:self-start">
       <div className="border-[3px] border-[color:var(--b-line)] bg-[color:var(--b-card)] text-[color:var(--b-ink)] shadow-[6px_6px_0_0_var(--b-shadow)]">
         <div className="bg-[color:var(--b-chrome)] px-3.5 py-2.5 font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-[color:var(--b-acid)]">
           People worth following

@@ -55,6 +55,59 @@ export const currentUser = query({
   },
 });
 
+const BIO_MAX = 280;
+const HANDLE_MAX = 50;
+const URL_MAX = 200;
+
+function normalizeWebsite(raw: string): string {
+  const withScheme = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+  let url: URL;
+  try {
+    url = new URL(withScheme);
+  } catch {
+    throw new Error("Website must be a valid URL");
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    throw new Error("Website must be an http(s) URL");
+  }
+  return url.toString();
+}
+
+/**
+ * Updates the signed-in user's editable profile fields. Account basics (name,
+ * avatar, email) stay with Clerk; this owns bio + social links. A field that
+ * arrives is trimmed/capped and, when empty, cleared (patched to undefined);
+ * a field that is omitted is left untouched. The X handle is stored without '@'.
+ */
+export const updateProfile = mutation({
+  args: {
+    bio: v.optional(v.string()),
+    xHandle: v.optional(v.string()),
+    website: v.optional(v.string()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const user = await requireCurrentUser(ctx);
+    const clean = (value: string, max: number): string | undefined => {
+      const trimmed = value.trim().slice(0, max);
+      return trimmed.length === 0 ? undefined : trimmed;
+    };
+
+    const patch: Partial<Doc<"users">> = {};
+    if (args.bio !== undefined) patch.bio = clean(args.bio, BIO_MAX);
+    if (args.xHandle !== undefined) {
+      patch.xHandle = clean(args.xHandle.replace(/^@/, ""), HANDLE_MAX);
+    }
+    if (args.website !== undefined) {
+      const trimmed = args.website.trim().slice(0, URL_MAX);
+      patch.website = trimmed.length === 0 ? undefined : normalizeWebsite(trimmed);
+    }
+
+    await ctx.db.patch(user._id, patch);
+    return null;
+  },
+});
+
 /**
  * Up to `limit` suggested accounts for the feed's "people worth following" rail:
  * most-recent users, excluding the signed-in user. Lightweight — no ranking yet.

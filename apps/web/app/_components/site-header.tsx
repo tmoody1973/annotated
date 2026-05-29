@@ -52,7 +52,15 @@ export function SiteHeader() {
         <NewClipButton />
         <ThemeToggle />
         {isAuthenticated ? (
-          <UserButton />
+          <UserButton>
+            <UserButton.MenuItems>
+              <UserButton.Link
+                label="Edit profile"
+                labelIcon={<span aria-hidden>✎</span>}
+                href="/settings"
+              />
+            </UserButton.MenuItems>
+          </UserButton>
         ) : (
           <SignInButton mode="modal">
             <button className="border-2 border-[color:var(--b-acid)] bg-[color:var(--b-acid)] px-4 py-2 text-[13px] font-black uppercase tracking-wide text-[color:var(--b-acid-ink)]">

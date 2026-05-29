@@ -78,15 +78,29 @@ export default async function ProfilePage({
               {user.bio}
             </p>
           )}
-          {user.xHandle && (
-            <a
-              href={xProfileUrl(user.xHandle)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-2 inline-flex items-center gap-1.5 font-mono text-[13px] font-bold text-[color:var(--b-dim-onbg)] hover:text-[color:var(--b-onbg)] hover:underline"
-            >
-              𝕏 @{user.xHandle.replace(/^@/, "")}
-            </a>
+          {(user.xHandle || user.website) && (
+            <div className="mt-2 flex flex-wrap items-center gap-4">
+              {user.xHandle && (
+                <a
+                  href={xProfileUrl(user.xHandle)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 font-mono text-[13px] font-bold text-[color:var(--b-dim-onbg)] hover:text-[color:var(--b-onbg)] hover:underline"
+                >
+                  𝕏 @{user.xHandle.replace(/^@/, "")}
+                </a>
+              )}
+              {user.website && (
+                <a
+                  href={user.website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 font-mono text-[13px] font-bold text-[color:var(--b-dim-onbg)] hover:text-[color:var(--b-onbg)] hover:underline"
+                >
+                  🔗 {user.website.replace(/^https?:\/\//, "").replace(/\/$/, "")}
+                </a>
+              )}
+            </div>
           )}
         </div>
 
