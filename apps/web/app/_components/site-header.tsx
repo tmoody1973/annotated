@@ -18,10 +18,15 @@ function useEnsureUser(): void {
   }, [isAuthenticated, ensure]);
 }
 
-/** Brutalist top chrome: black bar, acid-block wordmark, theme toggle, Clerk auth. */
-// Chrome Web Store install link — set NEXT_PUBLIC_EXTENSION_URL once the listing
-// is live to reveal the "Get the extension" CTA; hidden until then.
-const extensionUrl = process.env.NEXT_PUBLIC_EXTENSION_URL;
+/** Quiet marketing links in the top nav. The active page (Home) gets the acid
+ *  fill; the rest are ghost links so they never compete with New clip / Sign in.
+ *  Extension carries the ⊕ glyph to read as the install destination (§2). */
+const NAV_LINKS = [
+  { label: "Home", href: "/", active: true },
+  { label: "Publishers", href: "/publishers" },
+  { label: "⊕ Extension", href: "/extension" },
+  { label: "About", href: "/about" },
+];
 
 export function SiteHeader() {
   useEnsureUser();
@@ -33,21 +38,24 @@ export function SiteHeader() {
         <span className="bg-[color:var(--b-acid)] px-1.5 text-[color:var(--b-acid-ink)]">A</span>NNOTATED
       </Link>
       <nav className="hidden gap-1 lg:flex">
-        <Link
-          href="/"
-          className="bg-[color:var(--b-acid)] px-3 py-1.5 text-[13px] font-extrabold uppercase tracking-wide text-[color:var(--b-acid-ink)]"
-        >
-          Home
-        </Link>
-        {extensionUrl && (
-          <a
-            href={extensionUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="border-2 border-[color:var(--b-acid)] px-3 py-1.5 text-[13px] font-extrabold uppercase tracking-wide text-[color:var(--b-acid)] hover:bg-[color:var(--b-acid)] hover:text-[color:var(--b-acid-ink)]"
-          >
-            Get the extension
-          </a>
+        {NAV_LINKS.map((link) =>
+          link.active ? (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="bg-[color:var(--b-acid)] px-3 py-1.5 text-[13px] font-extrabold uppercase tracking-wide text-[color:var(--b-acid-ink)]"
+            >
+              {link.label}
+            </Link>
+          ) : (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="px-3 py-1.5 text-[13px] font-extrabold uppercase tracking-wide text-[color:var(--b-card)] hover:text-[color:var(--b-acid)]"
+            >
+              {link.label}
+            </Link>
+          )
         )}
       </nav>
       <div className="ml-auto flex items-center gap-3">

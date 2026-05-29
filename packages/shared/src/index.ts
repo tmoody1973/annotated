@@ -30,3 +30,5 @@ export { sliceTranscriptToSpan } from "./youtube-vtt";
 export { rankAnnotations, netScore } from "./rank-annotations";
 export type { Rankable, RankSort } from "./rank-annotations";
 export { authorInitials } from "./author-initials";
+export { classifyBrowser, browserLabel } from "./detect-browser";
+export type { BrowserKind, DetectedBrowser } from "./detect-browser";
