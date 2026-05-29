@@ -1,5 +1,6 @@
 import { formatClipTimestamp } from "@annotated/shared";
 import { WaveformPlayer } from "./waveform-player";
+import { SourceByline } from "./source-byline";
 
 /**
  * The source screenshot, capped in height and top-anchored so the head of the
@@ -51,6 +52,9 @@ export interface ClipArticleData {
     title: string;
     siteName?: string;
     imageUrl?: string | null;
+    author?: string | null;
+    podcastName?: string | null;
+    youtubeChannelUrl?: string | null;
   } | null;
 }
 
@@ -153,18 +157,17 @@ export function ClipArticle({ data }: { data: ClipArticleData }) {
 
         {data.source && (
           <div className="mt-6 border-t-[3px] border-[color:var(--b-line)] pt-4">
-            <p className={`${label} text-[color:var(--b-dim)]`}>
-              Clipped from{data.source.siteName ? ` · ${data.source.siteName}` : ""}
-            </p>
-            <p className="mt-1 text-[17px] font-extrabold">{data.source.title}</p>
-            <a
-              href={data.source.canonicalUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-3 inline-flex items-center gap-1 border-2 border-[color:var(--b-line)] bg-[color:var(--b-acid)] px-3 py-1.5 text-sm font-black uppercase tracking-wide text-[color:var(--b-acid-ink)]"
-            >
-              View original ↗
-            </a>
+            <SourceByline
+              source={{
+                type: data.sourceType ?? "",
+                canonicalUrl: data.source.canonicalUrl,
+                siteName: data.source.siteName,
+                author: data.source.author,
+                podcastName: data.source.podcastName,
+                youtubeChannelUrl: data.source.youtubeChannelUrl,
+              }}
+            />
+            <p className="mt-2 text-[17px] font-extrabold">{data.source.title}</p>
           </div>
         )}
       </div>

@@ -6,6 +6,7 @@ import { VoteButtons } from "./vote-buttons";
 import { WaveformPlayer } from "./waveform-player";
 import { AuthorAvatar, VerifiedBadge } from "./author-avatar";
 import { CardShareMenu } from "./card-share-menu";
+import { SourceByline } from "./source-byline";
 
 export interface FeedItem {
   _id: string;
@@ -27,6 +28,9 @@ export interface FeedItem {
     canonicalUrl: string;
     siteName?: string;
     imageUrl?: string | null;
+    author?: string | null;
+    podcastName?: string | null;
+    youtubeChannelUrl?: string | null;
   } | null;
   author: {
     username: string;
@@ -130,6 +134,8 @@ export function AnnotationCard({ item }: { item: FeedItem }) {
         </Link>
       )}
 
+      {source && <SourceByline source={source} className="mx-4 mt-3.5" />}
+
       {item.selectedText && (
         <blockquote className="mx-4 mt-4 border-l-[5px] border-[color:var(--b-acid)] pl-3 text-[17px] font-semibold leading-snug">
           “{item.selectedText}”
@@ -158,19 +164,7 @@ export function AnnotationCard({ item }: { item: FeedItem }) {
         </div>
       )}
 
-      {source && (
-        <a
-          href={source.canonicalUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-3 block px-4 font-mono text-[12px] text-[color:var(--b-dim)] hover:text-[color:var(--b-ink)] hover:underline"
-        >
-          ↗ {source.siteName ? `${source.siteName} — ` : ""}
-          {source.title}
-        </a>
-      )}
-
-      <div className="mt-3 flex items-center gap-2 border-t-[3px] border-[color:var(--b-line)] p-3">
+      <div className="mt-4 flex items-center gap-2 border-t-[3px] border-[color:var(--b-line)] p-3">
         <Link
           href={detailHref}
           className="inline-flex items-center gap-1.5 border-2 border-[color:var(--b-line)] px-2.5 py-1.5 text-[13px] font-extrabold hover:bg-[color:var(--b-acid)]"

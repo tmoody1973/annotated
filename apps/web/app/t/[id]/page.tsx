@@ -8,6 +8,7 @@ import { VoteButtons } from "../../_components/vote-buttons";
 import { FollowButton } from "../../_components/follow-button";
 import { Comments } from "../../_components/comments";
 import { ClipArticle } from "../../_components/clip-article";
+import { SourceByline } from "../../_components/source-byline";
 import { JsonLd } from "../../_components/json-ld";
 import { absoluteUrl, threadPath } from "../../_lib/urls";
 
@@ -36,6 +37,8 @@ interface ThreadView {
     author?: string;
     imageUrl?: string | null;
     youtubeThumbnailUrl?: string | null;
+    podcastName?: string | null;
+    youtubeChannelUrl?: string | null;
   } | null;
   author: { id: string; username: string; displayName: string } | null;
   clips: ThreadClip[];
@@ -148,10 +151,17 @@ export default async function ThreadPage({
                 className="-mx-5 -mt-5 mb-4 block max-h-[260px] w-[calc(100%+2.5rem)] max-w-none border-b-[3px] border-[color:var(--b-line)] object-cover object-top"
               />
             )}
-            <p className="font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-[color:var(--b-dim)]">
-              Thread{thread.source.siteName ? ` · ${thread.source.siteName}` : ""}
-            </p>
-            <p className="mt-1 text-[26px] font-extrabold leading-[1.08] tracking-[-0.01em]">
+            <SourceByline
+              source={{
+                type: thread.source.type,
+                canonicalUrl: thread.source.canonicalUrl,
+                siteName: thread.source.siteName,
+                author: thread.source.author,
+                podcastName: thread.source.podcastName,
+                youtubeChannelUrl: thread.source.youtubeChannelUrl,
+              }}
+            />
+            <p className="mt-3 text-[26px] font-extrabold leading-[1.08] tracking-[-0.01em]">
               {thread.source.title}
             </p>
             <div className="mt-3 flex items-center gap-3">
@@ -162,14 +172,6 @@ export default async function ThreadPage({
               )}
               {thread.author && <FollowButton targetUserId={thread.author.id} />}
             </div>
-            <a
-              href={thread.source.canonicalUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-3 inline-flex items-center gap-1 border-2 border-[color:var(--b-line)] bg-[color:var(--b-acid)] px-3 py-1.5 text-sm font-black uppercase tracking-wide text-[color:var(--b-acid-ink)]"
-            >
-              View original ↗
-            </a>
           </div>
         )}
 

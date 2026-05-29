@@ -51,6 +51,28 @@ test("auth-gated social flow with mocked Clerk identities", async () => {
   expect(comments).toHaveLength(1);
   expect(comments[0]?.text).toBe("great clip");
   expect(comments[0]?.author?.username).toBeTruthy();
+  expect(comments[0]?.likeCount).toBe(0);
+  expect(comments[0]?.viewerHasLiked).toBe(false);
+
+  // Per-comment like: drift-proof toggle, recomputed count, per-viewer state.
+  const commentId = comments[0]!._id;
+  expect(await bob.mutation(api.comments.toggleCommentLike, { commentId })).toEqual({
+    liked: true,
+    likeCount: 1,
+  });
+  expect(await alice.mutation(api.comments.toggleCommentLike, { commentId })).toEqual({
+    liked: true,
+    likeCount: 2,
+  });
+  expect(await bob.mutation(api.comments.toggleCommentLike, { commentId })).toEqual({
+    liked: false,
+    likeCount: 1,
+  });
+  const seenByAlice = await alice.query(api.comments.listByAnnotation, { annotationId });
+  expect(seenByAlice[0]?.likeCount).toBe(1);
+  expect(seenByAlice[0]?.viewerHasLiked).toBe(true);
+  const seenByBob = await bob.query(api.comments.listByAnnotation, { annotationId });
+  expect(seenByBob[0]?.viewerHasLiked).toBe(false);
 
   // Empty comment is rejected.
   await expect(

@@ -28,6 +28,7 @@ interface YoutubeSourceInput {
   videoId: string;
   title: string;
   author?: string;
+  channelUrl?: string;
   thumbnailUrl?: string;
   durationMs?: number;
 }
@@ -54,6 +55,7 @@ export async function upsertYoutubeSource(
     author: input.author,
     youtubeVideoId: input.videoId,
     youtubeThumbnailUrl: input.thumbnailUrl,
+    youtubeChannelUrl: input.channelUrl,
     youtubeDurationMs: input.durationMs,
     cachedAt: Date.now(),
   });
@@ -65,6 +67,7 @@ export const upsertYoutube = mutation({
     videoId: v.string(),
     title: v.string(),
     author: v.optional(v.string()),
+    channelUrl: v.optional(v.string()),
     thumbnailUrl: v.optional(v.string()),
     durationMs: v.optional(v.number()),
   },

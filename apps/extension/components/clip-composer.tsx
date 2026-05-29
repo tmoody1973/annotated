@@ -7,7 +7,11 @@ import {
   type Chapter,
   type ClipSpanResult,
 } from "@annotated/shared";
-import { requestPlayerTimeMs, getActiveVideoTitle } from "../lib/player-time";
+import {
+  requestPlayerTimeMs,
+  getActiveVideoTitle,
+  getActiveVideoChannel,
+} from "../lib/player-time";
 import {
   clipYoutube,
   fetchYoutubeChapters,
@@ -205,6 +209,7 @@ export function ClipComposer({ videoId }: { videoId: string }) {
     setErrorMsg(null);
     try {
       const title = await getActiveVideoTitle();
+      const channel = await getActiveVideoChannel();
       const { storageId } = await clipYoutube({ videoId, startMs, endMs });
       const commentaryAudio = audioBlob
         ? await transcodeCommentary(audioBlob)
@@ -213,6 +218,8 @@ export function ClipComposer({ videoId }: { videoId: string }) {
       const id = await publishYoutubeAuthed({
         videoId,
         title,
+        author: channel.name ?? undefined,
+        channelUrl: channel.url ?? undefined,
         clipStorageId: storageId,
         clipStartMs: startMs,
         clipEndMs: endMs,

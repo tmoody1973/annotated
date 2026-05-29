@@ -7,6 +7,11 @@ const convexUrl = process.env.PLASMO_PUBLIC_CONVEX_URL ?? "";
 export type YoutubePublishArgs = {
   videoId: string;
   title: string;
+  // YouTube channel name + URL (the creator), read from the watch page at clip
+  // time. `author` is the channel name; the clip's own author is still derived
+  // server-side from the Clerk identity.
+  author?: string;
+  channelUrl?: string;
   clipStorageId: string;
   clipStartMs: number;
   clipEndMs: number;

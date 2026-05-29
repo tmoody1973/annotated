@@ -77,6 +77,11 @@ async function toFeedItem(ctx: QueryCtx, annotation: Doc<"annotations">) {
           canonicalUrl: source.canonicalUrl,
           siteName: source.siteName,
           imageUrl: source.imageUrl,
+          // Creator attribution: journalist (article), show (podcast), channel
+          // name + link (youtube). Surfaced as a prominent byline on the card.
+          author: source.author,
+          podcastName: source.podcastName,
+          youtubeChannelUrl: source.youtubeChannelUrl,
         }
       : null,
     author: author
@@ -225,6 +230,7 @@ export const createYoutube = mutation({
     videoId: v.string(),
     title: v.string(),
     author: v.optional(v.string()),
+    channelUrl: v.optional(v.string()),
     thumbnailUrl: v.optional(v.string()),
     durationMs: v.optional(v.number()),
     clipStorageId: v.id("_storage"),
@@ -540,6 +546,8 @@ export async function toLandingView(
           author: source.author,
           imageUrl: source.imageUrl,
           youtubeThumbnailUrl: source.youtubeThumbnailUrl,
+          podcastName: source.podcastName,
+          youtubeChannelUrl: source.youtubeChannelUrl,
         }
       : null,
     author: author

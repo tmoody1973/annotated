@@ -35,6 +35,8 @@ interface AnnotationView {
     siteName?: string;
     author?: string;
     imageUrl?: string | null;
+    podcastName?: string | null;
+    youtubeChannelUrl?: string | null;
   } | null;
   author: { id: string; username: string; displayName: string; avatarUrl?: string | null } | null;
 }

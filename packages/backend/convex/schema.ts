@@ -30,6 +30,10 @@ export default defineSchema({
     youtubeVideoId: v.optional(v.string()),
     youtubeThumbnailUrl: v.optional(v.string()),
     youtubeDurationMs: v.optional(v.number()),
+    // Channel name lives in `author` (shared with article journalist); the
+    // channel URL is YouTube-specific. Captured at clip time going forward —
+    // optional so pre-existing rows validate (channel name only, no link).
+    youtubeChannelUrl: v.optional(v.string()),
     // Podcast
     podcastName: v.optional(v.string()),
     podcastEpisodeGuid: v.optional(v.string()),
@@ -168,6 +172,15 @@ export default defineSchema({
     .index("by_annotation", ["annotationId"])
     .index("by_author", ["authorId"])
     .index("by_parent", ["parentId"]),
+
+  // Likes on individual comments. Drift-proof: the count is derived from rows,
+  // never stored. One row per (comment, user).
+  commentLikes: defineTable({
+    commentId: v.id("comments"),
+    userId: v.id("users"),
+  })
+    .index("by_comment", ["commentId"])
+    .index("by_comment_and_user", ["commentId", "userId"]),
 
   // Follow relationships between users.
   follows: defineTable({
