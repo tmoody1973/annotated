@@ -43,39 +43,49 @@ const chromium = resolveChromium();
 const EXTENSION_PATH = resolve(__dirname, "..", "build", "chrome-mv3-prod");
 
 // Drives the real chrome.scripting MAIN-world inject from the service worker.
-// The reader mirrors lib/player-time.ts getActiveVideoChannel() exactly; it's
-// defined inside the SW evaluate so chrome.scripting serializes it into the
-// page's MAIN world by toString (no eval — extension CSP forbids it).
+// The reader mirrors lib/player-time.ts getActiveVideoMeta(): title + channel
+// from videoDetails (live getPlayerResponse() preferred, ytInitialPlayerResponse
+// fallback), with a short poll for hydration. Defined inside the SW evaluate so
+// chrome.scripting serializes it into the page MAIN world by toString (no eval —
+// extension CSP forbids it).
 async function injectFromSw(sw, tabId) {
   return sw.evaluate(async (tabId) => {
-    const reader = () => {
-      const fromDetails = (response) => {
-        const details = response?.videoDetails;
-        if (!details?.author && !details?.channelId) return null;
+    const reader = async () => {
+      const fromDetails = () => {
+        const player = document.querySelector("#movie_player");
+        const live =
+          typeof player?.getPlayerResponse === "function"
+            ? player.getPlayerResponse()
+            : null;
+        const initial = window.ytInitialPlayerResponse;
+        const details = live?.videoDetails ?? initial?.videoDetails;
+        if (!details) return null;
+        const channelName = details.author?.trim() || null;
+        const title = details.title?.trim() || null;
+        if (!channelName && !title) return null;
         return {
-          name: details.author?.trim() || null,
-          url: details.channelId
+          title,
+          channelName,
+          channelUrl: details.channelId
             ? `https://www.youtube.com/channel/${details.channelId}`
             : null,
         };
       };
-      const player = document.querySelector("#movie_player");
-      const live =
-        typeof player?.getPlayerResponse === "function"
-          ? player.getPlayerResponse()
-          : null;
-      const fromLive = fromDetails(live);
-      if (fromLive) return fromLive;
-      const initial = window.ytInitialPlayerResponse;
-      const fromInitial = fromDetails(initial);
-      if (fromInitial) return fromInitial;
+      let meta = fromDetails();
+      for (let i = 0; i < 20 && !meta; i++) {
+        await new Promise((r) => setTimeout(r, 100));
+        meta = fromDetails();
+      }
+      if (meta) return meta;
       const anchor = document.querySelector(
         "ytd-video-owner-renderer a.yt-simple-endpoint, #owner #channel-name a, ytd-channel-name a"
       );
       const name = anchor?.textContent?.trim() || null;
       const href = anchor?.getAttribute("href") || null;
       const url = href ? new URL(href, location.origin).href : null;
-      return { name, url };
+      const docTitle =
+        document.title?.replace(/\s*-\s*YouTube\s*$/, "").trim() || null;
+      return { title: docTitle, channelName: name, channelUrl: url };
     };
     const [inj] = await chrome.scripting.executeScript({
       target: { tabId },
@@ -116,18 +126,30 @@ async function main() {
       const el = document.createElement("div");
       el.id = "movie_player";
       el.getPlayerResponse = () => ({
-        videoDetails: { author: "Live Channel", channelId: "UC_LIVE_123" },
+        videoDetails: {
+          title: "Live Video Title",
+          author: "Live Channel",
+          channelId: "UC_LIVE_123",
+        },
       });
       document.body.appendChild(el);
       window.ytInitialPlayerResponse = {
-        videoDetails: { author: "Initial Channel", channelId: "UC_INIT_456" },
+        videoDetails: {
+          title: "Initial Video Title",
+          author: "Initial Channel",
+          channelId: "UC_INIT_456",
+        },
       };
     });
     const live = await injectFromSw(sw, tabId);
     assert.deepEqual(
       live,
-      { name: "Live Channel", url: "https://www.youtube.com/channel/UC_LIVE_123" },
-      "live getPlayerResponse() path should win and resolve the channel"
+      {
+        title: "Live Video Title",
+        channelName: "Live Channel",
+        channelUrl: "https://www.youtube.com/channel/UC_LIVE_123",
+      },
+      "live getPlayerResponse() path should win and resolve title + channel"
     );
 
     // (b) Fallback path: no live player → ytInitialPlayerResponse is used.
@@ -137,12 +159,16 @@ async function main() {
     const initial = await injectFromSw(sw, tabId);
     assert.deepEqual(
       initial,
-      { name: "Initial Channel", url: "https://www.youtube.com/channel/UC_INIT_456" },
-      "ytInitialPlayerResponse fallback should resolve the channel"
+      {
+        title: "Initial Video Title",
+        channelName: "Initial Channel",
+        channelUrl: "https://www.youtube.com/channel/UC_INIT_456",
+      },
+      "ytInitialPlayerResponse fallback should resolve title + channel"
     );
 
     console.log(
-      "PASS: world:'MAIN' inject through the loaded extension resolved the channel from live getPlayerResponse() and from ytInitialPlayerResponse."
+      "PASS: world:'MAIN' inject through the loaded extension resolved title + channel from live getPlayerResponse() and from ytInitialPlayerResponse."
     );
   } finally {
     await context.close();

@@ -10,7 +10,7 @@ import {
 import {
   requestPlayerTimeMs,
   getActiveVideoTitle,
-  getActiveVideoChannel,
+  getActiveVideoMeta,
 } from "../lib/player-time";
 import { ProgressIndicator } from "./progress-indicator";
 import {
@@ -169,13 +169,15 @@ export function ClipComposer({ videoId }: { videoId: string }) {
   useEffect(() => {
     let active = true;
     setSource(null);
-    void Promise.all([getActiveVideoTitle(), getActiveVideoChannel()]).then(
-      ([title, channel]) => {
-        if (active) {
-          setSource({ title, channelName: channel.name, channelUrl: channel.url });
-        }
+    void getActiveVideoMeta().then((meta) => {
+      if (active && (meta.title || meta.channelName)) {
+        setSource({
+          title: meta.title ?? "",
+          channelName: meta.channelName,
+          channelUrl: meta.channelUrl,
+        });
       }
-    );
+    });
     return () => {
       active = false;
     };
@@ -270,16 +272,16 @@ export function ClipComposer({ videoId }: { videoId: string }) {
     setProcessingStartedAt(Date.now());
     setErrorMsg(null);
     try {
-      // Prefer attribution captured at detection; fall back to a fresh read only
-      // if detection hadn't resolved yet.
-      let captured = source;
-      if (!captured) {
-        const [title, channel] = await Promise.all([
-          getActiveVideoTitle(),
-          getActiveVideoChannel(),
-        ]);
-        captured = { title, channelName: channel.name, channelUrl: channel.url };
-      }
+      // Re-read attribution at publish: the page is fully hydrated by now and —
+      // thanks to the background-tab relay — the video is still the active tab.
+      // Prefer the fresh read, fall back to what detection captured, then to the
+      // tab title as a last resort for the title.
+      const fresh = await getActiveVideoMeta();
+      const captured = {
+        title: fresh.title || source?.title || (await getActiveVideoTitle()),
+        channelName: fresh.channelName ?? source?.channelName ?? null,
+        channelUrl: fresh.channelUrl ?? source?.channelUrl ?? null,
+      };
       const { storageId } = await clipYoutube({ videoId, startMs, endMs });
       const commentaryAudio = audioBlob
         ? await transcodeCommentary(audioBlob)

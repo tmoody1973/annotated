@@ -1,7 +1,65 @@
-// Open the side panel when the user clicks the Annotated toolbar icon.
+// The side panel opens only on the tab where the user clicks the Annotated
+// toolbar icon (like Claude) — not one global panel that follows every tab. We
+// turn off the global open-on-click behavior and manage panel availability per
+// tab: a tab is "opted in" when its icon is clicked, and the panel is enabled
+// only on opted-in tabs (disabled elsewhere, so it closes when you switch away).
+// The opted-in set lives in chrome.storage.session so it survives the service
+// worker being torn down between events.
+const PANEL_PATH = "sidepanel.html";
+const OPEN_TABS_KEY = "panel-open-tabs";
+
 chrome.sidePanel
-  .setPanelBehavior({ openPanelOnActionClick: true })
+  .setPanelBehavior({ openPanelOnActionClick: false })
   .catch((error: unknown) => console.error(error));
+
+async function readOpenTabs(): Promise<number[]> {
+  try {
+    const stored = await chrome.storage.session.get(OPEN_TABS_KEY);
+    const ids = stored[OPEN_TABS_KEY];
+    return Array.isArray(ids) ? (ids as number[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+async function setTabOpen(tabId: number, open: boolean): Promise<void> {
+  const ids = new Set(await readOpenTabs());
+  if (open) ids.add(tabId);
+  else ids.delete(tabId);
+  await chrome.storage.session.set({ [OPEN_TABS_KEY]: [...ids] }).catch(() => {});
+}
+
+// Open the panel for the clicked tab. open() must run inside the user gesture,
+// so it goes first — before any awaited work that would expire the gesture.
+chrome.action.onClicked.addListener((tab) => {
+  if (tab.id == null) return;
+  const tabId = tab.id;
+  chrome.sidePanel.open({ tabId }).catch((error: unknown) => console.error(error));
+  void (async () => {
+    await chrome.sidePanel
+      .setOptions({ tabId, path: PANEL_PATH, enabled: true })
+      .catch(() => {});
+    await setTabOpen(tabId, true);
+  })();
+});
+
+// On tab switch, the panel is available only where the user opened it.
+chrome.tabs.onActivated.addListener(({ tabId }) => {
+  void (async () => {
+    const enabled = (await readOpenTabs()).includes(tabId);
+    await chrome.sidePanel
+      .setOptions(
+        enabled
+          ? { tabId, path: PANEL_PATH, enabled: true }
+          : { tabId, enabled: false }
+      )
+      .catch(() => {});
+  })();
+});
+
+chrome.tabs.onRemoved.addListener((tabId) => {
+  void setTabOpen(tabId, false);
+});
 
 const webUrl = process.env.PLASMO_PUBLIC_WEB_URL ?? "";
 
