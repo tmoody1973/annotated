@@ -1,8 +1,11 @@
 // The side panel opens only on the tab where the user clicks the Annotated
-// toolbar icon (like Claude) — not one global panel that follows every tab. We
-// turn off the global open-on-click behavior and manage panel availability per
-// tab: a tab is "opted in" when its icon is clicked, and the panel is enabled
-// only on opted-in tabs (disabled elsewhere, so it closes when you switch away).
+// toolbar icon (like Claude) — not one global panel that follows every tab.
+//
+// The manifest's `side_panel.default_path` registers the panel as enabled on
+// EVERY tab, which is why it used to follow you everywhere. The fix is to flip
+// the global default to disabled (`setOptions` with no tabId) so the panel is
+// hidden by default, then enable it only on tabs the user opted into by clicking
+// the icon. Disabled tabs hide the panel; enabled tabs auto-show it on return.
 // The opted-in set lives in chrome.storage.session so it survives the service
 // worker being torn down between events.
 const PANEL_PATH = "sidepanel.html";
@@ -10,6 +13,11 @@ const OPEN_TABS_KEY = "panel-open-tabs";
 
 chrome.sidePanel
   .setPanelBehavior({ openPanelOnActionClick: false })
+  .catch((error: unknown) => console.error(error));
+
+// Hidden on every tab by default — only opted-in tabs (below) re-enable it.
+chrome.sidePanel
+  .setOptions({ path: PANEL_PATH, enabled: false })
   .catch((error: unknown) => console.error(error));
 
 async function readOpenTabs(): Promise<number[]> {
@@ -29,18 +37,18 @@ async function setTabOpen(tabId: number, open: boolean): Promise<void> {
   await chrome.storage.session.set({ [OPEN_TABS_KEY]: [...ids] }).catch(() => {});
 }
 
-// Open the panel for the clicked tab. open() must run inside the user gesture,
-// so it goes first — before any awaited work that would expire the gesture.
+// Open the panel for the clicked tab. Enable this tab first, then open — both
+// fired synchronously (no await between) so the user gesture that open() requires
+// isn't consumed, and so the tab is enabled before/as it opens despite the
+// disabled global default.
 chrome.action.onClicked.addListener((tab) => {
   if (tab.id == null) return;
   const tabId = tab.id;
-  chrome.sidePanel.open({ tabId }).catch((error: unknown) => console.error(error));
-  void (async () => {
-    await chrome.sidePanel
-      .setOptions({ tabId, path: PANEL_PATH, enabled: true })
-      .catch(() => {});
-    await setTabOpen(tabId, true);
-  })();
+  void chrome.sidePanel
+    .setOptions({ tabId, path: PANEL_PATH, enabled: true })
+    .catch(() => {});
+  void chrome.sidePanel.open({ tabId }).catch((error: unknown) => console.error(error));
+  void setTabOpen(tabId, true);
 });
 
 // On tab switch, the panel is available only where the user opened it.
