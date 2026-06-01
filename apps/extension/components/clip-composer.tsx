@@ -302,6 +302,9 @@ export function ClipComposer({ videoId }: { videoId: string }) {
       });
       setAnnotationId(id);
       setStatus("done");
+      // The clip is published — drop its saved draft so a later remount on this
+      // video doesn't repopulate the already-published fields.
+      void clearClipDraft(videoId);
       // Fire-and-forget: backfill the video's transcript once per source so the
       // landing page can show the clip-window accordion. Never blocks publish.
       void transcribeYoutube(videoId);
