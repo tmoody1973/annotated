@@ -176,6 +176,21 @@ interface PodcastSourceInput {
  * GUID when present (the same episode shares one row across users); feeds
  * without GUIDs fall back to the canonical page URL.
  */
+/** Fills only blank podcast fields from a later resolve (first real writer wins). */
+async function backfillPodcastSource(
+  ctx: MutationCtx,
+  existing: { _id: Id<"sources">; title?: string; podcastName?: string; mp3Url?: string },
+  input: PodcastSourceInput
+): Promise<void> {
+  const patch: Partial<{ title: string; podcastName: string; mp3Url: string }> = {};
+  if (!isBlank(input.title) && isBlank(existing.title)) patch.title = input.title.trim();
+  if (!isBlank(input.podcastName) && isBlank(existing.podcastName)) {
+    patch.podcastName = input.podcastName.trim();
+  }
+  if (!isBlank(input.mp3Url) && isBlank(existing.mp3Url)) patch.mp3Url = input.mp3Url.trim();
+  if (Object.keys(patch).length > 0) await ctx.db.patch(existing._id, patch);
+}
+
 export async function upsertPodcastSource(
   ctx: MutationCtx,
   input: PodcastSourceInput
@@ -187,7 +202,10 @@ export async function upsertPodcastSource(
         q.eq("podcastEpisodeGuid", input.episodeGuid)
       )
       .first();
-    if (byGuid) return byGuid._id;
+    if (byGuid) {
+      await backfillPodcastSource(ctx, byGuid, input);
+      return byGuid._id;
+    }
   } else {
     const byUrl = await ctx.db
       .query("sources")
@@ -195,7 +213,10 @@ export async function upsertPodcastSource(
         q.eq("canonicalUrl", input.canonicalUrl)
       )
       .first();
-    if (byUrl) return byUrl._id;
+    if (byUrl) {
+      await backfillPodcastSource(ctx, byUrl, input);
+      return byUrl._id;
+    }
   }
 
   return await ctx.db.insert("sources", {
@@ -222,6 +243,24 @@ interface ArticleSourceInput {
  * URL. Articles dedup on the page URL (no GUID, no video id) — two users
  * annotating the same article share one source row, like the other types.
  */
+/** Fills only blank article fields from a later annotation (first real writer wins). */
+async function backfillArticleSource(
+  ctx: MutationCtx,
+  existing: { _id: Id<"sources">; title?: string; siteName?: string; author?: string; imageUrl?: string },
+  input: ArticleSourceInput
+): Promise<void> {
+  const patch: Partial<{ title: string; siteName: string; author: string; imageUrl: string }> = {};
+  if (!isBlank(input.title) && isBlank(existing.title)) patch.title = input.title.trim();
+  if (!isBlank(input.siteName) && isBlank(existing.siteName)) {
+    patch.siteName = input.siteName!.trim();
+  }
+  if (!isBlank(input.author) && isBlank(existing.author)) patch.author = input.author!.trim();
+  if (!isBlank(input.imageUrl) && isBlank(existing.imageUrl)) {
+    patch.imageUrl = input.imageUrl!.trim();
+  }
+  if (Object.keys(patch).length > 0) await ctx.db.patch(existing._id, patch);
+}
+
 export async function upsertArticleSource(
   ctx: MutationCtx,
   input: ArticleSourceInput
@@ -232,7 +271,10 @@ export async function upsertArticleSource(
       q.eq("canonicalUrl", input.canonicalUrl)
     )
     .first();
-  if (existing) return existing._id;
+  if (existing) {
+    await backfillArticleSource(ctx, existing, input);
+    return existing._id;
+  }
 
   return await ctx.db.insert("sources", {
     type: "article",
