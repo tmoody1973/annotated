@@ -10,9 +10,18 @@
  * shows instead of a misleading "sign in" message.
  */
 export async function getConvexToken(): Promise<string | null> {
-  const response = (await chrome.runtime.sendMessage({ type: "GET_CONVEX_TOKEN" })) as
-    | { token: string | null; error?: string }
-    | undefined;
+  // The background relay is internally bounded, but guard the round-trip too so
+  // a wedged service worker can never leave a publish spinning forever.
+  const response = (await Promise.race([
+    chrome.runtime.sendMessage({ type: "GET_CONVEX_TOKEN" }),
+    new Promise((resolve) => setTimeout(() => resolve({ timedOut: true }), 40000)),
+  ])) as { token?: string | null; error?: string; timedOut?: boolean } | undefined;
+
+  if (response?.timedOut) {
+    throw new Error(
+      "Timed out getting your sign-in token. Make sure you're signed in at annotated.sh, then try again."
+    );
+  }
   if (response?.error) throw new Error(response.error);
   return response?.token ?? null;
 }
