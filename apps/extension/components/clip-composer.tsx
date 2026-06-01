@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   clockToMs,
   evaluateClipSpan,
@@ -26,6 +26,7 @@ import { CommentaryComposer } from "./commentary-composer";
 import { AnonymousToggle } from "./anonymous-toggle";
 import { TopicPicker } from "./topic-picker";
 import { useThread } from "../lib/use-thread";
+import { clearClipDraft, loadClipDraft, saveClipDraft } from "../lib/clip-draft";
 
 type Status = "idle" | "clipping" | "publishing" | "done" | "error";
 
@@ -153,6 +154,64 @@ export function ClipComposer({ videoId }: { videoId: string }) {
   const [annotationId, setAnnotationId] = useState<string | null>(null);
   const [captureHint, setCaptureHint] = useState<string | null>(null);
   const [chapters, setChapters] = useState<Chapter[]>([]);
+  // Source attribution captured when the video is detected — the active tab is
+  // reliably this video then. At publish the active tab may be elsewhere (e.g.
+  // the user focused annotated.sh), so reading it then would lose the channel.
+  const [source, setSource] = useState<{
+    title: string;
+    channelName: string | null;
+    channelUrl: string | null;
+  } | null>(null);
+  // Tracks which video's saved draft has been hydrated into state, so the
+  // save-effect never persists a half-loaded (or wrong-video) draft.
+  const draftHydratedFor = useRef<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    setSource(null);
+    void Promise.all([getActiveVideoTitle(), getActiveVideoChannel()]).then(
+      ([title, channel]) => {
+        if (active) {
+          setSource({ title, channelName: channel.name, channelUrl: channel.url });
+        }
+      }
+    );
+    return () => {
+      active = false;
+    };
+  }, [videoId]);
+
+  // Restore any in-progress clip for this video (or clear to empty when there's
+  // none), so switching tabs and coming back doesn't lose work.
+  useEffect(() => {
+    let active = true;
+    draftHydratedFor.current = null;
+    void loadClipDraft(videoId).then((draft) => {
+      if (!active) return;
+      setStartInput(draft?.startInput ?? "");
+      setEndInput(draft?.endInput ?? "");
+      setCommentary(draft?.commentary ?? "");
+      setTopicIds(draft?.topicIds ?? []);
+      setIsAnonymous(draft?.isAnonymous ?? false);
+      draftHydratedFor.current = videoId;
+    });
+    return () => {
+      active = false;
+    };
+  }, [videoId]);
+
+  // Persist edits as they happen, but only once this video's draft is hydrated
+  // and only while idle (never mid-publish or on the published screen).
+  useEffect(() => {
+    if (draftHydratedFor.current !== videoId || status !== "idle") return;
+    void saveClipDraft(videoId, {
+      startInput,
+      endInput,
+      commentary,
+      topicIds,
+      isAnonymous,
+    });
+  }, [videoId, startInput, endInput, commentary, topicIds, isAnonymous, status]);
 
   useEffect(() => {
     let active = true;
@@ -211,8 +270,16 @@ export function ClipComposer({ videoId }: { videoId: string }) {
     setProcessingStartedAt(Date.now());
     setErrorMsg(null);
     try {
-      const title = await getActiveVideoTitle();
-      const channel = await getActiveVideoChannel();
+      // Prefer attribution captured at detection; fall back to a fresh read only
+      // if detection hadn't resolved yet.
+      let captured = source;
+      if (!captured) {
+        const [title, channel] = await Promise.all([
+          getActiveVideoTitle(),
+          getActiveVideoChannel(),
+        ]);
+        captured = { title, channelName: channel.name, channelUrl: channel.url };
+      }
       const { storageId } = await clipYoutube({ videoId, startMs, endMs });
       const commentaryAudio = audioBlob
         ? await transcodeCommentary(audioBlob)
@@ -220,9 +287,9 @@ export function ClipComposer({ videoId }: { videoId: string }) {
       setStatus("publishing");
       const id = await publishYoutubeAuthed({
         videoId,
-        title,
-        author: channel.name ?? undefined,
-        channelUrl: channel.url ?? undefined,
+        title: captured.title,
+        author: captured.channelName ?? undefined,
+        channelUrl: captured.channelUrl ?? undefined,
         clipStorageId: storageId,
         clipStartMs: startMs,
         clipEndMs: endMs,
@@ -253,6 +320,7 @@ export function ClipComposer({ videoId }: { videoId: string }) {
     setTopicIds([]);
     setIsAnonymous(false);
     setAnnotationId(null);
+    void clearClipDraft(videoId);
   };
 
   if (status === "done" && annotationId) {

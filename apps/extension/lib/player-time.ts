@@ -54,9 +54,21 @@ export async function getActiveVideoTitle(): Promise<string> {
 
 /**
  * Reads the channel name + absolute channel URL from the active YouTube watch
- * page (the creator the clip points at). Injected on demand — the owner link is
- * the same anchor YouTube renders under the video. Returns nulls when not a
- * watch page or the DOM shape changed, so publish degrades gracefully.
+ * page (the creator the clip points at).
+ *
+ * Primary source is YouTube's own embedded player data —
+ * `#movie_player.getPlayerResponse().videoDetails` (live on SPA navigation),
+ * falling back to the page's `ytInitialPlayerResponse` global. These give the
+ * exact `author` + `channelId` YouTube uses, so we don't depend on the rendered
+ * DOM, which changes shape often and isn't present until the watch page hydrates.
+ * The owner-link CSS selectors remain a last-resort fallback.
+ *
+ * Page globals live in the MAIN world, not the extension's isolated content
+ * world, so the reader is injected with `world: "MAIN"`. Returns nulls when not a
+ * watch page or nothing resolves, so publish degrades gracefully.
+ *
+ * Capture this when the video is *detected* (the active tab is reliably the video
+ * then), not at publish time — by publish the active tab may be elsewhere.
  */
 export async function getActiveVideoChannel(): Promise<{
   name: string | null;
@@ -67,7 +79,40 @@ export async function getActiveVideoChannel(): Promise<{
   try {
     const [injection] = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
+      world: "MAIN",
       func: () => {
+        type VideoDetails = { author?: string; channelId?: string };
+        type PlayerResponse = { videoDetails?: VideoDetails };
+
+        const fromDetails = (
+          response: PlayerResponse | null | undefined
+        ): { name: string | null; url: string | null } | null => {
+          const details = response?.videoDetails;
+          if (!details?.author && !details?.channelId) return null;
+          return {
+            name: details.author?.trim() || null,
+            url: details.channelId
+              ? `https://www.youtube.com/channel/${details.channelId}`
+              : null,
+          };
+        };
+
+        const player = document.querySelector("#movie_player") as
+          | (Element & { getPlayerResponse?: () => PlayerResponse })
+          | null;
+        const live =
+          typeof player?.getPlayerResponse === "function"
+            ? player.getPlayerResponse()
+            : null;
+        const fromLive = fromDetails(live);
+        if (fromLive) return fromLive;
+
+        const initial = (
+          window as unknown as { ytInitialPlayerResponse?: PlayerResponse }
+        ).ytInitialPlayerResponse;
+        const fromInitial = fromDetails(initial);
+        if (fromInitial) return fromInitial;
+
         const anchor = document.querySelector<HTMLAnchorElement>(
           "ytd-video-owner-renderer a.yt-simple-endpoint, #owner #channel-name a, ytd-channel-name a"
         );
