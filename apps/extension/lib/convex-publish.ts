@@ -4,6 +4,20 @@ import { getConvexToken } from "./auth-token";
 
 const convexUrl = process.env.PLASMO_PUBLIC_CONVEX_URL ?? "";
 
+const CONVEX_TIMEOUT_MS = 25000;
+const CONVEX_UNREACHABLE =
+  "Couldn't reach Annotated's servers. Check your connection and try again.";
+
+/** Rejects with a clear message if a Convex call stalls, so publish never spins
+ *  forever when the deployment is unreachable (e.g. a network/firewall dropping
+ *  the connection — the WebSocket-1006 case). */
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error(message)), ms)),
+  ]);
+}
+
 export type YoutubePublishArgs = {
   videoId: string;
   title: string;
@@ -95,7 +109,7 @@ async function buildAuthedClient(): Promise<ConvexHttpClient> {
   const client = new ConvexHttpClient(convexUrl);
   client.setAuth(token);
   // Guarantee the users row exists before deriving the author from it.
-  await client.mutation(ensureCurrentUser, {});
+  await withTimeout(client.mutation(ensureCurrentUser, {}), CONVEX_TIMEOUT_MS, CONVEX_UNREACHABLE);
   return client;
 }
 
@@ -107,7 +121,7 @@ async function buildAuthedClient(): Promise<ConvexHttpClient> {
  */
 export async function publishYoutubeAuthed(args: YoutubePublishArgs): Promise<string> {
   const client = await buildAuthedClient();
-  return await client.mutation(createYoutube, args);
+  return await withTimeout(client.mutation(createYoutube, args), CONVEX_TIMEOUT_MS, CONVEX_UNREACHABLE);
 }
 
 /**
@@ -116,7 +130,7 @@ export async function publishYoutubeAuthed(args: YoutubePublishArgs): Promise<st
  */
 export async function publishPodcastAuthed(args: PodcastPublishArgs): Promise<string> {
   const client = await buildAuthedClient();
-  return await client.mutation(createPodcast, args);
+  return await withTimeout(client.mutation(createPodcast, args), CONVEX_TIMEOUT_MS, CONVEX_UNREACHABLE);
 }
 
 /**
@@ -125,5 +139,5 @@ export async function publishPodcastAuthed(args: PodcastPublishArgs): Promise<st
  */
 export async function publishArticleAuthed(args: ArticlePublishArgs): Promise<string> {
   const client = await buildAuthedClient();
-  return await client.mutation(createArticle, args);
+  return await withTimeout(client.mutation(createArticle, args), CONVEX_TIMEOUT_MS, CONVEX_UNREACHABLE);
 }

@@ -99,16 +99,27 @@ async function mintTokenInTab(tabId: number): Promise<string | null> {
     target: { tabId },
     world: "MAIN",
     func: async () => {
-      const clerk = (window as unknown as { Clerk?: any }).Clerk;
-      if (!clerk) return null;
-      try {
-        await clerk.load?.();
-      } catch {
-        /* already loaded */
+      // Never await a Clerk call unbounded — on a tab whose session is degraded
+      // (e.g. token-refresh failing), load()/getToken() can hang forever, which
+      // would leave a publish spinning indefinitely. Race every hop to a timeout.
+      const withTimeout = (value: unknown, ms: number): Promise<unknown> =>
+        Promise.race([
+          Promise.resolve(value).catch(() => null),
+          new Promise((resolve) => setTimeout(() => resolve(null), ms)),
+        ]);
+
+      const readClerk = () => (window as unknown as { Clerk?: any }).Clerk;
+      // A freshly opened tab hasn't attached window.Clerk yet — wait for it
+      // (this is why a cold relay tab returned null too early before).
+      let clerk = readClerk();
+      for (let i = 0; i < 50 && !clerk; i++) {
+        await new Promise((r) => setTimeout(r, 100));
+        clerk = readClerk();
       }
-      // clerk.session can lag right after load — poll (longer for a freshly
-      // opened tab whose session is still hydrating), and fall back to the
-      // active session on the client if the convenience getter is null.
+      if (!clerk) return null;
+
+      await withTimeout(clerk.load?.(), 4000);
+
       const findSession = () =>
         clerk.session ??
         clerk.client?.activeSessions?.[0] ??
@@ -120,7 +131,8 @@ async function mintTokenInTab(tabId: number): Promise<string | null> {
         session = findSession();
       }
       if (!session) return null;
-      return (await session.getToken({ template: "convex" })) ?? null;
+
+      return (await withTimeout(session.getToken({ template: "convex" }), 6000)) ?? null;
     },
   });
   return (injection?.result as string | null | undefined) ?? null;
@@ -155,13 +167,22 @@ function waitForTabComplete(tabId: number, timeoutMs = 15000): Promise<void> {
   });
 }
 
+/** Belt-and-suspenders: even if executeScript itself stalls on an unresponsive
+ *  tab, the mint can't hang the publish — it resolves to null after `ms`. */
+function mintWithTimeout(tabId: number, ms = 12000): Promise<string | null> {
+  return Promise.race([
+    mintTokenInTab(tabId).catch(() => null),
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), ms)),
+  ]);
+}
+
 async function fetchConvexToken(): Promise<string | null> {
   if (!webUrl) throw new Error("Missing PLASMO_PUBLIC_WEB_URL");
   const origin = new URL(webUrl).origin;
 
   const tabs = (await chrome.tabs.query({ url: `${origin}/*` })).filter((t) => t.id != null);
   for (const tab of tabs) {
-    const token = await mintTokenInTab(tab.id!);
+    const token = await mintWithTimeout(tab.id!);
     if (token) return token;
   }
 
@@ -171,7 +192,7 @@ async function fetchConvexToken(): Promise<string | null> {
   if (created.id == null) return null;
   try {
     await waitForTabComplete(created.id);
-    return await mintTokenInTab(created.id);
+    return await mintWithTimeout(created.id);
   } finally {
     await chrome.tabs.remove(created.id).catch(() => {});
   }
