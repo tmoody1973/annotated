@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import { SiteHeader } from "../_components/site-header";
 import { SiteFooter } from "../_components/site-footer";
-import { BrowserGrid, ExtensionHeroCta } from "./install-ctas";
+import { ExtensionHeroCta, InstallDownloadButton } from "./install-ctas";
 
 export const metadata: Metadata = {
   title: "Extension — Annotated",
   description:
-    "Clip any page without leaving it. Highlight text on any site, add your take, and publish the receipt — straight from a dock beside the page. Free for Chrome, Edge, Firefox, and Brave.",
+    "Clip any page without leaving it. Highlight text on any site, add your take, and publish the receipt — straight from a dock beside the page. Free for Chrome.",
 };
 
 const STEPS = [
@@ -133,14 +133,100 @@ export default function ExtensionPage() {
         </div>
       </section>
 
-      {/* BROWSERS */}
-      <section id="browsers" className="border-b-[3px] border-[color:var(--b-line)] scroll-mt-20">
+      {/* INSTALL — manual sideload until Chrome Web Store approval */}
+      <section id="install" className="border-b-[3px] border-[color:var(--b-line)] scroll-mt-20">
         <div className="mx-auto max-w-[1080px] px-6 py-14">
-          <p className={sectionLabel}>Pick your browser</p>
-          <h2 className="mt-3 font-display text-[30px] tracking-tight">Get it for your browser</h2>
-          <div className="mt-8">
-            <BrowserGrid />
-          </div>
+          <p className={sectionLabel}>Install in Chrome · about a minute</p>
+          <h2 className="mt-3 font-display text-[30px] tracking-tight">Add it to Chrome yourself</h2>
+          <p className="mt-3 max-w-[62ch] text-[15px] leading-relaxed text-[color:var(--b-onbg)]">
+            Annotated is in Chrome Web Store review. Until it&apos;s approved you can add it directly
+            — same extension, about a minute. Works in Chrome and other Chromium browsers (Edge,
+            Brave).
+          </p>
+
+          <ol className="mt-8 grid grid-cols-1 gap-4">
+            {[
+              {
+                no: "01",
+                title: "Download & unzip",
+                body: (
+                  <>
+                    Download the package and unzip it — you&apos;ll get a folder named{" "}
+                    <code className="bg-[color:var(--b-chrome)] px-1 py-0.5 font-mono text-[12px] text-[color:var(--b-acid)]">
+                      annotated-extension
+                    </code>
+                    .
+                    <span className="mt-3 block">
+                      <InstallDownloadButton />
+                    </span>
+                  </>
+                ),
+              },
+              {
+                no: "02",
+                title: "Open Chrome's extensions page",
+                body: (
+                  <>
+                    Paste this into your address bar and press Enter:{" "}
+                    <code className="bg-[color:var(--b-chrome)] px-1 py-0.5 font-mono text-[12px] text-[color:var(--b-acid)]">
+                      chrome://extensions
+                    </code>
+                    <span className="mt-1 block font-mono text-[11px] text-[color:var(--b-dim)]">
+                      (Chrome blocks links to that page, so it has to be pasted.)
+                    </span>
+                  </>
+                ),
+              },
+              {
+                no: "03",
+                title: "Turn on Developer mode",
+                body: <>Flip the <strong>Developer mode</strong> toggle in the top-right corner.</>,
+              },
+              {
+                no: "04",
+                title: "Load unpacked",
+                body: (
+                  <>
+                    Click <strong>Load unpacked</strong> and select the{" "}
+                    <code className="bg-[color:var(--b-chrome)] px-1 py-0.5 font-mono text-[12px] text-[color:var(--b-acid)]">
+                      annotated-extension
+                    </code>{" "}
+                    folder you unzipped.
+                  </>
+                ),
+              },
+              {
+                no: "05",
+                title: "Pin it & sign in",
+                body: (
+                  <>
+                    Click the puzzle-piece icon, pin <strong>Annotated</strong>, then click it on any
+                    page and sign in with Google or X. You&apos;re clipping.
+                  </>
+                ),
+              },
+            ].map((step) => (
+              <li
+                key={step.no}
+                className="flex gap-4 border-[3px] border-[color:var(--b-line)] bg-[color:var(--b-card)] p-5 text-[color:var(--b-ink)] shadow-[6px_6px_0_0_var(--b-shadow)]"
+              >
+                <span className="h-fit shrink-0 bg-[color:var(--b-chrome)] px-2 py-1 font-mono text-[11px] font-bold text-[color:var(--b-acid)]">
+                  {step.no}
+                </span>
+                <div>
+                  <h3 className="font-display text-lg tracking-tight">{step.title}</h3>
+                  <p className="mt-1.5 text-[14px] leading-relaxed text-[color:var(--b-ink)]">
+                    {step.body}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ol>
+
+          <p className="mt-6 border-l-4 border-[color:var(--b-acid)] pl-3 font-mono text-[12px] leading-relaxed text-[color:var(--b-dim-onbg)]">
+            Once it clears Chrome Web Store review, this becomes a one-click install — no download,
+            no Developer mode.
+          </p>
         </div>
       </section>
 
@@ -168,7 +254,7 @@ export default function ExtensionPage() {
           </div>
 
           <div className="border-[3px] border-[color:var(--b-line)] bg-[color:var(--b-card)] p-6 text-[color:var(--b-ink)] shadow-[6px_6px_0_0_var(--b-shadow)]">
-            <h3 className="font-display text-lg tracking-tight">On mobile or Safari?</h3>
+            <h3 className="font-display text-lg tracking-tight">On mobile, Safari, or Firefox?</h3>
             <ul className="mt-4 space-y-2.5 text-[13px] leading-relaxed">
               {[
                 "The extension isn't available there yet — but you don't need it to use Annotated.",
