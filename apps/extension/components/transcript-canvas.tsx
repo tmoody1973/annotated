@@ -54,10 +54,15 @@ function groupBySpeaker(words: TranscriptWord[]): SpeakerSegment[] {
 export function TranscriptCanvas({
   sourceId,
   mp3Url,
+  clipUrl,
   words,
 }: {
   sourceId: string;
   mp3Url: string;
+  /** The frozen episode copy (Convex storage) the transcript was made from. When
+   *  present, cut the clip from it so the audio matches the selected words; falls
+   *  back to the live enclosure (drift-prone) when absent. */
+  clipUrl?: string;
   words: TranscriptWord[];
 }) {
   const thread = useThread();
@@ -114,7 +119,7 @@ export function TranscriptCanvas({
     setError(null);
     try {
       const clipStorageId = await clipAudio(
-        mp3Url,
+        clipUrl ?? mp3Url,
         selection.clipStartMs,
         selection.clipEndMs
       );

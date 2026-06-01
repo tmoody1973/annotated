@@ -16,6 +16,9 @@ interface TranscriptRow {
   // legacy inline array (pre-existing short rows). Parsed client-side.
   wordsJson?: string;
   words?: TranscriptWord[];
+  /** The episode audio frozen in Convex storage — clips cut from this match the
+   *  transcript timeline (no ad drift). Absent on older / fallback transcripts. */
+  episodeStorageId?: string;
   /** Convex server timestamp the row was created — when transcription began. */
   _creationTime: number;
 }
@@ -39,6 +42,12 @@ const getTranscriptBySource = makeFunctionReference<
   TranscriptRow | null
 >("transcripts:getBySource");
 
+const getStorageUrl = makeFunctionReference<
+  "query",
+  { storageId: string },
+  string | null
+>("files:getUrl");
+
 const note = { fontFamily: monoStack, fontSize: 12, color: muted, margin: "10px 0 0" };
 
 /**
@@ -54,6 +63,14 @@ export function PodcastClipper({
   mp3Url: string;
 }) {
   const transcript = useQuery(getTranscriptBySource, { sourceId });
+  // Resolve the frozen episode's URL so clips cut from the same bytes that were
+  // transcribed (no ad drift). Skips until the row carries an episodeStorageId.
+  const episodeStorageId =
+    transcript?.status === "ready" ? transcript.episodeStorageId : undefined;
+  const frozenUrl = useQuery(
+    getStorageUrl,
+    episodeStorageId ? { storageId: episodeStorageId } : "skip"
+  );
   const requested = useRef<string | null>(null);
   // Local fallback start time for the brief window after we trigger transcription
   // but before the worker has inserted the row (which carries the real start).
@@ -91,6 +108,11 @@ export function PodcastClipper({
   }
 
   return (
-    <TranscriptCanvas sourceId={sourceId} mp3Url={mp3Url} words={parseWords(transcript)} />
+    <TranscriptCanvas
+      sourceId={sourceId}
+      mp3Url={mp3Url}
+      clipUrl={frozenUrl ?? undefined}
+      words={parseWords(transcript)}
+    />
   );
 }

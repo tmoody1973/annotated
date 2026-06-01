@@ -95,6 +95,10 @@ export default defineSchema({
       v.literal("failed")
     ),
     deepgramJobId: v.optional(v.string()),
+    // The episode audio frozen into Convex storage at transcribe time. Podcast
+    // clips are cut from THIS copy (not the live enclosure) so the audio shares
+    // one timeline with these word timestamps — no dynamic-ad-insertion drift.
+    episodeStorageId: v.optional(v.id("_storage")),
   })
     .index("by_source", ["sourceId"])
     .index("by_status", ["status"]),
