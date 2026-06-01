@@ -23,6 +23,7 @@ app.get("/health", async () => ({ status: "ok" }));
 registerTranscribeRoute(app, {
   deepgram: createDeepgramClient(env.DEEPGRAM_API_KEY),
   writer: createTranscriptWriter(env.CONVEX_URL, env.WORKER_AUTH_TOKEN),
+  uploader: createClipUploader(env.CONVEX_URL, env.WORKER_AUTH_TOKEN),
   workerToken: env.WORKER_AUTH_TOKEN,
 });
 

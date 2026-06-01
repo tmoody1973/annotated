@@ -61,6 +61,9 @@ export const setReady = mutation({
     transcriptId: v.id("transcripts"),
     wordsJson: v.string(),
     deepgramJobId: v.optional(v.string()),
+    // The frozen episode audio in Convex storage — podcast clips cut from this so
+    // the audio and these word timestamps share one timeline (no ad drift).
+    episodeStorageId: v.optional(v.id("_storage")),
     workerToken: v.string(),
   },
   returns: v.null(),
@@ -70,6 +73,7 @@ export const setReady = mutation({
       wordsJson: args.wordsJson,
       status: "ready",
       ...(args.deepgramJobId ? { deepgramJobId: args.deepgramJobId } : {}),
+      ...(args.episodeStorageId ? { episodeStorageId: args.episodeStorageId } : {}),
     });
     return null;
   },

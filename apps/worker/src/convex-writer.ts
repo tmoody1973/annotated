@@ -18,9 +18,21 @@ const createRef = makeFunctionReference<
 
 const setReadyRef = makeFunctionReference<
   "mutation",
-  { transcriptId: string; wordsJson: string; deepgramJobId?: string; workerToken: string },
+  {
+    transcriptId: string;
+    wordsJson: string;
+    deepgramJobId?: string;
+    episodeStorageId?: string;
+    workerToken: string;
+  },
   null
 >("transcripts:setReady");
+
+const filesGetUrlRef = makeFunctionReference<
+  "query",
+  { storageId: string },
+  string | null
+>("files:getUrl");
 
 const setFailedRef = makeFunctionReference<
   "mutation",
@@ -42,12 +54,18 @@ const getByYoutubeIdRef = makeFunctionReference<
 
 export interface TranscriptWriter {
   createProcessing(sourceId: string, provider?: Provider): Promise<string>;
-  markReady(transcriptId: string, words: TranscriptWord[]): Promise<void>;
+  markReady(
+    transcriptId: string,
+    words: TranscriptWord[],
+    episodeStorageId?: string
+  ): Promise<void>;
   markFailed(transcriptId: string): Promise<void>;
   /** True if a transcript row already exists for this source (any provider). */
   hasTranscript(sourceId: string): Promise<boolean>;
   /** Resolves the source id for a YouTube video, or null if no source exists yet. */
   resolveYoutubeSourceId(videoId: string): Promise<string | null>;
+  /** Signed Convex URL for a stored file (the frozen episode), or null. */
+  getStorageUrl(storageId: string): Promise<string | null>;
 }
 
 /**
@@ -72,18 +90,27 @@ export function createTranscriptWriter(
       });
     },
 
-    async markReady(transcriptId: string, words: TranscriptWord[]): Promise<void> {
+    async markReady(
+      transcriptId: string,
+      words: TranscriptWord[],
+      episodeStorageId?: string
+    ): Promise<void> {
       // Send the words as a JSON string — Convex caps array args at 8192
       // elements, which a full episode exceeds. The client parses it back.
       await client.mutation(setReadyRef, {
         transcriptId,
         wordsJson: JSON.stringify(words),
+        ...(episodeStorageId ? { episodeStorageId } : {}),
         workerToken,
       });
     },
 
     async markFailed(transcriptId: string): Promise<void> {
       await client.mutation(setFailedRef, { transcriptId, workerToken });
+    },
+
+    async getStorageUrl(storageId: string): Promise<string | null> {
+      return await client.query(filesGetUrlRef, { storageId });
     },
 
     async hasTranscript(sourceId: string): Promise<boolean> {
