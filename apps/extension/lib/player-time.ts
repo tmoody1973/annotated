@@ -52,33 +52,92 @@ export async function getActiveVideoTitle(): Promise<string> {
   return cleanYoutubeTitle(tab?.title ?? "YouTube video");
 }
 
+export interface ActiveVideoMeta {
+  title: string | null;
+  channelName: string | null;
+  channelUrl: string | null;
+}
+
 /**
- * Reads the channel name + absolute channel URL from the active YouTube watch
- * page (the creator the clip points at). Injected on demand — the owner link is
- * the same anchor YouTube renders under the video. Returns nulls when not a
- * watch page or the DOM shape changed, so publish degrades gracefully.
+ * Reads the video title, channel name, and absolute channel URL from the active
+ * YouTube watch page — the attribution a clip points at.
+ *
+ * All three come from YouTube's own embedded player data
+ * (`#movie_player.getPlayerResponse().videoDetails`, falling back to the
+ * `ytInitialPlayerResponse` global), which carries the exact `title`, `author`,
+ * and `channelId`. This avoids the rendered DOM, which changes shape and isn't
+ * present until the watch page hydrates.
+ *
+ * Crucially the reader **polls** for that data: when a video is first detected
+ * (especially on YouTube's SPA video→video navigation) the player response and
+ * even `document.title` lag behind, so reading once too early yields the bare
+ * page chrome. We poll ~2s, then fall back to the owner-link DOM + document
+ * title as a last resort. Page globals live in the MAIN world, so the reader is
+ * injected with `world: "MAIN"`.
  */
-export async function getActiveVideoChannel(): Promise<{
-  name: string | null;
-  url: string | null;
-}> {
+export async function getActiveVideoMeta(): Promise<ActiveVideoMeta> {
+  const empty: ActiveVideoMeta = { title: null, channelName: null, channelUrl: null };
   const tab = await getActiveTab();
-  if (!tab?.id) return { name: null, url: null };
+  if (!tab?.id) return empty;
   try {
     const [injection] = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
-      func: () => {
+      world: "MAIN",
+      func: async () => {
+        type VideoDetails = { title?: string; author?: string; channelId?: string };
+        type PlayerResponse = { videoDetails?: VideoDetails };
+
+        const fromDetails = (): {
+          title: string | null;
+          channelName: string | null;
+          channelUrl: string | null;
+        } | null => {
+          const player = document.querySelector("#movie_player") as
+            | (Element & { getPlayerResponse?: () => PlayerResponse })
+            | null;
+          const live =
+            typeof player?.getPlayerResponse === "function"
+              ? player.getPlayerResponse()
+              : null;
+          const initial = (
+            window as unknown as { ytInitialPlayerResponse?: PlayerResponse }
+          ).ytInitialPlayerResponse;
+          const details = live?.videoDetails ?? initial?.videoDetails;
+          if (!details) return null;
+          const channelName = details.author?.trim() || null;
+          const title = details.title?.trim() || null;
+          if (!channelName && !title) return null;
+          return {
+            title,
+            channelName,
+            channelUrl: details.channelId
+              ? `https://www.youtube.com/channel/${details.channelId}`
+              : null,
+          };
+        };
+
+        let meta = fromDetails();
+        for (let i = 0; i < 20 && !meta; i++) {
+          await new Promise((r) => setTimeout(r, 100));
+          meta = fromDetails();
+        }
+        if (meta) return meta;
+
+        // Last resort: the rendered owner link (channel @handle, not /channel/id)
+        // and the document title with YouTube's suffix stripped.
         const anchor = document.querySelector<HTMLAnchorElement>(
           "ytd-video-owner-renderer a.yt-simple-endpoint, #owner #channel-name a, ytd-channel-name a"
         );
         const name = anchor?.textContent?.trim() || null;
         const href = anchor?.getAttribute("href") || null;
         const url = href ? new URL(href, location.origin).href : null;
-        return { name, url };
+        const docTitle =
+          document.title?.replace(/\s*-\s*YouTube\s*$/, "").trim() || null;
+        return { title: docTitle, channelName: name, channelUrl: url };
       },
     });
-    return injection?.result ?? { name: null, url: null };
+    return injection?.result ?? empty;
   } catch {
-    return { name: null, url: null };
+    return empty;
   }
 }
