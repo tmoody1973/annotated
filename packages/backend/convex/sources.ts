@@ -50,10 +50,76 @@ export function youtubeThumbnailFor(source: {
     : undefined;
 }
 
+/** Titles that mean "we never captured a real one" — safe to replace on re-clip. */
+const PLACEHOLDER_YOUTUBE_TITLES = new Set(["", "YouTube", "YouTube video"]);
+
+const isBlank = (value?: string): boolean =>
+  value === undefined || value.trim() === "";
+
+/**
+ * Fills only the fields the existing row is missing (or that hold a placeholder
+ * title) from a later, better-resolved clip. First *real* writer still wins for
+ * any field that's already populated — we never overwrite good data. This
+ * self-heals rows captured before the page hydrated (no channel name, "YouTube"
+ * title) when the same video is clipped again.
+ */
+async function backfillYoutubeSource(
+  ctx: MutationCtx,
+  existing: { _id: Id<"sources">; title?: string; author?: string; youtubeChannelUrl?: string; youtubeThumbnailUrl?: string; youtubeDurationMs?: number },
+  input: YoutubeSourceInput
+): Promise<void> {
+  const patch: Partial<{
+    title: string;
+    author: string;
+    youtubeChannelUrl: string;
+    youtubeThumbnailUrl: string;
+    youtubeDurationMs: number;
+  }> = {};
+
+  if (!isBlank(input.author) && isBlank(existing.author)) {
+    patch.author = input.author!.trim();
+  }
+  // Channel URL: fill if blank. Also upgrade a DOM-scraped `/@handle` (which can
+  // point at the wrong anchor entirely) to a `/channel/<id>` from videoDetails —
+  // the authoritative owner of the video. Never downgrade /channel → @handle.
+  const isHandleUrl = (url?: string): boolean => !!url && /\/@[^/]+/.test(url);
+  const isChannelIdUrl = (url?: string): boolean => !!url && /\/channel\//.test(url);
+  if (!isBlank(input.channelUrl)) {
+    if (isBlank(existing.youtubeChannelUrl)) {
+      patch.youtubeChannelUrl = input.channelUrl!.trim();
+    } else if (
+      isHandleUrl(existing.youtubeChannelUrl) &&
+      isChannelIdUrl(input.channelUrl)
+    ) {
+      patch.youtubeChannelUrl = input.channelUrl!.trim();
+    }
+  }
+  if (!isBlank(input.thumbnailUrl) && isBlank(existing.youtubeThumbnailUrl)) {
+    patch.youtubeThumbnailUrl = input.thumbnailUrl!.trim();
+  }
+  if (input.durationMs !== undefined && existing.youtubeDurationMs === undefined) {
+    patch.youtubeDurationMs = input.durationMs;
+  }
+
+  const incomingTitleIsReal =
+    !isBlank(input.title) && !PLACEHOLDER_YOUTUBE_TITLES.has(input.title.trim());
+  const existingTitleIsPlaceholder =
+    isBlank(existing.title) || PLACEHOLDER_YOUTUBE_TITLES.has(existing.title!.trim());
+  if (incomingTitleIsReal && existingTitleIsPlaceholder) {
+    patch.title = input.title.trim();
+  }
+
+  if (Object.keys(patch).length > 0) {
+    await ctx.db.patch(existing._id, patch);
+  }
+}
+
 /**
  * Inserts a YouTube source, or returns the existing one for this video id.
  * Sources are shared across users (the dedup moat) — idempotent by video id.
- * Plain helper so `annotations.createYoutube` and the test seed share one code path.
+ * On a re-clip, missing/placeholder metadata is backfilled (see
+ * `backfillYoutubeSource`). Plain helper so `annotations.createYoutube` and the
+ * test seed share one code path.
  */
 export async function upsertYoutubeSource(
   ctx: MutationCtx,
@@ -63,7 +129,10 @@ export async function upsertYoutubeSource(
     .query("sources")
     .withIndex("by_youtube_id", (q) => q.eq("youtubeVideoId", input.videoId))
     .first();
-  if (existing) return existing._id;
+  if (existing) {
+    await backfillYoutubeSource(ctx, existing, input);
+    return existing._id;
+  }
 
   return await ctx.db.insert("sources", {
     type: "youtube",
