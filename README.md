@@ -156,4 +156,4 @@ pnpm --filter worker exec vitest run             # worker tests
 
 ## License
 
-Private. Built as a bounty submission — a Chrome side-panel for clipping and annotating media. All rights reserved.
+Released under the [MIT License](./LICENSE) © 2026 Tarik Moody.
