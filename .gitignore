@@ -38,3 +38,13 @@ graphify-out/
 
 # Chrome extension signing key (stable CRX ID) — never commit the private key
 *.pem
+
+# Brainstorming session mockups (regenerable)
+.superpowers/
+
+# Build artifacts / local scratch
+annotated-extension-webstore.zip
+.playwright-mcp/
+
+# Production build env for the extension (contains the worker token until it is removed)
+apps/extension/.env.production

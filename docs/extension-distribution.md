@@ -121,17 +121,70 @@ trigger extra scrutiny; the bundled worker token is now publicly extractable (se
 
 ## Security — the bundled token
 
-`PLASMO_PUBLIC_WORKER_TOKEN` is compiled **into the extension bundle** (all `PLASMO_PUBLIC_*`
-vars are client-visible). It guards the dev publish mutations (`testing.*ClipDev`) and the
-worker. Anyone who installs the extension can extract it from the bundle and call those
-token-guarded endpoints directly.
+> **This stopped being hypothetical on 2026-08-11.** The warning below was written as a
+> risk; it had already happened. See the incident note at the end of this section.
 
-- **Route A (privately-shared zip):** lower exposure — only people you send the link to.
-- **Route B (Unlisted store):** the bundle is downloadable by anyone with the link, so treat
-  the token as compromised-by-design. Before a store upload, rotate it to a throwaway value
-  and be ready to rotate again after judging — or, better, replace the dev publish path with
-  real Clerk auth + a server-side worker call (the deferred "production auth" debt) so no
-  secret ships client-side.
+`PLASMO_PUBLIC_WORKER_TOKEN` is compiled **into the extension bundle** (all `PLASMO_PUBLIC_*`
+vars are client-visible). Anyone who installs the extension — or downloads the sideload zip
+from `/extension` — can extract it and call the worker directly.
+
+The exposure is wider than "someone can burn Fly compute". `WORKER_AUTH_TOKEN` is a single
+symmetric secret in three places: Fly validates inbound worker requests with it, the worker
+authenticates **to Convex** with it (`apps/worker/src/index.ts`), and Convex validates writes
+against it (`convex/files.ts`, `convex/transcripts.ts`). A leaked token therefore also grants
+`files:generateUploadUrl` — the ability to write into Convex storage.
+
+- **Route A (privately-shared zip):** lower exposure, not zero.
+- **Route B (store listing) and the public `/extension` download:** the bundle is
+  downloadable by anyone, so treat the token as public the moment you publish.
+
+**The fix is structural, not procedural.** Rotating faster does not help when every build
+re-leaks. Plan A (`docs/superpowers/plans/2026-08-11-extension-foundation.md`) moves every
+worker call into a Convex action so the extension holds no credential at all, and Task 8's
+acceptance criterion is a `grep` over the packaged zip proving no 64-hex secret and no
+`fly.dev` host remain.
+
+### Incident — 2026-08-11
+
+The packaged zip was found to contain a **live** worker token in plaintext
+(`chrome-mv3-prod/sidepanel.*.js`), verified by calling `POST /clip-youtube` with it: the
+bundled token returned 400 (auth passed), a bogus token returned 401.
+
+Rotated the same day on both the Convex deployment (`strong-eel-665`) and the Fly app
+(`annotated-worker-rm`) — Convex first, because the worker authenticates to Convex with the
+same value and setting Fly first would break writes. Verified afterwards: old token 401, new
+token 400.
+
+Rotation broke clipping for every already-distributed build, so the extension was rebuilt
+from a gitignored `apps/extension/.env.production` carrying the real production values
+(`pk_live_…`, `PLASMO_PUBLIC_CLERK_SYNC_HOST=https://annotated.sh`) rather than the dev
+`.env`, which points Clerk at `http://localhost` and would have shipped an extension nobody
+could sign in to.
+
+**Until Plan A Task 8 lands, every rebuild still ships a token.** Rotate once more after it
+does.
+
+## Building for distribution
+
+`plasmo build` loads `.env.production` ahead of `.env`. Keep production values there — it is
+gitignored — and never point a distributed build at the dev `.env`:
+
+```bash
+pnpm --filter extension build      # → build/chrome-mv3-prod/       (unpacked)
+pnpm --filter extension package    # → build/chrome-mv3-prod.zip    (store upload)
+```
+
+The public sideload zip served at `/extension` is `apps/web/public/annotated-extension-chrome.zip`
+and must unzip to a single `annotated-extension/` folder so "Load unpacked" works. Rebuild it
+from the same `chrome-mv3-prod` output whenever the extension changes — it is a **tracked
+file**, so a stale one ships silently.
+
+Verify every package before distributing:
+
+```bash
+unzip -p <zip> '*.js' | grep -c "<the old token>"   # must be 0
+unzip -p <zip> '*.js' | grep -c "pk_live_"          # must be 1 — a pk_test_ key means you built from .env
+```
 
 ---
 
@@ -141,4 +194,4 @@ For the bounty deadline: **Route A.** Ship a hosted zip + the five-step "Load un
 instructions. It's instant and fully in your control. But the real gating work is the
 [Prerequisites](#0-prerequisites-do-this-before-either-route) — **deploy the worker and
 repoint the env at prod**, or the judge installs a polished panel that can't actually cut a
-clip. Do that first; the install method is the last 5 minutes.
+clip. Do that first; the install method is the last 5 minutes.		 
