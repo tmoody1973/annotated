@@ -150,6 +150,7 @@ interface AnnotationInsert {
   authorId: Id<"users">;
   sourceId: Id<"sources">;
   clipStorageId?: Id<"_storage">;
+  mediaState?: "processing" | "ready" | "failed";
   clipStartMs?: number;
   clipEndMs?: number;
   textStart?: number;
@@ -197,6 +198,7 @@ export async function insertAnnotation(
     authorId: input.authorId,
     sourceId: input.sourceId,
     clipStorageId: input.clipStorageId,
+    mediaState: input.mediaState,
     clipStartMs: input.clipStartMs,
     clipEndMs: input.clipEndMs,
     textStart: input.textStart,
@@ -235,7 +237,7 @@ export const createYoutube = mutation({
     channelUrl: v.optional(v.string()),
     thumbnailUrl: v.optional(v.string()),
     durationMs: v.optional(v.number()),
-    clipStorageId: v.id("_storage"),
+    clipStorageId: v.optional(v.id("_storage")),
     clipStartMs: v.number(),
     clipEndMs: v.number(),
     commentaryText: v.optional(v.string()),
@@ -264,6 +266,7 @@ export const createYoutube = mutation({
       authorId: user._id,
       sourceId,
       clipStorageId: args.clipStorageId,
+      mediaState: args.clipStorageId === undefined ? "processing" : "ready",
       clipStartMs: args.clipStartMs,
       clipEndMs: args.clipEndMs,
       commentaryText: args.commentaryText,
@@ -287,7 +290,7 @@ export const createYoutube = mutation({
 export const createPodcast = mutation({
   args: {
     sourceId: v.id("sources"),
-    clipStorageId: v.id("_storage"),
+    clipStorageId: v.optional(v.id("_storage")),
     clipStartMs: v.number(),
     clipEndMs: v.number(),
     selectedText: v.string(),
@@ -320,6 +323,7 @@ export const createPodcast = mutation({
       authorId: user._id,
       sourceId: args.sourceId,
       clipStorageId: args.clipStorageId,
+      mediaState: args.clipStorageId === undefined ? "processing" : "ready",
       clipStartMs: args.clipStartMs,
       clipEndMs: args.clipEndMs,
       selectedText: args.selectedText,

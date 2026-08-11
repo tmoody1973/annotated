@@ -112,6 +112,15 @@ export default defineSchema({
     clipEndMs: v.optional(v.number()),
     // Storage ID for the sliced clip file (set by the worker after slicing).
     clipStorageId: v.optional(v.id("_storage")),
+    // Optimistic publish: the row is created the moment the user hits Publish,
+    // before the worker has sliced anything, so a shareable URL exists in ~2s.
+    // A Convex action patches `clipStorageId` and flips this to "ready" when the
+    // slice lands, or to "failed" if it doesn't. Absent means "ready" — every
+    // pre-existing row was created with its clip already attached, so there is
+    // no backfill.
+    mediaState: v.optional(
+      v.union(v.literal("processing"), v.literal("ready"), v.literal("failed"))
+    ),
     // Text selection boundaries for article sources.
     textStart: v.optional(v.number()),
     textEnd: v.optional(v.number()),
