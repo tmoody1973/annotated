@@ -41,3 +41,7 @@ graphify-out/
 
 # Brainstorming session mockups (regenerable)
 .superpowers/
+
+# Build artifacts / local scratch
+annotated-extension-webstore.zip
+.playwright-mcp/
