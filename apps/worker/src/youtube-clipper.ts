@@ -4,18 +4,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 
-const execFileAsync = promisify(execFile);
-const CLIP_HEIGHT = 240;
-const MAX_CLIP_SECONDS = 90;
-const BIG_BUFFER = 1024 * 1024 * 64;
+import {
+  buildFfmpegArgs,
+  buildYtDlpArgs,
+  leadingPadMs,
+} from "./youtube-clipper-args.js";
 
-function toTimestamp(totalSeconds: number): string {
-  const whole = Math.max(0, Math.floor(totalSeconds));
-  const hh = Math.floor(whole / 3600);
-  const mm = Math.floor((whole % 3600) / 60);
-  const ss = whole % 60;
-  return [hh, mm, ss].map((n) => String(n).padStart(2, "0")).join(":");
-}
+const execFileAsync = promisify(execFile);
+const BIG_BUFFER = 1024 * 1024 * 64;
 
 export interface ClipFile {
   filePath: string;
@@ -38,27 +34,9 @@ export async function clipYoutubeVideo(
     rm(workDir, { recursive: true, force: true });
 
   try {
-    const url = `https://www.youtube.com/watch?v=${videoId}`;
-    const startSec = startMs / 1000;
-    const endSec = endMs / 1000;
-
     await execFileAsync(
       "yt-dlp",
-      [
-        "--no-playlist",
-        "--quiet",
-        "--no-warnings",
-        "--force-keyframes-at-cuts",
-        "--download-sections",
-        `*${toTimestamp(startSec)}-${toTimestamp(endSec)}`,
-        "-f",
-        "bv*[height<=360]+ba/b[height<=360]/b",
-        "--merge-output-format",
-        "mp4",
-        "-o",
-        join(workDir, "section.%(ext)s"),
-        url,
-      ],
+      buildYtDlpArgs(videoId, startMs, endMs, join(workDir, "section.%(ext)s")),
       { maxBuffer: BIG_BUFFER }
     );
 
@@ -69,28 +47,15 @@ export async function clipYoutubeVideo(
       throw new Error("yt-dlp produced no output file");
     }
 
-    const durationSec = Math.min(endSec - startSec, MAX_CLIP_SECONDS);
     const output = join(workDir, "clip.mp4");
     await execFileAsync(
       "ffmpeg",
-      [
-        "-y",
-        "-i",
+      buildFfmpegArgs(
         join(workDir, downloaded),
-        "-t",
-        String(durationSec),
-        "-vf",
-        `scale=-2:${CLIP_HEIGHT}`,
-        "-c:v",
-        "libx264",
-        "-preset",
-        "veryfast",
-        "-c:a",
-        "aac",
-        "-movflags",
-        "+faststart",
         output,
-      ],
+        leadingPadMs(startMs),
+        endMs - startMs
+      ),
       { maxBuffer: BIG_BUFFER }
     );
 
