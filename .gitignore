@@ -45,3 +45,6 @@ graphify-out/
 # Build artifacts / local scratch
 annotated-extension-webstore.zip
 .playwright-mcp/
+
+# Production build env for the extension (contains the worker token until it is removed)
+apps/extension/.env.production
