@@ -685,7 +685,7 @@ export const sliceYoutube = internalAction({
       }
       await ctx.runMutation(internal.clips.attachClip, {
         annotationId: args.annotationId,
-        clipStorageId: body.storageId as never,
+        clipStorageId: body.storageId as Id<"_storage">,
       });
     } catch (err) {
       await ctx.runMutation(internal.clips.markFailed, {
@@ -732,7 +732,7 @@ export const slicePodcast = internalAction({
       }
       await ctx.runMutation(internal.clips.attachClip, {
         annotationId: args.annotationId,
-        clipStorageId: body.storageId as never,
+        clipStorageId: body.storageId as Id<"_storage">,
       });
     } catch (err) {
       await ctx.runMutation(internal.clips.markFailed, {
@@ -745,7 +745,7 @@ export const slicePodcast = internalAction({
 });
 ```
 
-> **Note on `body.storageId as never`:** the worker returns a plain string; Convex needs an `Id<"_storage">`. There is no runtime validation available for a foreign id here, and the value came from our own worker's `ctx.storage.store`. If the codebase already has a helper for this cast, use it instead.
+> **Note on the cast:** the worker returns a plain string; Convex needs a branded `Id<"_storage">`. There is no runtime validator for a foreign id, and the value came from our own worker's `ctx.storage.store`. Import the type — `import type { Id } from "./_generated/dataModel";` — and cast to `Id<"_storage">`, never to `any` or `never`. If the codebase already has a helper for this, use it instead.
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -991,7 +991,7 @@ export const transcodeTake = action({
       throw new Error("Worker returned no storageId for the recorded take");
     }
     return {
-      storageId: body.storageId as never,
+      storageId: body.storageId as Id<"_storage">,
       transcript: body.transcript ?? null,
     };
   },
