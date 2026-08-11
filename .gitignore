@@ -38,3 +38,6 @@ graphify-out/
 
 # Chrome extension signing key (stable CRX ID) — never commit the private key
 *.pem
+
+# Brainstorming session mockups (regenerable)
+.superpowers/
