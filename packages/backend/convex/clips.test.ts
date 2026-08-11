@@ -1,6 +1,6 @@
 import { convexTest } from "convex-test";
 import { describe, expect, test } from "vitest";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import schema from "./schema";
 
 const modules = import.meta.glob("./**/*.ts");
@@ -62,5 +62,70 @@ describe("optimistic publish", () => {
         topicIds: [topicId],
       })
     ).rejects.toThrow(/Invalid clip span/);
+  });
+});
+
+describe("slice lifecycle", () => {
+  test("attachClip moves a processing row to ready", async () => {
+    const { t, asUser, topicId } = await setup();
+    const annotationId = await asUser.mutation(api.annotations.createYoutube, {
+      videoId: "abc123",
+      title: "Ready flow",
+      clipStartMs: 0,
+      clipEndMs: 30_000,
+      commentaryText: "Take",
+      topicIds: [topicId],
+    });
+
+    const storageId = await t.run(async (ctx) =>
+      ctx.storage.store(new Blob(["fake-mp4"], { type: "video/mp4" }))
+    );
+    await t.mutation(internal.clips.attachClip, { annotationId, clipStorageId: storageId });
+
+    const row = await t.run(async (ctx) => ctx.db.get(annotationId));
+    expect(row?.mediaState).toBe("ready");
+    expect(row?.clipStorageId).toBe(storageId);
+  });
+
+  test("markFailed records the reason and does not unpublish the row", async () => {
+    const { t, asUser, topicId } = await setup();
+    const annotationId = await asUser.mutation(api.annotations.createYoutube, {
+      videoId: "abc123",
+      title: "Failed flow",
+      clipStartMs: 0,
+      clipEndMs: 30_000,
+      commentaryText: "Take",
+      topicIds: [topicId],
+    });
+
+    await t.mutation(internal.clips.markFailed, {
+      annotationId,
+      reason: "Clip generation failed",
+    });
+
+    const row = await t.run(async (ctx) => ctx.db.get(annotationId));
+    expect(row?.mediaState).toBe("failed");
+    expect(row?.isPublic).toBe(true);
+  });
+
+  test("attachClip on an already-failed row still succeeds (late worker reply)", async () => {
+    const { t, asUser, topicId } = await setup();
+    const annotationId = await asUser.mutation(api.annotations.createYoutube, {
+      videoId: "abc123",
+      title: "Late reply",
+      clipStartMs: 0,
+      clipEndMs: 30_000,
+      commentaryText: "Take",
+      topicIds: [topicId],
+    });
+    await t.mutation(internal.clips.markFailed, { annotationId, reason: "timeout" });
+
+    const storageId = await t.run(async (ctx) =>
+      ctx.storage.store(new Blob(["fake-mp4"], { type: "video/mp4" }))
+    );
+    await t.mutation(internal.clips.attachClip, { annotationId, clipStorageId: storageId });
+
+    const row = await t.run(async (ctx) => ctx.db.get(annotationId));
+    expect(row?.mediaState).toBe("ready");
   });
 });

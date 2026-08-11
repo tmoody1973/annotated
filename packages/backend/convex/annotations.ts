@@ -8,6 +8,7 @@ import {
   type QueryCtx,
 } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
+import { internal } from "./_generated/api";
 import { upsertArticleSource, upsertYoutubeSource, youtubeThumbnailFor } from "./sources";
 import { requireCurrentUser } from "./users";
 import { countWords, MAX_QUOTE_WORDS, rankAnnotations } from "@annotated/shared";
@@ -262,7 +263,7 @@ export const createYoutube = mutation({
     }
 
     const sourceId = await upsertYoutubeSource(ctx, args);
-    return await insertAnnotation(ctx, {
+    const annotationId = await insertAnnotation(ctx, {
       authorId: user._id,
       sourceId,
       clipStorageId: args.clipStorageId,
@@ -276,6 +277,18 @@ export const createYoutube = mutation({
       threadId: args.threadId,
       topicIds: args.topicIds,
     });
+
+    // Optimistic publish: the row (and its URL) exist now; the slice happens
+    // after. Skipped when the caller already supplied a clip.
+    if (args.clipStorageId === undefined) {
+      await ctx.scheduler.runAfter(0, internal.clips.sliceYoutube, {
+        annotationId,
+        videoId: args.videoId,
+        startMs: args.clipStartMs,
+        endMs: args.clipEndMs,
+      });
+    }
+    return annotationId;
   },
 });
 
@@ -319,7 +332,7 @@ export const createPodcast = mutation({
         throw new Error("Cannot append to a thread you do not own");
       }
     }
-    return await insertAnnotation(ctx, {
+    const annotationId = await insertAnnotation(ctx, {
       authorId: user._id,
       sourceId: args.sourceId,
       clipStorageId: args.clipStorageId,
@@ -334,6 +347,27 @@ export const createPodcast = mutation({
       threadId: args.threadId,
       topicIds: args.topicIds,
     });
+
+    if (args.clipStorageId === undefined) {
+      const transcript = await ctx.db
+        .query("transcripts")
+        .withIndex("by_source", (q) => q.eq("sourceId", args.sourceId))
+        .unique();
+      // The frozen episode is what the displayed word timestamps belong to.
+      // Clipping the live enclosure would drift against ad insertion (9cf7ac0).
+      if (!transcript?.episodeStorageId) {
+        throw new Error(
+          "This episode isn't ready to clip yet — its audio is still being prepared."
+        );
+      }
+      await ctx.scheduler.runAfter(0, internal.clips.slicePodcast, {
+        annotationId,
+        episodeStorageId: transcript.episodeStorageId,
+        startMs: args.clipStartMs,
+        endMs: args.clipEndMs,
+      });
+    }
+    return annotationId;
   },
 });
 
