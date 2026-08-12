@@ -130,6 +130,7 @@ export function AnnotationCard({ item }: { item: FeedItem }) {
         mediaState={item.mediaState}
         clipUrl={item.clipUrl}
         sourceType={type}
+        bare
         className="border-y-[3px] border-[color:var(--b-line)]"
       />
 

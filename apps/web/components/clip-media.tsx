@@ -20,6 +20,7 @@ export function ClipMedia({
   sourceType,
   captionsUrl,
   className = "",
+  bare = false,
 }: {
   mediaState: MediaState;
   clipUrl: string | null;
@@ -28,6 +29,8 @@ export function ClipMedia({
   captionsUrl?: string;
   /** Border/position classes the caller controls (its position in the card differs per surface). */
   className?: string;
+  /** Feed card's pre-existing youtube render: no chrome wrapper, no height cap. */
+  bare?: boolean;
 }) {
   if (sourceType === "article") return null;
 
@@ -55,6 +58,10 @@ export function ClipMedia({
 
   if (sourceType === "podcast") {
     return <WaveformPlayer src={clipUrl} />;
+  }
+
+  if (bare) {
+    return <video controls playsInline src={clipUrl} className={`block w-full bg-black ${className}`} />;
   }
 
   return (
