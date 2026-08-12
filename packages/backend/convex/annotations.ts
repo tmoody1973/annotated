@@ -116,6 +116,47 @@ export const MAX_CLIP_MS = 90_000;
  * (SPEC), and the clip span must be ordered and within the 90s cap. Throws with
  * a readable reason.
  */
+/**
+ * Pre-rename publish arguments, still accepted.
+ *
+ * A sideloaded Chrome extension does NOT auto-update, so every build installed
+ * before the commentary→take rename keeps sending the old field names forever.
+ * Convex arg validators reject unknown fields outright, so omitting these means
+ * "Object contains extra field `commentaryText`" and publishing simply stops
+ * working for those users — with no upgrade prompt and no way for them to know.
+ *
+ * Accept them, map them forward in `resolveTake`, and drop this once the
+ * installed base has moved. Nothing writes these names.
+ */
+const legacyTakeArgs = {
+  commentaryText: v.optional(v.string()),
+  commentaryAudioStorageId: v.optional(v.id("_storage")),
+  commentaryAudioTranscript: v.optional(v.string()),
+};
+
+interface TakeFields {
+  takeText?: string;
+  takeAudioStorageId?: Id<"_storage">;
+  takeAudioTranscript?: string;
+  commentaryText?: string;
+  commentaryAudioStorageId?: Id<"_storage">;
+  commentaryAudioTranscript?: string;
+}
+
+/** The take, whichever generation of field names the caller used. */
+export function resolveTake(args: TakeFields): {
+  takeText?: string;
+  takeAudioStorageId?: Id<"_storage">;
+  takeAudioTranscript?: string;
+} {
+  return {
+    takeText: args.takeText ?? args.commentaryText,
+    takeAudioStorageId: args.takeAudioStorageId ?? args.commentaryAudioStorageId,
+    takeAudioTranscript:
+      args.takeAudioTranscript ?? args.commentaryAudioTranscript,
+  };
+}
+
 export function assertPublishable(input: {
   takeText?: string;
   takeAudioStorageId?: Id<"_storage">;
@@ -253,6 +294,7 @@ export const createYoutube = mutation({
     takeText: v.optional(v.string()),
     takeAudioStorageId: v.optional(v.id("_storage")),
     takeAudioTranscript: v.optional(v.string()),
+    ...legacyTakeArgs,
     isAnonymous: v.optional(v.boolean()),
     threadId: v.optional(v.id("threads")),
     topicIds: v.array(v.id("topics")),
@@ -260,7 +302,8 @@ export const createYoutube = mutation({
   returns: v.id("annotations"),
   handler: async (ctx, args) => {
     const user = await requireCurrentUser(ctx);
-    assertPublishable(args);
+    const take = resolveTake(args);
+    assertPublishable({ ...args, ...take });
     await assertTopics(ctx, args.topicIds);
     // A clip may only be appended to a thread the caller owns — the threadId
     // arrives from the client, so never trust it to belong to this author.
@@ -279,9 +322,7 @@ export const createYoutube = mutation({
       mediaState: args.clipStorageId === undefined ? "processing" : "ready",
       clipStartMs: args.clipStartMs,
       clipEndMs: args.clipEndMs,
-      takeText: args.takeText,
-      takeAudioStorageId: args.takeAudioStorageId,
-      takeAudioTranscript: args.takeAudioTranscript,
+      ...take,
       isAnonymous: args.isAnonymous,
       threadId: args.threadId,
       topicIds: args.topicIds,
@@ -319,6 +360,7 @@ export const createPodcast = mutation({
     takeText: v.optional(v.string()),
     takeAudioStorageId: v.optional(v.id("_storage")),
     takeAudioTranscript: v.optional(v.string()),
+    ...legacyTakeArgs,
     isAnonymous: v.optional(v.boolean()),
     threadId: v.optional(v.id("threads")),
     topicIds: v.array(v.id("topics")),
@@ -326,6 +368,7 @@ export const createPodcast = mutation({
   returns: v.id("annotations"),
   handler: async (ctx, args) => {
     const user = await requireCurrentUser(ctx);
+    const take = resolveTake(args);
     const source = await ctx.db.get(args.sourceId);
     if (!source || source.type !== "podcast") {
       throw new Error("Source is not a podcast");
@@ -333,7 +376,7 @@ export const createPodcast = mutation({
     if (args.selectedText.trim().length === 0) {
       throw new Error("A transcript quote is required");
     }
-    assertPublishable(args);
+    assertPublishable({ ...args, ...take });
     await assertTopics(ctx, args.topicIds);
     if (args.threadId) {
       const thread = await ctx.db.get(args.threadId);
@@ -349,9 +392,7 @@ export const createPodcast = mutation({
       clipStartMs: args.clipStartMs,
       clipEndMs: args.clipEndMs,
       selectedText: args.selectedText,
-      takeText: args.takeText,
-      takeAudioStorageId: args.takeAudioStorageId,
-      takeAudioTranscript: args.takeAudioTranscript,
+      ...take,
       isAnonymous: args.isAnonymous,
       threadId: args.threadId,
       topicIds: args.topicIds,
@@ -414,6 +455,7 @@ export const createArticle = mutation({
     takeText: v.optional(v.string()),
     takeAudioStorageId: v.optional(v.id("_storage")),
     takeAudioTranscript: v.optional(v.string()),
+    ...legacyTakeArgs,
     screenshotStorageId: v.optional(v.id("_storage")),
     isAnonymous: v.optional(v.boolean()),
     threadId: v.optional(v.id("threads")),
@@ -422,11 +464,12 @@ export const createArticle = mutation({
   returns: v.id("annotations"),
   handler: async (ctx, args) => {
     const user = await requireCurrentUser(ctx);
+    const take = resolveTake(args);
     if (args.selectedText.trim().length === 0) {
       throw new Error("A highlighted quote is required");
     }
-    const hasTakeText = (args.takeText ?? "").trim().length > 0;
-    if (!hasTakeText && args.takeAudioStorageId === undefined) {
+    const hasTakeText = (take.takeText ?? "").trim().length > 0;
+    if (!hasTakeText && take.takeAudioStorageId === undefined) {
       throw new Error("A take is required (text or recorded audio)");
     }
     if (
@@ -467,9 +510,7 @@ export const createArticle = mutation({
       selectedText: args.selectedText,
       textStart: args.textStart,
       textEnd: args.textEnd,
-      takeText: args.takeText,
-      takeAudioStorageId: args.takeAudioStorageId,
-      takeAudioTranscript: args.takeAudioTranscript,
+      ...take,
       screenshotStorageId: args.screenshotStorageId,
       isAnonymous: args.isAnonymous,
       threadId: args.threadId,
