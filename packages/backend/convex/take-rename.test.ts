@@ -27,6 +27,8 @@ test("a row written with the legacy commentaryText still projects as takeText", 
 
   const projected = await t.query(api.annotations.getById, { annotationId });
   expect(projected?.takeText).toBe("written before the rename");
+  // The still-deployed old web app reads the pre-rename key — it must keep working.
+  expect(projected?.commentaryText).toBe("written before the rename");
 });
 
 test("a newly published annotation stores takeText", async () => {
@@ -45,4 +47,9 @@ test("a newly published annotation stores takeText", async () => {
   const row = await t.run(async (ctx) => ctx.db.get(annotationId));
   expect(row?.takeText).toBe("written after the rename");
   expect(row?.commentaryText).toBeUndefined();
+
+  // The stored row has no commentaryText (write side is fully cut over), but the
+  // projection still fills in the legacy key for the still-deployed old web app.
+  const projected = await t.query(api.annotations.getById, { annotationId });
+  expect(projected?.commentaryText).toBe("written after the rename");
 });

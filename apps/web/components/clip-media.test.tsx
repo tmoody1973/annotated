@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { ClipMedia } from "./clip-media";
 
@@ -21,7 +21,7 @@ describe("ClipMedia", () => {
     const { container } = render(
       <ClipMedia mediaState="processing" clipUrl={null} sourceType="youtube" />
     );
-    expect(screen.getByText(/clip processing/i)).toBeTruthy();
+    expect(within(container).getByText(/clip processing/i)).toBeTruthy();
     expect(container.querySelector("video")).toBeNull();
   });
 
@@ -29,7 +29,7 @@ describe("ClipMedia", () => {
     const { container } = render(
       <ClipMedia mediaState="failed" clipUrl={null} sourceType="youtube" />
     );
-    expect(screen.getByText(/couldn't be made/i)).toBeTruthy();
+    expect(within(container).getByText(/couldn't be made/i)).toBeTruthy();
     expect(container.querySelector("video")).toBeNull();
   });
 
@@ -38,6 +38,15 @@ describe("ClipMedia", () => {
       <ClipMedia mediaState={undefined} clipUrl="https://example.com/c.mp4" sourceType="youtube" />
     );
     expect(container.querySelector("video")).not.toBeNull();
+  });
+
+  it("shows an unavailable notice (not processing) for a legacy row with no mediaState and no clipUrl", () => {
+    const { container } = render(
+      <ClipMedia mediaState={undefined} clipUrl={null} sourceType="youtube" />
+    );
+    expect(within(container).getByText(/clip unavailable/i)).toBeTruthy();
+    expect(within(container).queryByText(/clip processing/i)).toBeNull();
+    expect(container.querySelector("video")).toBeNull();
   });
 
   it("renders nothing for an article, which has no clip", () => {

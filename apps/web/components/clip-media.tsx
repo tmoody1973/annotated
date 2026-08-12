@@ -45,13 +45,24 @@ export function ClipMedia({
     );
   }
 
-  if (mediaState === "processing" || !clipUrl) {
+  if (mediaState === "processing") {
     return (
       <div aria-live="polite" className={`bg-[color:var(--b-chrome)] p-6 text-center ${className}`}>
         <p className={noticeText}>Clip processing…</p>
         <p className="mt-1 text-[13px] text-[color:var(--b-dim-onbg)]">
           This page updates itself when it&apos;s ready.
         </p>
+      </div>
+    );
+  }
+
+  // No mediaState + no clipUrl is a legacy row (mediaState absent means
+  // "ready" per the contract above), not one that's still processing — it
+  // will never resolve, so don't promise it will.
+  if (!clipUrl) {
+    return (
+      <div className={`bg-[color:var(--b-chrome)] p-6 text-center ${className}`}>
+        <p className={noticeText}>Clip unavailable</p>
       </div>
     );
   }

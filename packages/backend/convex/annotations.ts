@@ -55,13 +55,19 @@ async function toFeedItem(ctx: QueryCtx, annotation: Doc<"annotations">) {
   )
     .filter((t): t is Doc<"topics"> => t !== null)
     .map((t) => ({ slug: t.slug, name: t.name }));
+  const takeText = annotation.takeText ?? annotation.commentaryText;
+  const takeAudioTranscript =
+    annotation.takeAudioTranscript ?? annotation.commentaryAudioTranscript;
   return {
     _id: annotation._id,
     publishedAt: annotation.publishedAt,
     selectedText: annotation.selectedText,
-    takeText: annotation.takeText ?? annotation.commentaryText,
-    takeAudioTranscript:
-      annotation.takeAudioTranscript ?? annotation.commentaryAudioTranscript,
+    takeText,
+    takeAudioTranscript,
+    // Transitional: the deployed web app still reads the pre-rename keys.
+    // Drop once it has shipped with takeText/takeAudioTranscript.
+    commentaryText: takeText,
+    commentaryAudioTranscript: takeAudioTranscript,
     clipStartMs: annotation.clipStartMs,
     clipEndMs: annotation.clipEndMs,
     clipUrl,
@@ -230,7 +236,7 @@ export async function insertAnnotation(
  * Publishes a YouTube clip annotation as the signed-in user. Upserts the shared
  * source, then inserts the annotation. Author is derived from the Clerk identity
  * (`requireCurrentUser`) — never accepted as an argument. Mirrors the field set
- * the sidepanel collects (audio commentary, anonymity, thread append), enforcing
+ * the sidepanel collects (audio take, anonymity, thread append), enforcing
  * the same `assertPublishable` invariants as the dev seed path.
  */
 export const createYoutube = mutation({
@@ -299,7 +305,7 @@ export const createYoutube = mutation({
  * Publishes a podcast clip annotation as the signed-in user. The source row is
  * identified by the `sourceId` created during the podcast-resolution step
  * (Step 6). Validates that the source is actually a podcast, that the transcript
- * quote is non-empty, and that the clip span + commentary meet the publish
+ * quote is non-empty, and that the clip span + take meet the publish
  * invariants. Author is derived from the Clerk identity — never accepted as an
  * argument.
  */
@@ -390,9 +396,9 @@ export const createPodcast = mutation({
 /**
  * Publishes an article clip annotation as the signed-in user. An article has
  * no media clip — the "clip" is the highlighted quote (`selectedText` +
- * char offsets) plus commentary. Does NOT call `assertPublishable` (which
+ * char offsets) plus a take. Does NOT call `assertPublishable` (which
  * assumes an audio/video span); instead validates the quote, offsets, and
- * commentary directly. Upserts the article source by canonical URL. Author is
+ * take directly. Upserts the article source by canonical URL. Author is
  * derived from the Clerk identity — never accepted as an argument.
  */
 export const createArticle = mutation({
@@ -618,6 +624,9 @@ export async function toLandingView(
   const screenshotUrl = annotation.screenshotStorageId
     ? await ctx.storage.getUrl(annotation.screenshotStorageId)
     : null;
+  const takeText = annotation.takeText ?? annotation.commentaryText;
+  const takeAudioTranscript =
+    annotation.takeAudioTranscript ?? annotation.commentaryAudioTranscript;
 
   return {
     ...annotation,
@@ -629,11 +638,18 @@ export async function toLandingView(
     // Pre-§2 rows have no `downCount`; default to 0 so the vote control gets a
     // number (mirrors the `listFeed` projection).
     downCount: annotation.downCount ?? 0,
-    takeText: annotation.takeText ?? annotation.commentaryText,
-    takeAudioTranscript:
-      annotation.takeAudioTranscript ?? annotation.commentaryAudioTranscript,
+    takeText,
+    takeAudioTranscript,
     clipUrl,
     takeAudioUrl,
+    // Transitional: the deployed web app still reads the pre-rename keys
+    // (the `...annotation` spread above only carries their *raw*, possibly
+    // undefined, DB values for post-rename rows — these overrides make them
+    // correct for every row's vintage). Drop once it has shipped with
+    // takeText/takeAudioUrl/takeAudioTranscript.
+    commentaryText: takeText,
+    commentaryAudioUrl: takeAudioUrl,
+    commentaryAudioTranscript: takeAudioTranscript,
     screenshotUrl,
     source: source
       ? {

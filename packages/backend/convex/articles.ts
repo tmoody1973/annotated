@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { action } from "./_generated/server";
+import { requireIdentity } from "./media";
 
 const extractedArticleValidator = v.object({
   title: v.string(),
@@ -23,6 +24,7 @@ export const extractArticle = action({
   args: { url: v.string(), htmlStorageId: v.optional(v.id("_storage")) },
   returns: extractedArticleValidator,
   handler: async (ctx, args) => {
+    await requireIdentity(ctx);
     const workerUrl = process.env.WORKER_URL;
     const workerToken = process.env.WORKER_AUTH_TOKEN;
     if (!workerUrl || !workerToken) {
@@ -43,6 +45,9 @@ export const extractArticle = action({
           const htmlResponse = await fetch(htmlUrl);
           if (htmlResponse.ok) html = await htmlResponse.text();
         }
+      } catch {
+        // Swallow: html stays undefined and the worker falls back to its own
+        // url-fetch (option A).
       } finally {
         await ctx.storage.delete(args.htmlStorageId);
       }

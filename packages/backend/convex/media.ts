@@ -15,7 +15,7 @@ const TRANSCRIBE_PODCAST_TIMEOUT_MS = 180_000;
  * Clerk identity — the worker token lives only here.
  */
 
-async function requireIdentity(ctx: { auth: { getUserIdentity: () => Promise<unknown> } }) {
+export async function requireIdentity(ctx: { auth: { getUserIdentity: () => Promise<unknown> } }) {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) throw new Error("Sign in to continue");
 }

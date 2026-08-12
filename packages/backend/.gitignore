@@ -1,2 +1,9 @@
 .env.local
-convex/_generated/
+
+# convex/_generated is intentionally TRACKED (2026-08-11).
+# Vercel builds in the cloud with no Convex credentials and the web build has no
+# codegen step, so an ignored _generated meant Vercel type-checked against a
+# stale copy left in its build cache — production went ~2 months without a
+# successful deploy because of it.
+# If you add or rename a Convex function, run `npx convex codegen` and commit
+# the result, or the web build will fail on a missing api.* member.
