@@ -1,7 +1,13 @@
 import { v } from "convex/values";
 import { action } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { workerConfig, WORKER_FETCH_TIMEOUT_MS } from "./clips";
 import type { Id } from "./_generated/dataModel";
+
+// /transcribe downloads the whole episode then runs Deepgram sync (debt j:
+// ~20-40s typical, longer for long episodes) — a materially heavier call than
+// the other worker endpoints, so it gets more headroom than the shared 60s bound.
+const TRANSCRIBE_PODCAST_TIMEOUT_MS = 180_000;
 
 /**
  * Server-side proxies for the worker endpoints the extension used to call
@@ -81,6 +87,38 @@ export const transcodeTake = action({
       storageId: body.storageId as Id<"_storage">,
       transcript: body.transcript ?? null,
     };
+  },
+});
+
+export const transcribePodcast = action({
+  args: { sourceId: v.id("sources") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireIdentity(ctx);
+    const source = await ctx.runQuery(internal.sources.getById, {
+      sourceId: args.sourceId,
+    });
+    if (!source) throw new Error("Source not found");
+    if (source.type !== "podcast") throw new Error("Source is not a podcast");
+    // Read server-side, never accept a client-supplied mp3Url — a forwarded
+    // client URL would be an SSRF vector now that this call originates here.
+    if (!source.mp3Url) throw new Error("Podcast source has no audio URL");
+    const { url, token } = workerConfig();
+    let response: Response;
+    try {
+      response = await fetch(`${url}/transcribe`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ sourceId: args.sourceId, mp3Url: source.mp3Url }),
+        signal: AbortSignal.timeout(TRANSCRIBE_PODCAST_TIMEOUT_MS),
+      });
+    } catch {
+      throw new Error("Couldn't start transcription. Try again.");
+    }
+    if (!response.ok) {
+      throw new Error("Couldn't start transcription. Try again.");
+    }
+    return null;
   },
 });
 
