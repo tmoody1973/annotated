@@ -11,9 +11,12 @@ import { ConvexProvider, ConvexReactClient } from "convex/react";
 import { PanelShell } from "./components/panel-shell";
 import { SourceScreen } from "./components/screens/source-screen";
 import { ClipScreen } from "./components/screens/clip-screen";
+import { TakeScreen } from "./components/screens/take-screen";
 import { panelCss } from "./lib/panel-theme";
 import { sourceHeading } from "./lib/source-states";
 import { useAuthState } from "./lib/use-auth-state";
+import { usePublish } from "./lib/use-publish";
+import { useThread } from "./lib/use-thread";
 import { detectionKey, useDetectedSource } from "./lib/use-detected-source";
 import { usePanelFlow } from "./lib/use-panel-flow";
 
@@ -31,6 +34,8 @@ function ComingNext({ label }: { label: string }) {
 function Sidepanel() {
   const detected = useDetectedSource();
   const auth = useAuthState();
+  const thread = useThread();
+  const publisher = usePublish();
   const flow = usePanelFlow();
   const sourceKey = detectionKey(detected);
 
@@ -94,7 +99,25 @@ function Sidepanel() {
             onNext={() => dispatch({ type: "confirmSpan" })}
           />
         ) : flow.screen === "take" ? (
-          <ComingNext label="The take screen" />
+          <TakeScreen
+            detected={detected}
+            draft={flow.draft}
+            auth={auth}
+            publishing={publisher.publishing}
+            error={publisher.error}
+            onTextChange={(text) => dispatch({ type: "setTakeText", text })}
+            onAudioChange={(audio) => dispatch({ type: "setTakeAudio", audio })}
+            onTopicsChange={(topicIds) => dispatch({ type: "setTopicIds", topicIds })}
+            onAnonymousChange={(isAnonymous) => dispatch({ type: "setAnonymous", isAnonymous })}
+            onEditClip={() => dispatch({ type: "back" })}
+            onPublish={() => {
+              void publisher
+                .publish(detected, flow.draft, thread.threadId)
+                .then((annotationId) => {
+                  if (annotationId) dispatch({ type: "published", annotationId });
+                });
+            }}
+          />
         ) : (
           <ComingNext label="The published screen" />
         )}

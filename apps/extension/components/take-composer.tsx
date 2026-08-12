@@ -45,10 +45,10 @@ export function TakeComposer({
 
   return (
     <div>
-      <div style={labelStyle}>Take</div>
+      <div style={labelStyle}>Your take</div>
       <textarea
         className="ann-textarea ann-shadow"
-        placeholder="Add your take (text), record a voice note, or both"
+        placeholder="BS or brilliant? Say why."
         value={text}
         onChange={(event) => onTextChange(event.target.value)}
         disabled={disabled}

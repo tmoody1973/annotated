@@ -24,6 +24,7 @@ import type * as sources from "../sources.js";
 import type * as testing from "../testing.js";
 import type * as threads from "../threads.js";
 import type * as topics from "../topics.js";
+import type * as topicsSuggest from "../topicsSuggest.js";
 import type * as transcripts from "../transcripts.js";
 import type * as users from "../users.js";
 import type * as votes from "../votes.js";
@@ -51,6 +52,7 @@ declare const fullApi: ApiFromModules<{
   testing: typeof testing;
   threads: typeof threads;
   topics: typeof topics;
+  topicsSuggest: typeof topicsSuggest;
   transcripts: typeof transcripts;
   users: typeof users;
   votes: typeof votes;
