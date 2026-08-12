@@ -3,7 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { computeWaveformPeaks } from "@annotated/shared";
 
-const BARS = 56;
+/** Bars are flexed, not fixed-width, so the waveform fills its container at any
+ *  size. More bars than the old 56 because a full-width player has the room for
+ *  them — at ~900px this reads as a waveform rather than a picket fence. */
+const BARS = 96;
 
 /**
  * Brutalist audio player for podcast clips: a real waveform (acid bars on the
@@ -71,8 +74,10 @@ export function WaveformPlayer({ src }: { src: string }) {
         {(peaks ?? new Array(BARS).fill(0.15)).map((peak, i) => (
           <span
             key={i}
-            className={i < playedBars ? "bg-[color:var(--b-acid)]" : "bg-[color:#5f5f59]"}
-            style={{ width: 3, height: `${Math.max(8, peak * 100)}%` }}
+            className={`min-w-px flex-1 ${
+              i < playedBars ? "bg-[color:var(--b-acid)]" : "bg-[color:#5f5f59]"
+            }`}
+            style={{ height: `${Math.max(8, peak * 100)}%` }}
           />
         ))}
       </div>
