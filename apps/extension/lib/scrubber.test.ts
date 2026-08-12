@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { MAX_CLIP_MS } from "@annotated/shared";
-import { MIN_SPAN_MS, NUDGE_MS, NUDGE_COARSE_MS, moveHandle, moveSpan, nudgeHandle, spanAtFraction } from "./scrubber";
+import { MIN_SPAN_MS, NUDGE_MS, NUDGE_COARSE_MS, moveHandle, moveSpan, nudgeHandle, spanAtFraction, viewFor, keepInView } from "./scrubber";
 
 const DURATION = 600_000; // a ten-minute video
 const span = { startMs: 120_000, endMs: 180_000 };
@@ -120,5 +120,65 @@ describe("moveSpan", () => {
 
   it("snaps to whole seconds like every other movement", () => {
     expect(moveSpan(sixty, 300_400, DURATION).startMs % 1000).toBe(0);
+  });
+});
+
+describe("viewFor", () => {
+  it("zooms so the clip fills about a third of the track", () => {
+    const view = viewFor({ startMs: 1_084_000, endMs: 1_174_000 }, 3_860_000);
+    const clipShare = 90_000 / (view.endMs - view.startMs);
+    expect(clipShare).toBeGreaterThan(0.25);
+    expect(clipShare).toBeLessThan(0.4);
+  });
+
+  it("centres the window on the clip", () => {
+    const view = viewFor({ startMs: 1_084_000, endMs: 1_174_000 }, 3_860_000);
+    const clipCentre = (1_084_000 + 1_174_000) / 2;
+    const viewCentre = (view.startMs + view.endMs) / 2;
+    expect(Math.abs(clipCentre - viewCentre)).toBeLessThan(1_000);
+  });
+
+  it("never runs off the front of the video", () => {
+    const view = viewFor({ startMs: 0, endMs: 90_000 }, 3_860_000);
+    expect(view.startMs).toBe(0);
+  });
+
+  it("never runs off the end of the video", () => {
+    const view = viewFor({ startMs: 3_770_000, endMs: 3_860_000 }, 3_860_000);
+    expect(view.endMs).toBeLessThanOrEqual(3_860_000);
+  });
+
+  it("shows the whole of a video shorter than the window", () => {
+    const view = viewFor({ startMs: 0, endMs: 20_000 }, 25_000);
+    expect(view).toEqual({ startMs: 0, endMs: 25_000 });
+  });
+
+  it("keeps the clip inside the window it produces", () => {
+    for (const start of [0, 60_000, 1_800_000, 3_770_000]) {
+      const span = { startMs: start, endMs: start + 90_000 };
+      const view = viewFor(span, 3_860_000);
+      expect(span.startMs, `start ${start}`).toBeGreaterThanOrEqual(view.startMs);
+      expect(span.endMs, `start ${start}`).toBeLessThanOrEqual(view.endMs);
+    }
+  });
+});
+
+describe("keepInView", () => {
+  const duration = 3_860_000;
+
+  it("holds the window still while the clip moves within it", () => {
+    const span = { startMs: 1_084_000, endMs: 1_174_000 };
+    const view = viewFor(span, duration);
+    const nudged = { startMs: span.startMs + 5_000, endMs: span.endMs + 5_000 };
+    expect(keepInView(view, nudged, duration)).toEqual(view);
+  });
+
+  it("re-centres once the clip reaches the edge", () => {
+    const span = { startMs: 1_084_000, endMs: 1_174_000 };
+    const view = viewFor(span, duration);
+    const far = { startMs: view.endMs - 10_000, endMs: view.endMs + 80_000 };
+    const moved = keepInView(view, far, duration);
+    expect(moved).not.toEqual(view);
+    expect(far.endMs).toBeLessThanOrEqual(moved.endMs);
   });
 });

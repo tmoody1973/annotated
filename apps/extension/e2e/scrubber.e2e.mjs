@@ -137,13 +137,19 @@ async function main() {
     console.log("  ok  handles announce their position");
 
     // Typing in the readout moves the handle.
-    const before = await endHandle.boundingBox();
+    // Pixel position is no longer a proxy for value: the track zooms to a window
+    // around the clip, so resizing the clip rescales the whole track and a handle
+    // can land on a similar x for a different time. Assert the handle's reported
+    // value instead, which is what "the field and the handle agree" actually means.
     const typed = "0:45";
     await outField.fill(typed);
     await outField.press("Enter");
     assert.equal(await outField.inputValue(), typed, "typed out-point did not stick");
-    const after = await endHandle.boundingBox();
-    assert.ok(Math.abs(after.x - before.x) > 1, "typing did not move the handle");
+    assert.equal(
+      await endHandle.getAttribute("aria-valuenow"),
+      String(clock(typed)),
+      "typing moved the field but not the handle",
+    );
     console.log("  ok  typing in the readout moves the handle");
 
     // Dragging the end handle moves the readout.

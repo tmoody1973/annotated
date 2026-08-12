@@ -1,33 +1,41 @@
 /**
- * The scrubber. Two gestures, and they have to look like two gestures:
- * grab the middle of the acid band to **move** the clip, grab either end to
- * **stretch** it. The first build only had the second one — the band was inert
- * and the handles were 12px slivers, so "grab sixty seconds from over there"
- * meant dragging both ends across one at a time.
+ * The scrubber. Two gestures that have to look like two gestures: grab the
+ * middle of the acid band to **move** the clip, grab either end to **stretch**
+ * it. Clicking anywhere else on the track jumps the clip there.
+ *
+ * The track draws a *window* around the clip rather than the whole video. The
+ * first version drew the whole thing, which collapsed the moment a video got
+ * long: a 90-second clip inside a 64-minute talk is 2.3% of the track — about
+ * eight pixels — and the handles, centred on its edges, covered it completely.
+ * Nothing was grabbable and one pixel meant eleven seconds.
+ *
+ * The handles now sit *outside* the band rather than straddling it, so the band
+ * always keeps its full width no matter how tight the clip gets.
  *
  * The mm:ss fields survive as readouts you can still type into, and each handle
- * is a keyboard-operable slider. Drag, type and arrow keys all go through the
- * same two functions in lib/scrubber.ts, so none of them can produce a clip the
- * others would call invalid.
+ * is a keyboard-operable slider. Drag, click, type and arrow keys all route
+ * through lib/scrubber.ts, so none of them can build a clip the others reject.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { formatClipTimestamp, MAX_CLIP_MS } from "@annotated/shared";
 import {
+  keepInView,
   moveHandle,
   moveSpan,
   nudgeHandle,
-  spanAtFraction,
+  viewFor,
   NUDGE_COARSE_MS,
   NUDGE_MS,
   type Handle,
   type Span,
+  type View,
 } from "../../lib/scrubber";
 import { requestPlayerState } from "../../lib/player-time";
 import { ClockField } from "./clock-field";
 
 const PLAYHEAD_POLL_MS = 500;
 const TRACK_HEIGHT = 52;
-const HANDLE_WIDTH = 18;
+const HANDLE_WIDTH = 16;
 
 type Drag =
   | { kind: "handle"; handle: Handle }
@@ -42,12 +50,11 @@ interface ClipBodyYoutubeProps {
 export function ClipBodyYoutube({ span, onChange }: ClipBodyYoutubeProps) {
   const [durationMs, setDurationMs] = useState(0);
   const [playheadMs, setPlayheadMs] = useState<number | null>(null);
+  const [view, setView] = useState<View>(() => viewFor(span, 0));
   const [dragKind, setDragKind] = useState<Drag["kind"] | null>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const dragging = useRef<Drag | null>(null);
 
-  // The playhead is live, so the track keeps meaning something while the video
-  // plays underneath the panel.
   useEffect(() => {
     let cancelled = false;
     const read = async (): Promise<void> => {
@@ -64,17 +71,25 @@ export function ClipBodyYoutube({ span, onChange }: ClipBodyYoutubeProps) {
     };
   }, []);
 
-  const scale = durationMs > 0 ? durationMs : Math.max(span.endMs, MAX_CLIP_MS);
-  const percent = (ms: number): string => `${(ms / scale) * 100}%`;
+  // The window follows the clip only once the clip reaches its edge — otherwise
+  // dragging would move the scenery and pin the band in place.
+  useEffect(() => {
+    setView((current) => keepInView(current, span, durationMs));
+  }, [span.startMs, span.endMs, durationMs]);
+
+  const viewMs = Math.max(1, view.endMs - view.startMs);
+  const percent = (ms: number): string => `${((ms - view.startMs) / viewMs) * 100}%`;
+  const widthPercent = (ms: number): string => `${(ms / viewMs) * 100}%`;
 
   const pointerToMs = useCallback(
     (clientX: number): number => {
       const track = trackRef.current;
-      if (!track) return 0;
+      if (!track) return view.startMs;
       const box = track.getBoundingClientRect();
-      return spanAtFraction((clientX - box.left) / box.width, scale);
+      const fraction = Math.max(0, Math.min(1, (clientX - box.left) / box.width));
+      return Math.round(view.startMs + fraction * viewMs);
     },
-    [scale],
+    [view.startMs, viewMs],
   );
 
   useEffect(() => {
@@ -84,8 +99,8 @@ export function ClipBodyYoutube({ span, onChange }: ClipBodyYoutubeProps) {
       const at = pointerToMs(event.clientX);
       onChange(
         drag.kind === "handle"
-          ? moveHandle(span, drag.handle, at, scale)
-          : moveSpan(span, at - drag.grabOffsetMs, scale),
+          ? moveHandle(span, drag.handle, at, durationMs || view.endMs)
+          : moveSpan(span, at - drag.grabOffsetMs, durationMs || view.endMs),
       );
     };
     const onUp = (): void => {
@@ -98,7 +113,7 @@ export function ClipBodyYoutube({ span, onChange }: ClipBodyYoutubeProps) {
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
     };
-  }, [span, scale, onChange, pointerToMs]);
+  }, [span, durationMs, view.endMs, onChange, pointerToMs]);
 
   const beginDrag = (drag: Drag) => (event: React.PointerEvent): void => {
     event.preventDefault();
@@ -107,23 +122,36 @@ export function ClipBodyYoutube({ span, onChange }: ClipBodyYoutubeProps) {
     setDragKind(drag.kind);
   };
 
+  /** Anywhere on the bare track: bring the clip here, then keep dragging it. */
+  const onTrackPointerDown = (event: React.PointerEvent): void => {
+    event.preventDefault();
+    const clipMs = span.endMs - span.startMs;
+    const at = pointerToMs(event.clientX);
+    onChange(moveSpan(span, at - clipMs / 2, durationMs || view.endMs));
+    dragging.current = { kind: "band", grabOffsetMs: clipMs / 2 };
+    setDragKind("band");
+  };
+
   const onHandleKeyDown = (handle: Handle) => (event: React.KeyboardEvent): void => {
     const direction = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
     if (direction === 0) return;
     event.preventDefault();
-    onChange(
-      nudgeHandle(span, handle, direction * (event.shiftKey ? NUDGE_COARSE_MS : NUDGE_MS), scale),
-    );
+    const step = event.shiftKey ? NUDGE_COARSE_MS : NUDGE_MS;
+    onChange(nudgeHandle(span, handle, direction * step, durationMs || view.endMs));
   };
+
+  const playheadInView =
+    playheadMs !== null && playheadMs >= view.startMs && playheadMs <= view.endMs;
 
   return (
     <section>
       <div
         ref={trackRef}
         className="ann-card"
-        style={{ position: "relative", height: TRACK_HEIGHT, marginBottom: 6 }}
+        onPointerDown={onTrackPointerDown}
+        title="Click to bring the clip here"
+        style={{ position: "relative", height: TRACK_HEIGHT, marginBottom: 6, cursor: "pointer" }}
       >
-        {/* The clip itself. Grab it anywhere in the middle to slide it. */}
         <div
           onPointerDown={(event) =>
             beginDrag({ kind: "band", grabOffsetMs: pointerToMs(event.clientX) - span.startMs })(
@@ -136,7 +164,7 @@ export function ClipBodyYoutube({ span, onChange }: ClipBodyYoutubeProps) {
             top: 0,
             bottom: 0,
             left: percent(span.startMs),
-            width: percent(span.endMs - span.startMs),
+            width: widthPercent(span.endMs - span.startMs),
             background: "var(--b-acid)",
             cursor: dragKind === "band" ? "grabbing" : "grab",
             touchAction: "none",
@@ -148,7 +176,7 @@ export function ClipBodyYoutube({ span, onChange }: ClipBodyYoutubeProps) {
           <GripDots />
         </div>
 
-        {playheadMs !== null ? (
+        {playheadInView ? (
           <div
             aria-hidden="true"
             title="Where the video is playing"
@@ -173,10 +201,12 @@ export function ClipBodyYoutube({ span, onChange }: ClipBodyYoutubeProps) {
               tabIndex={0}
               aria-label={handle === "start" ? "Clip start" : "Clip end"}
               aria-valuemin={0}
-              aria-valuemax={Math.round(scale / 1000)}
+              aria-valuemax={Math.round((durationMs || view.endMs) / 1000)}
               aria-valuenow={Math.round(value / 1000)}
               aria-valuetext={formatClipTimestamp(value)}
-              title={handle === "start" ? "Drag to change where it starts" : "Drag to change where it ends"}
+              title={
+                handle === "start" ? "Drag to change where it starts" : "Drag to change where it ends"
+              }
               onKeyDown={onHandleKeyDown(handle)}
               onPointerDown={beginDrag({ kind: "handle", handle })}
               style={{
@@ -185,10 +215,9 @@ export function ClipBodyYoutube({ span, onChange }: ClipBodyYoutubeProps) {
                 bottom: -4,
                 left: percent(value),
                 width: HANDLE_WIDTH,
-                marginLeft: -HANDLE_WIDTH / 2,
-                // Light bar, dark outline — the one combination that reads
-                // against the acid band, the pale track, and (in dark mode) the
-                // near-black page the handle overhangs at either extreme.
+                // Outside the band, not straddling it: a handle that overlaps
+                // the selection eats the very area you move the clip by.
+                marginLeft: handle === "start" ? -HANDLE_WIDTH : 0,
                 background: "var(--b-card)",
                 border: "2px solid var(--b-ink)",
                 cursor: "ew-resize",
@@ -196,7 +225,6 @@ export function ClipBodyYoutube({ span, onChange }: ClipBodyYoutubeProps) {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                gap: 2,
               }}
             >
               <GripLines />
@@ -205,14 +233,17 @@ export function ClipBodyYoutube({ span, onChange }: ClipBodyYoutubeProps) {
         })}
       </div>
 
-      {/* The scale, so the band's position on the track means something. */}
       <div
         className="ann-dim ann-mono"
-        style={{ display: "flex", justifyContent: "space-between", fontSize: 10, marginBottom: 12 }}
+        style={{ display: "flex", justifyContent: "space-between", fontSize: 10 }}
       >
-        <span>0:00</span>
-        <span>{durationMs > 0 ? formatClipTimestamp(durationMs) : "…"}</span>
+        <span>{formatClipTimestamp(view.startMs)}</span>
+        <span>{formatClipTimestamp(view.endMs)}</span>
       </div>
+
+      {durationMs > view.endMs - view.startMs ? (
+        <Overview view={view} durationMs={durationMs} />
+      ) : null}
 
       <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 4 }}>
         <strong className="ann-mono" style={{ fontSize: 26, fontWeight: 900, lineHeight: 1 }}>
@@ -230,15 +261,43 @@ export function ClipBodyYoutube({ span, onChange }: ClipBodyYoutubeProps) {
         <ClockField
           label="In"
           valueMs={span.startMs}
-          onCommit={(ms) => onChange(moveHandle(span, "start", ms, scale))}
+          onCommit={(ms) => onChange(moveHandle(span, "start", ms, durationMs || view.endMs))}
         />
         <ClockField
           label="Out"
           valueMs={span.endMs}
-          onCommit={(ms) => onChange(moveHandle(span, "end", ms, scale))}
+          onCommit={(ms) => onChange(moveHandle(span, "end", ms, durationMs || view.endMs))}
         />
       </div>
     </section>
+  );
+}
+
+/** Where the zoomed window sits in the whole video — the context zooming costs. */
+function Overview({ view, durationMs }: { view: View; durationMs: number }) {
+  const left = (view.startMs / durationMs) * 100;
+  const width = Math.max(1.5, ((view.endMs - view.startMs) / durationMs) * 100);
+  return (
+    <div style={{ margin: "8px 0 12px" }}>
+      <div
+        aria-hidden="true"
+        style={{ position: "relative", height: 4, background: "var(--b-card)", border: "1px solid var(--b-line)" }}
+      >
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            bottom: 0,
+            left: `${left}%`,
+            width: `${width}%`,
+            background: "var(--b-acid)",
+          }}
+        />
+      </div>
+      <p className="ann-dim ann-mono" style={{ fontSize: 10, margin: "3px 0 0" }}>
+        zoomed · {formatClipTimestamp(durationMs)} total
+      </p>
+    </div>
   );
 }
 

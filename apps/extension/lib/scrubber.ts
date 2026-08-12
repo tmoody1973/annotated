@@ -85,3 +85,47 @@ export function moveSpan(span: Span, toStartMs: number, durationMs: number): Spa
   const startMs = toWholeSecond(clamp(toStartMs, 0, latestStart));
   return { startMs, endMs: startMs + length };
 }
+
+/**
+ * The slice of the video the track draws.
+ *
+ * Drawing the whole video was unusable the moment a video got long: a 90-second
+ * clip inside a 64-minute talk is 2.3% of the track — about eight pixels — and
+ * the two handles sat centred on its edges, covering it completely. There was
+ * no band left to grab, and one pixel of track meant eleven seconds, so no
+ * precision either.
+ *
+ * The track now shows a window around the clip instead, sized so the clip fills
+ * about a third of it. Same gestures, usable scale.
+ */
+export interface View {
+  startMs: number;
+  endMs: number;
+}
+
+/** The clip occupies roughly 1/VIEW_ZOOM of the track. */
+const VIEW_ZOOM = 3;
+const MIN_VIEW_MS = 30_000;
+
+export function viewFor(span: Span, durationMs: number): View {
+  const clipMs = Math.max(1_000, span.endMs - span.startMs);
+  const wanted = Math.max(MIN_VIEW_MS, clipMs * VIEW_ZOOM);
+  const bound = durationMs > 0 ? durationMs : wanted;
+  const length = Math.min(wanted, bound);
+  const centre = (span.startMs + span.endMs) / 2;
+  const startMs = Math.round(clamp(centre - length / 2, 0, Math.max(0, bound - length)));
+  return { startMs, endMs: startMs + length };
+}
+
+/**
+ * Re-centre only once the clip reaches the edge of the window.
+ *
+ * Recomputing the window on every change would keep the clip permanently
+ * centred — so dragging it would move the *scenery* and the band would appear
+ * nailed in place. It has to stay still while the clip moves within it.
+ */
+export function keepInView(view: View, span: Span, durationMs: number): View {
+  const margin = (view.endMs - view.startMs) * 0.1;
+  const inside = span.startMs >= view.startMs + margin && span.endMs <= view.endMs - margin;
+  return inside ? view : viewFor(span, durationMs);
+}
