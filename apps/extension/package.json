@@ -13,7 +13,6 @@
   },
   "dependencies": {
     "@annotated/shared": "workspace:*",
-    "@clerk/chrome-extension": "^3.1.30",
     "@heroui/react": "^3.0.5",
     "@heroui/styles": "^3.0.5",
     "convex": "^1.39.1",
