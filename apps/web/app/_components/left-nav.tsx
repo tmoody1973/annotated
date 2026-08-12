@@ -23,6 +23,7 @@ export const MARKETING_ITEMS: NavItem[] = [
   { label: "Publishers", glyph: "▣", href: "/publishers" },
   { label: "Extension", glyph: "⊕", href: "/extension" },
   { label: "About", glyph: "◧", href: "/about" },
+  { label: "Changelog", glyph: "▤", href: "/changelog" },
 ];
 
 const SIGNED_IN_ROOMS: NavItem[] = [
