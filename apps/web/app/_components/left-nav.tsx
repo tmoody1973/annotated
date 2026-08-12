@@ -80,6 +80,36 @@ export function LeftNav() {
         )}
       </nav>
 
+      {/* Publishers / Extension / About / Changelog. These previously lived only
+          in the mobile drawer and on three marketing pages' footers — which meant
+          they were unreachable from the feed, a clip page, or a profile, i.e.
+          everywhere people actually are. AppShell renders LeftNav on every page,
+          so putting them here makes them reachable from all of them. */}
+      <nav
+        aria-label="More"
+        className="mt-5 border-[3px] border-[color:var(--b-line)] bg-[color:var(--b-card)] text-[color:var(--b-ink)] shadow-[6px_6px_0_0_var(--b-shadow)]"
+      >
+        {MARKETING_ITEMS.map((it, i) => (
+          <Link
+            key={it.label}
+            href={it.href}
+            aria-current={pathname === it.href ? "page" : undefined}
+            className={`flex items-center gap-3 px-4 py-2.5 text-[13px] font-extrabold ${
+              i < MARKETING_ITEMS.length - 1
+                ? "border-b-2 border-[color:var(--b-line)]"
+                : ""
+            } ${
+              pathname === it.href
+                ? "bg-[color:var(--b-chrome)] text-[color:var(--b-acid)]"
+                : "hover:bg-[color:var(--b-acid)]"
+            }`}
+          >
+            <span className="w-5 text-center">{it.glyph}</span>
+            {it.label}
+          </Link>
+        ))}
+      </nav>
+
       <div className="mt-5 border-[3px] border-[color:var(--b-line)] bg-[color:var(--b-acid)] p-4 text-[color:var(--b-acid-ink)] shadow-[6px_6px_0_0_var(--b-shadow)]">
         <h4 className="font-display text-[17px] leading-[1.05]">IDEAS MULTIPLY WHEN SHARED.</h4>
         <p className="mt-2 text-[13px] font-semibold leading-snug">
