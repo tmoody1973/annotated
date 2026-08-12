@@ -349,15 +349,28 @@ export const createPodcast = mutation({
     });
 
     if (args.clipStorageId === undefined) {
+      // `.first()`, not `.unique()`: concurrent transcribe requests for the
+      // same episode can insert more than one row (no dedup upstream), and
+      // the first is the timeline-correct one — the row whose word
+      // timestamps the extension actually displayed.
       const transcript = await ctx.db
         .query("transcripts")
         .withIndex("by_source", (q) => q.eq("sourceId", args.sourceId))
-        .unique();
+        .first();
       // The frozen episode is what the displayed word timestamps belong to.
       // Clipping the live enclosure would drift against ad insertion (9cf7ac0).
-      if (!transcript?.episodeStorageId) {
+      if (!transcript || transcript.status === "pending" || transcript.status === "processing") {
+        // Transient: transcription hasn't finished yet, retrying later works.
         throw new Error(
           "This episode isn't ready to clip yet — its audio is still being prepared."
+        );
+      }
+      if (transcript.status === "failed" || !transcript.episodeStorageId) {
+        // Permanent: transcription itself failed, or it finished but the
+        // frozen download failed (transcribe.ts's live-URL fallback) — no
+        // episode audio will ever show up here, so don't tell the user to wait.
+        throw new Error(
+          "This episode's audio couldn't be prepared for clipping. Try a different clip."
         );
       }
       await ctx.scheduler.runAfter(0, internal.clips.slicePodcast, {

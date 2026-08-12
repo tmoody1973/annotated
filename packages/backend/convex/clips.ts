@@ -12,6 +12,14 @@ import type { Id } from "./_generated/dataModel";
  * Everything here is internal: no client calls these directly.
  */
 
+// Bounds the worker fetch so a hung Fly instance can't leave a row stuck
+// "processing" forever — Convex would otherwise only cut it off at the
+// action's own runtime limit, well past the point of being useful. 90s caps
+// the clip itself; ffmpeg range-seek copies run single-digit seconds even on
+// shared CPU, so 60s leaves generous headroom for the yt-dlp/download hop
+// without approving an effectively-unbounded wait.
+const WORKER_FETCH_TIMEOUT_MS = 60_000;
+
 /** Attaches a finished clip and flips the row to ready. */
 export const attachClip = internalMutation({
   args: {
@@ -26,6 +34,11 @@ export const attachClip = internalMutation({
     if (!annotation) {
       await ctx.storage.delete(args.clipStorageId);
       return null;
+    }
+    // A re-slice replaces the clip — delete the blob it's replacing so it
+    // doesn't leak (same family as debt d).
+    if (annotation.clipStorageId) {
+      await ctx.storage.delete(annotation.clipStorageId);
     }
     await ctx.db.patch(args.annotationId, {
       clipStorageId: args.clipStorageId,
@@ -49,6 +62,9 @@ export const markFailed = internalMutation({
   handler: async (ctx, args) => {
     const annotation = await ctx.db.get(args.annotationId);
     if (!annotation) return null;
+    // A late/duplicate failure callback must not clobber a row that already
+    // attached its clip successfully.
+    if (annotation.mediaState === "ready") return null;
     await ctx.db.patch(args.annotationId, { mediaState: "failed" });
     console.error(`clip slice failed for ${args.annotationId}: ${args.reason}`);
     return null;
@@ -87,6 +103,7 @@ export const sliceYoutube = internalAction({
           startMs: args.startMs,
           endMs: args.endMs,
         }),
+        signal: AbortSignal.timeout(WORKER_FETCH_TIMEOUT_MS),
       });
       if (!response.ok) {
         throw new Error(`Worker returned ${response.status}`);
@@ -135,6 +152,7 @@ export const slicePodcast = internalAction({
           startMs: args.startMs,
           endMs: args.endMs,
         }),
+        signal: AbortSignal.timeout(WORKER_FETCH_TIMEOUT_MS),
       });
       if (!response.ok) {
         throw new Error(`Worker returned ${response.status}`);
