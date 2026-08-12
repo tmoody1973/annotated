@@ -9,12 +9,14 @@ import type { Span } from "../../lib/scrubber";
 import type { Draft } from "../../lib/use-panel-flow";
 import { ClipBodyYoutube } from "./clip-body-youtube";
 import { ClipBodyArticle } from "./clip-body-article";
+import { ClipBodyPodcast } from "./clip-body-podcast";
 
 interface ClipScreenProps {
   detected: DetectedSource;
   draft: Draft;
   onSpanChange: (span: Span) => void;
   onHighlight: (highlight: ArticleHighlight | null) => void;
+  onPodcastSelection: (quote: string, startMs: number, endMs: number, sourceId: string) => void;
   onNext: () => void;
 }
 
@@ -23,6 +25,7 @@ export function ClipScreen({
   draft,
   onSpanChange,
   onHighlight,
+  onPodcastSelection,
   onNext,
 }: ClipScreenProps) {
   const highlight: ArticleHighlight | null =
@@ -46,11 +49,13 @@ export function ClipScreen({
           highlight={highlight}
           onChange={onHighlight}
         />
-      ) : (
-        <p className="ann-dim" style={{ fontSize: 14 }}>
-          The transcript view lands in the next commit.
-        </p>
-      )}
+      ) : detected.kind === "podcast" && detected.podcast.kind !== "spotify" ? (
+        <ClipBodyPodcast
+          podcast={detected.podcast}
+          onSelection={onPodcastSelection}
+          onWriteTakeFirst={onNext}
+        />
+      ) : null}
 
       <button
         type="button"
@@ -70,6 +75,9 @@ export function ClipScreen({
 
 function isReady(detected: DetectedSource, draft: Draft): boolean {
   if (detected.kind === "article") return (draft.selectedText?.trim().length ?? 0) > 0;
+  if (detected.kind === "podcast") {
+    return (draft.selectedText?.trim().length ?? 0) > 0 && draft.spanMs !== null;
+  }
   if (!draft.spanMs) return false;
   return evaluateClipSpan(draft.spanMs.startMs, draft.spanMs.endMs).ok;
 }

@@ -83,6 +83,14 @@ function Sidepanel() {
                   : null,
               })
             }
+            onPodcastSelection={(quote, startMs, endMs, sourceId) =>
+              dispatch({
+                type: "setPodcastSelection",
+                quote,
+                spanMs: { startMs, endMs },
+                sourceId,
+              })
+            }
             onNext={() => dispatch({ type: "confirmSpan" })}
           />
         ) : flow.screen === "take" ? (

@@ -32,6 +32,8 @@ export interface Draft {
    * would place every quote at the top of the article.
    */
   textRange: TextRange | null;
+  /** The resolved podcast episode this clip came from, once known. */
+  sourceId: string | null;
   takeText: string;
   takeAudio: Blob | null;
   topicIds: string[];
@@ -47,6 +49,7 @@ export interface FlowState {
 export type FlowAction =
   | { type: "startClip"; spanMs: SpanMs | null }
   | { type: "setSpan"; spanMs: SpanMs | null }
+  | { type: "setPodcastSelection"; quote: string; spanMs: SpanMs; sourceId: string }
   | { type: "setSelectedText"; selectedText: string | null; textRange?: TextRange | null }
   | { type: "confirmSpan" }
   | { type: "setTakeText"; text: string }
@@ -63,6 +66,7 @@ export const EMPTY_DRAFT: Draft = {
   spanMs: null,
   selectedText: null,
   textRange: null,
+  sourceId: null,
   takeText: "",
   takeAudio: null,
   topicIds: [],
@@ -100,6 +104,17 @@ export function flowReducer(state: FlowState, action: FlowAction): FlowState {
 
     case "setSpan":
       return { ...state, draft: { ...state.draft, spanMs: action.spanMs } };
+
+    case "setPodcastSelection":
+      return {
+        ...state,
+        draft: {
+          ...state.draft,
+          selectedText: action.quote,
+          spanMs: action.spanMs,
+          sourceId: action.sourceId,
+        },
+      };
 
     case "setSelectedText":
       return {
