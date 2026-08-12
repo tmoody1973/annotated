@@ -87,7 +87,7 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
     setArticle(null);
     setExtractError(null);
     setHighlight(null);
-    extractArticle(detection.url)
+    extractArticle(detection.url, detection.html)
       .then((res) => {
         if (!cancelled) setArticle(res);
       })

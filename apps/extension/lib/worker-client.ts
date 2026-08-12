@@ -4,11 +4,9 @@ import { buildAuthedClient } from "./convex-client";
 
 // The extension no longer talks to the Fly worker directly — every former
 // worker call now routes through a Convex action/mutation, which holds the
-// worker token server-side. `workerToken` survives only for the pre-existing
-// `testing:startThreadDev` debt path (see lib/use-thread.ts) — a known,
-// separately-tracked gap ("DEBT: production must replace this with the real
-// authed threads.create", convex/testing.ts) that this task does not touch.
-const workerToken = process.env.PLASMO_PUBLIC_WORKER_TOKEN;
+// worker token server-side. Nothing here reads PLASMO_PUBLIC_WORKER_TOKEN
+// anymore (its last caller, lib/use-thread.ts, now calls the authed
+// threads:startFromAnnotation mutation instead of the token-guarded dev seed).
 
 const youtubeChapters = makeFunctionReference<
   "action", { videoId: string }, Chapter[]
@@ -41,20 +39,42 @@ export interface ExtractedArticle {
 }
 
 const extractArticleAction = makeFunctionReference<
-  "action", { url: string }, ExtractedArticle
+  "action", { url: string; htmlStorageId?: string }, ExtractedArticle
 >("articles:extractArticle");
 
 /**
- * Runs Mozilla Readability over the article at `url`, server-side. NOTE: the
- * server action (`convex/articles.ts`, built for the web composer) only
- * accepts a URL — it re-fetches the page itself rather than taking the live
- * outerHTML the content script captures. This drops the extension's former
- * "B primary" HTML path (paywalled/JS-rendered pages the worker's own fetch
- * can't reach); see the Task 7 report for the tradeoff.
+ * Runs Mozilla Readability over the article at `url`, server-side. `html` is
+ * the content script's live outerHTML (option B — paywalls/JS resolved, what
+ * the user actually sees) — it goes to Convex storage first, not through the
+ * action argument directly, since a real page's outerHTML can exceed 1MB
+ * (NPR measured 1.11MB), Convex's per-value size cap. The server reads it
+ * back from storage and deletes it once used (see convex/articles.ts). When
+ * `html` is omitted, or the upload fails, the worker falls back to fetching
+ * `url` itself (option A) — a best-effort enhancement, never a hard failure.
  */
-export async function extractArticle(url: string): Promise<ExtractedArticle> {
+export async function extractArticle(
+  url: string,
+  html?: string
+): Promise<ExtractedArticle> {
+  let htmlStorageId: string | undefined;
+  if (html) {
+    try {
+      const uploadUrl = await mintUploadUrl();
+      const uploaded = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": "text/html" },
+        body: html,
+      });
+      if (uploaded.ok) {
+        const body = (await uploaded.json()) as { storageId: string };
+        htmlStorageId = body.storageId;
+      }
+    } catch {
+      // Falls through to url-only extraction.
+    }
+  }
   const client = await buildAuthedClient();
-  return await client.action(extractArticleAction, { url });
+  return await client.action(extractArticleAction, { url, htmlStorageId });
 }
 
 /** Chapters are an enhancement — a failure must never block clipping. */
@@ -126,15 +146,6 @@ export async function transcribeSource(videoId: string): Promise<void> {
   } catch {
     // Transcript is an enhancement; swallow.
   }
-}
-
-/** The dev worker token, passed to the token-guarded `testing:startThreadDev`
- *  mutation (lib/use-thread.ts) — the one caller this task leaves in place. */
-export function getWorkerToken(): string {
-  if (!workerToken) {
-    throw new Error("Missing PLASMO_PUBLIC_WORKER_TOKEN");
-  }
-  return workerToken;
 }
 
 /** Base URL of the web app, for building the published annotation link. */

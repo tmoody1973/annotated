@@ -28,6 +28,40 @@ export const create = mutation({
 });
 
 /**
+ * Lazily threads an existing standalone clip the caller owns: creates a thread
+ * on that clip's source + author and attaches the clip as order 0, returning
+ * the threadId. Idempotent — if the clip is already threaded, returns its
+ * existing threadId without creating a second one. The authed counterpart to
+ * `testing.startThreadDev` (a token-guarded dev-seed path, left as-is) — this
+ * one derives the author from the Clerk identity and rejects a caller who
+ * doesn't own the annotation, since there's no token standing in for trust.
+ */
+export const startFromAnnotation = mutation({
+  args: { annotationId: v.id("annotations") },
+  returns: v.id("threads"),
+  handler: async (ctx, args) => {
+    const user = await requireCurrentUser(ctx);
+    const annotation = await ctx.db.get(args.annotationId);
+    if (!annotation) {
+      throw new Error("Annotation not found");
+    }
+    if (annotation.authorId !== user._id) {
+      throw new Error("Cannot start a thread on a clip you do not own");
+    }
+    if (annotation.threadId) {
+      return annotation.threadId;
+    }
+    const threadId = await ctx.db.insert("threads", {
+      authorId: annotation.authorId,
+      sourceId: annotation.sourceId,
+      createdAt: Date.now(),
+    });
+    await ctx.db.patch(args.annotationId, { threadId, threadOrder: 0 });
+    return threadId;
+  },
+});
+
+/**
  * A thread with its clips in order: the joined source + author and the ordered
  * list of clip landing views (each shaped exactly like the /a/[id] page).
  * Null if the thread doesn't exist.

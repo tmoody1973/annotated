@@ -144,3 +144,69 @@ test("threads.create requires auth; getWithClips returns null for a missing thre
     await t.query(api.threads.getWithClips, { threadId: realThreadId })
   ).toBeNull();
 });
+
+test("startFromAnnotation threads a standalone clip and is idempotent", async () => {
+  const t = convexTest(schema, modules);
+  const alice = t.withIdentity({ subject: "clerk_alice", name: "Alice" });
+  const aliceId = await alice.mutation(api.users.ensureCurrentUser, {});
+  const sourceId = await seedSource(t);
+  const annotationId = await t.run((ctx) =>
+    insertAnnotation(ctx, {
+      authorId: aliceId,
+      sourceId,
+      selectedText: "first clip",
+      takeText: "take",
+    })
+  );
+
+  const threadId = await alice.mutation(api.threads.startFromAnnotation, {
+    annotationId,
+  });
+
+  const annotation = await t.run((ctx) => ctx.db.get(annotationId));
+  expect(annotation?.threadId).toBe(threadId);
+  expect(annotation?.threadOrder).toBe(0);
+
+  const thread = await alice.query(api.threads.getWithClips, { threadId });
+  expect(thread?.clips.map((c) => c.selectedText)).toEqual(["first clip"]);
+
+  // Idempotent: calling again on an already-threaded clip returns the same
+  // threadId rather than creating a second thread.
+  const secondCall = await alice.mutation(api.threads.startFromAnnotation, {
+    annotationId,
+  });
+  expect(secondCall).toBe(threadId);
+});
+
+test("startFromAnnotation rejects a non-owner and an unauthenticated caller", async () => {
+  const t = convexTest(schema, modules);
+  const aliceId = await t
+    .withIdentity({ subject: "clerk_alice", name: "Alice" })
+    .mutation(api.users.ensureCurrentUser, {});
+  await t
+    .withIdentity({ subject: "clerk_bob", name: "Bob" })
+    .mutation(api.users.ensureCurrentUser, {});
+  const sourceId = await seedSource(t);
+  const annotationId = await t.run((ctx) =>
+    insertAnnotation(ctx, {
+      authorId: aliceId,
+      sourceId,
+      selectedText: "alice's clip",
+      takeText: "take",
+    })
+  );
+
+  await expect(
+    t
+      .withIdentity({ subject: "clerk_bob", name: "Bob" })
+      .mutation(api.threads.startFromAnnotation, { annotationId })
+  ).rejects.toThrow(/do not own/);
+
+  await expect(
+    t.mutation(api.threads.startFromAnnotation, { annotationId })
+  ).rejects.toThrow(/Not authenticated/);
+
+  // Neither rejected attempt should have threaded the clip.
+  const annotation = await t.run((ctx) => ctx.db.get(annotationId));
+  expect(annotation?.threadId).toBeUndefined();
+});
