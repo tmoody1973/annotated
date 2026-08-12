@@ -46,6 +46,42 @@ export async function requestPlayerTimeMs(): Promise<number | null> {
   }
 }
 
+export interface PlayerState {
+  currentTimeMs: number;
+  durationMs: number;
+}
+
+/**
+ * Reads position *and* length together — the scrubber needs both to draw a
+ * track at all, and asking twice would let them disagree by a frame.
+ *
+ * Goes straight to `chrome.scripting` rather than the content-script message,
+ * which only carries the position. The injected read is the same one
+ * `requestPlayerTimeMs` already falls back to, and it works without a reload.
+ * Null when there is no player or the metadata hasn't loaded (`duration` is
+ * NaN until then).
+ */
+export async function requestPlayerState(): Promise<PlayerState | null> {
+  const tab = await getActiveTab();
+  if (!tab?.id) return null;
+  try {
+    const [injection] = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: () => {
+        const video = document.querySelector<HTMLVideoElement>("video.html5-main-video");
+        if (!video || !Number.isFinite(video.duration) || video.duration <= 0) return null;
+        return {
+          currentTimeMs: Math.round(video.currentTime * 1000),
+          durationMs: Math.round(video.duration * 1000),
+        };
+      },
+    });
+    return (injection?.result as PlayerState | null | undefined) ?? null;
+  } catch {
+    return null;
+  }
+}
+
 /** Active tab title cleaned of YouTube's badge/suffix chrome, for source attribution. */
 export async function getActiveVideoTitle(): Promise<string> {
   const tab = await getActiveTab();

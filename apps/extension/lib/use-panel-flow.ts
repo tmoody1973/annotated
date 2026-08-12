@@ -18,9 +18,20 @@ export interface SpanMs {
   endMs: number;
 }
 
+export interface TextRange {
+  start: number;
+  end: number;
+}
+
 export interface Draft {
   spanMs: SpanMs | null;
   selectedText: string | null;
+  /**
+   * Character offsets of `selectedText` within the extracted article text. The
+   * publish path needs them verbatim — deriving them from the quote's length
+   * would place every quote at the top of the article.
+   */
+  textRange: TextRange | null;
   takeText: string;
   takeAudio: Blob | null;
   topicIds: string[];
@@ -36,7 +47,7 @@ export interface FlowState {
 export type FlowAction =
   | { type: "startClip"; spanMs: SpanMs | null }
   | { type: "setSpan"; spanMs: SpanMs | null }
-  | { type: "setSelectedText"; selectedText: string | null }
+  | { type: "setSelectedText"; selectedText: string | null; textRange?: TextRange | null }
   | { type: "confirmSpan" }
   | { type: "setTakeText"; text: string }
   | { type: "setTakeAudio"; audio: Blob | null }
@@ -51,6 +62,7 @@ export type FlowAction =
 export const EMPTY_DRAFT: Draft = {
   spanMs: null,
   selectedText: null,
+  textRange: null,
   takeText: "",
   takeAudio: null,
   topicIds: [],
@@ -90,7 +102,14 @@ export function flowReducer(state: FlowState, action: FlowAction): FlowState {
       return { ...state, draft: { ...state.draft, spanMs: action.spanMs } };
 
     case "setSelectedText":
-      return { ...state, draft: { ...state.draft, selectedText: action.selectedText } };
+      return {
+        ...state,
+        draft: {
+          ...state.draft,
+          selectedText: action.selectedText,
+          textRange: action.textRange ?? null,
+        },
+      };
 
     case "confirmSpan":
       return state.screen === "clip" ? { ...state, screen: "take" } : state;

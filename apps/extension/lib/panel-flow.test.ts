@@ -99,3 +99,25 @@ describe("flowReducer", () => {
     expect(before).toEqual(initial);
   });
 });
+
+describe("article selection", () => {
+  it("carries the character offsets, not just the quote", () => {
+    const s = flowReducer(initial, {
+      type: "setSelectedText",
+      selectedText: "a sentence from the middle",
+      textRange: { start: 4210, end: 4236 },
+    });
+    expect(s.draft.textRange).toEqual({ start: 4210, end: 4236 });
+  });
+
+  it("clears the offsets when the selection is cleared", () => {
+    let s = flowReducer(initial, {
+      type: "setSelectedText",
+      selectedText: "something",
+      textRange: { start: 10, end: 19 },
+    });
+    s = flowReducer(s, { type: "setSelectedText", selectedText: null });
+    expect(s.draft.selectedText).toBeNull();
+    expect(s.draft.textRange).toBeNull();
+  });
+});

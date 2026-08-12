@@ -10,6 +10,7 @@ import { useEffect, useRef } from "react";
 import { ConvexProvider, ConvexReactClient } from "convex/react";
 import { PanelShell } from "./components/panel-shell";
 import { SourceScreen } from "./components/screens/source-screen";
+import { ClipScreen } from "./components/screens/clip-screen";
 import { panelCss } from "./lib/panel-theme";
 import { sourceHeading } from "./lib/source-states";
 import { useAuthState } from "./lib/use-auth-state";
@@ -69,7 +70,21 @@ function Sidepanel() {
             onStartClip={(spanMs) => flow.dispatch({ type: "startClip", spanMs })}
           />
         ) : flow.screen === "clip" ? (
-          <ComingNext label="The clip screen" />
+          <ClipScreen
+            detected={detected}
+            draft={flow.draft}
+            onSpanChange={(spanMs) => dispatch({ type: "setSpan", spanMs })}
+            onHighlight={(highlight) =>
+              dispatch({
+                type: "setSelectedText",
+                selectedText: highlight?.selectedText ?? null,
+                textRange: highlight
+                  ? { start: highlight.textStart, end: highlight.textEnd }
+                  : null,
+              })
+            }
+            onNext={() => dispatch({ type: "confirmSpan" })}
+          />
         ) : flow.screen === "take" ? (
           <ComingNext label="The take screen" />
         ) : (
