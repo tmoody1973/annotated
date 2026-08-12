@@ -195,6 +195,7 @@ export default async function AnnotationPage({
       <JsonLd data={jsonLd} />
       <ClipArticle
           data={{
+            annotationId: annotation._id,
             selectedText: annotation.selectedText,
             takeText: annotation.takeText,
             takeAudioUrl: annotation.takeAudioUrl,

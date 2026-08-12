@@ -186,6 +186,7 @@ export default async function ThreadPage({
               </p>
               <ClipArticle
                 data={{
+                  annotationId: clip._id,
                   selectedText: clip.selectedText,
                   takeText: clip.takeText,
                   takeAudioUrl: clip.takeAudioUrl,

@@ -1,6 +1,7 @@
 import { formatClipTimestamp } from "@annotated/shared";
-import { SourceByline } from "./source-byline";
-import { ClipMedia, type MediaState } from "../../components/clip-media";
+import { SourceByline, resolveSourceByline } from "./source-byline";
+import type { MediaState } from "../../components/clip-media";
+import { ClipMediaLive } from "../../components/clip-media-live";
 
 /**
  * The source screenshot, capped in height and top-anchored so the head of the
@@ -31,6 +32,7 @@ function SourceVisual({
 }
 
 export interface ClipArticleData {
+  annotationId: string;
   selectedText?: string;
   takeText?: string;
   takeAudioUrl?: string | null;
@@ -81,10 +83,35 @@ export function ClipArticle({ data }: { data: ClipArticleData }) {
     data.clipStartMs != null && data.clipEndMs != null
       ? `${formatClipTimestamp(data.clipStartMs)}–${formatClipTimestamp(data.clipEndMs)}`
       : null;
+  // The creator name, resolved once so the quiet pre-player line and the full
+  // "Clipped from" block at the bottom (SourceByline) agree on who made this.
+  const byline = data.source
+    ? resolveSourceByline({
+        type: data.sourceType ?? "",
+        canonicalUrl: data.source.canonicalUrl,
+        siteName: data.source.siteName,
+        author: data.source.author,
+        podcastName: data.source.podcastName,
+        youtubeChannelUrl: data.source.youtubeChannelUrl,
+      })
+    : null;
 
   return (
     <article className="border-[3px] border-[color:var(--b-line)] bg-[color:var(--b-card)] text-[color:var(--b-ink)] shadow-[8px_8px_0_0_var(--b-shadow)]">
-      <ClipMedia
+      {data.source && byline && (
+        <div className="border-b-[3px] border-[color:var(--b-line)] px-5 pt-4 pb-3 sm:px-6">
+          <p className={`${label} text-[color:var(--b-dim)]`}>
+            {byline.primary}
+            {byline.secondary ? ` · ${byline.secondary}` : ""}
+          </p>
+          <p className="mt-1 truncate text-[15px] font-semibold leading-snug text-[color:var(--b-ink)]">
+            {data.source.title}
+          </p>
+        </div>
+      )}
+
+      <ClipMediaLive
+        annotationId={data.annotationId}
         mediaState={data.mediaState}
         clipUrl={data.clipUrl}
         sourceType={isArticle ? "article" : isPodcast ? "podcast" : "youtube"}
