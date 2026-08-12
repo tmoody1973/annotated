@@ -48,6 +48,23 @@ function deriveUsername(seed: string): string {
   return truncated;
 }
 
+/**
+ * Appends an incrementing suffix (`-2`, `-3`, …) to `base` until it's free,
+ * via the `by_username` index. Existing rows are never touched — this only
+ * stops new collisions (Fix 4).
+ */
+async function ensureUniqueUsername(ctx: MutationCtx, base: string): Promise<string> {
+  let candidate = base;
+  for (let suffix = 2; ; suffix++) {
+    const taken = await ctx.db
+      .query("users")
+      .withIndex("by_username", (q) => q.eq("username", candidate))
+      .first();
+    if (!taken) return candidate;
+    candidate = `${base}-${suffix}`;
+  }
+}
+
 export const currentUser = query({
   args: {},
   handler: async (ctx) => {
@@ -192,7 +209,7 @@ export const ensureCurrentUser = mutation({
       identity.name ?? identity.nickname ?? identity.givenName ?? "Anonymous";
     const usernameSeed =
       identity.nickname ?? identity.preferredUsername ?? identity.name ?? identity.subject;
-    const username = deriveUsername(String(usernameSeed));
+    const username = await ensureUniqueUsername(ctx, deriveUsername(String(usernameSeed)));
 
     return await ctx.db.insert("users", {
       clerkId: identity.subject,
