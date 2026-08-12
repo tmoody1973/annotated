@@ -24,7 +24,7 @@ export interface SourceBylineData {
   youtubeChannelUrl?: string | null;
 }
 
-interface Resolved {
+export interface ResolvedSourceByline {
   kind: string;
   primary: string;
   secondary?: string;
@@ -34,9 +34,11 @@ interface Resolved {
 /**
  * Resolves the type-aware byline: who created the clipped content and where to
  * reach them. Article → journalist + publication; podcast → show; YouTube →
- * channel (linked to the channel, not the video).
+ * channel (linked to the channel, not the video). Exported so other surfaces
+ * (the compact pre-player attribution line) can reuse the same creator-name
+ * logic instead of re-deriving it.
  */
-function resolve(source: SourceBylineData): Resolved {
+export function resolveSourceByline(source: SourceBylineData): ResolvedSourceByline {
   const kind = sourceKindLabel(source.type);
   switch (source.type) {
     case "youtube":
@@ -75,7 +77,7 @@ export function SourceByline({
   source: SourceBylineData;
   className?: string;
 }) {
-  const { kind, primary, secondary, href } = resolve(source);
+  const { kind, primary, secondary, href } = resolveSourceByline(source);
   return (
     <a
       href={href}
