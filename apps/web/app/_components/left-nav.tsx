@@ -32,7 +32,8 @@ const SIGNED_IN_ROOMS: NavItem[] = [
 
 /** Brutalist left dashboard rail: section/room nav + an acid tagline block.
  *  Logged-out visitors lead with "Curated" and see "For You" locked (the §1
- *  cold-start guard); signed-in users default to Latest. */
+ *  cold-start guard); signed-in users default to Latest. Rendered inside
+ *  `AppShell`'s left column, which owns the sticky/hidden-below-lg behavior. */
 export function LeftNav() {
   const { isAuthenticated } = useConvexAuth();
   const pathname = usePathname();
@@ -40,7 +41,7 @@ export function LeftNav() {
   const rooms = isAuthenticated ? SIGNED_IN_ROOMS : NAV_ITEMS;
 
   return (
-    <aside className="hidden lg:block lg:sticky lg:top-[76px] lg:self-start">
+    <div>
       <nav className="border-[3px] border-[color:var(--b-line)] bg-[color:var(--b-card)] text-[color:var(--b-ink)] shadow-[6px_6px_0_0_var(--b-shadow)]">
         {rooms.map((it, i) => {
           const active = onHome && i === 0;
@@ -84,6 +85,6 @@ export function LeftNav() {
           Clip the web. Add your take. Publish the receipt.
         </p>
       </div>
-    </aside>
+    </div>
   );
 }
