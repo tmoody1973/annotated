@@ -165,6 +165,35 @@ async function main() {
     assert.ok(span > 0 && span <= 90, `span exceeded the 90s ceiling: ${ceilIn}–${ceilOut}`);
     console.log(`  ok  ceiling held the span at ${span}s (${ceilIn}–${ceilOut})`);
 
+    // Grabbing the band slides the whole clip without resizing it — the gesture
+    // the first build was missing entirely.
+    await outField.fill("1:30");
+    await outField.press("Enter");
+    await inField.fill("0:30");
+    await inField.press("Enter");
+    const beforeMove = {
+      start: clock(await inField.inputValue()),
+      end: clock(await outField.inputValue()),
+    };
+    const band = await panel.locator('div[title="Drag to move the clip"]').boundingBox();
+    await panel.mouse.move(band.x + band.width / 2, band.y + band.height / 2);
+    await panel.mouse.down();
+    await panel.mouse.move(band.x + band.width / 2 + 60, band.y + band.height / 2, { steps: 10 });
+    await panel.mouse.up();
+    const afterMove = {
+      start: clock(await inField.inputValue()),
+      end: clock(await outField.inputValue()),
+    };
+    assert.ok(afterMove.start > beforeMove.start, "dragging the band did not move the clip");
+    assert.equal(
+      afterMove.end - afterMove.start,
+      beforeMove.end - beforeMove.start,
+      "moving the clip changed its length — it should only slide",
+    );
+    console.log(
+      `  ok  band drag moved the clip ${afterMove.start - beforeMove.start}s, length unchanged (${afterMove.end - afterMove.start}s)`,
+    );
+
     const next = panel.getByRole("button", { name: /Next — your take/i });
     assert.equal(await next.isEnabled(), true, "Next is dead on a valid span");
     console.log("  ok  Next stays live");

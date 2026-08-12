@@ -1,17 +1,20 @@
 /**
- * The scrubber. Drag is the primary way to choose a clip; the mm:ss fields
- * survive as readouts you can still type into, and each handle is a real
- * keyboard-operable slider.
+ * The scrubber. Two gestures, and they have to look like two gestures:
+ * grab the middle of the acid band to **move** the clip, grab either end to
+ * **stretch** it. The first build only had the second one — the band was inert
+ * and the handles were 12px slivers, so "grab sixty seconds from over there"
+ * meant dragging both ends across one at a time.
  *
- * The three inputs are one value seen three ways — drag moves the fields, the
- * fields move the handles, arrow keys move whichever handle has focus. All of
- * them go through `moveHandle`, so none of them can produce a clip the others
- * would consider invalid.
+ * The mm:ss fields survive as readouts you can still type into, and each handle
+ * is a keyboard-operable slider. Drag, type and arrow keys all go through the
+ * same two functions in lib/scrubber.ts, so none of them can produce a clip the
+ * others would call invalid.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { formatClipTimestamp, MAX_CLIP_MS } from "@annotated/shared";
 import {
   moveHandle,
+  moveSpan,
   nudgeHandle,
   spanAtFraction,
   NUDGE_COARSE_MS,
@@ -23,6 +26,13 @@ import { requestPlayerState } from "../../lib/player-time";
 import { ClockField } from "./clock-field";
 
 const PLAYHEAD_POLL_MS = 500;
+const TRACK_HEIGHT = 52;
+const HANDLE_WIDTH = 18;
+
+type Drag =
+  | { kind: "handle"; handle: Handle }
+  /** Where inside the band the pointer grabbed it, so it doesn't jump on grab. */
+  | { kind: "band"; grabOffsetMs: number };
 
 interface ClipBodyYoutubeProps {
   span: Span;
@@ -32,8 +42,9 @@ interface ClipBodyYoutubeProps {
 export function ClipBodyYoutube({ span, onChange }: ClipBodyYoutubeProps) {
   const [durationMs, setDurationMs] = useState(0);
   const [playheadMs, setPlayheadMs] = useState<number | null>(null);
+  const [dragKind, setDragKind] = useState<Drag["kind"] | null>(null);
   const trackRef = useRef<HTMLDivElement>(null);
-  const dragging = useRef<Handle | null>(null);
+  const dragging = useRef<Drag | null>(null);
 
   // The playhead is live, so the track keeps meaning something while the video
   // plays underneath the panel.
@@ -68,11 +79,18 @@ export function ClipBodyYoutube({ span, onChange }: ClipBodyYoutubeProps) {
 
   useEffect(() => {
     const onMove = (event: PointerEvent): void => {
-      const handle = dragging.current;
-      if (handle) onChange(moveHandle(span, handle, pointerToMs(event.clientX), scale));
+      const drag = dragging.current;
+      if (!drag) return;
+      const at = pointerToMs(event.clientX);
+      onChange(
+        drag.kind === "handle"
+          ? moveHandle(span, drag.handle, at, scale)
+          : moveSpan(span, at - drag.grabOffsetMs, scale),
+      );
     };
     const onUp = (): void => {
       dragging.current = null;
+      setDragKind(null);
     };
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
@@ -82,24 +100,37 @@ export function ClipBodyYoutube({ span, onChange }: ClipBodyYoutubeProps) {
     };
   }, [span, scale, onChange, pointerToMs]);
 
+  const beginDrag = (drag: Drag) => (event: React.PointerEvent): void => {
+    event.preventDefault();
+    event.stopPropagation();
+    dragging.current = drag;
+    setDragKind(drag.kind);
+  };
+
   const onHandleKeyDown = (handle: Handle) => (event: React.KeyboardEvent): void => {
     const direction = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
     if (direction === 0) return;
     event.preventDefault();
-    const step = event.shiftKey ? NUDGE_COARSE_MS : NUDGE_MS;
-    onChange(nudgeHandle(span, handle, direction * step, scale));
+    onChange(
+      nudgeHandle(span, handle, direction * (event.shiftKey ? NUDGE_COARSE_MS : NUDGE_MS), scale),
+    );
   };
-
-  const durationLabel = formatClipTimestamp(span.endMs - span.startMs);
 
   return (
     <section>
       <div
         ref={trackRef}
         className="ann-card"
-        style={{ position: "relative", height: 44, marginBottom: 12, cursor: "pointer" }}
+        style={{ position: "relative", height: TRACK_HEIGHT, marginBottom: 6 }}
       >
+        {/* The clip itself. Grab it anywhere in the middle to slide it. */}
         <div
+          onPointerDown={(event) =>
+            beginDrag({ kind: "band", grabOffsetMs: pointerToMs(event.clientX) - span.startMs })(
+              event,
+            )
+          }
+          title="Drag to move the clip"
           style={{
             position: "absolute",
             top: 0,
@@ -107,22 +138,32 @@ export function ClipBodyYoutube({ span, onChange }: ClipBodyYoutubeProps) {
             left: percent(span.startMs),
             width: percent(span.endMs - span.startMs),
             background: "var(--b-acid)",
+            cursor: dragKind === "band" ? "grabbing" : "grab",
+            touchAction: "none",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
           }}
-        />
+        >
+          <GripDots />
+        </div>
+
         {playheadMs !== null ? (
           <div
             aria-hidden="true"
+            title="Where the video is playing"
             style={{
               position: "absolute",
-              top: 0,
-              bottom: 0,
+              top: -2,
+              bottom: -2,
               left: percent(playheadMs),
               width: 2,
               background: "var(--b-ink)",
-              opacity: 0.55,
+              opacity: 0.5,
             }}
           />
         ) : null}
+
         {(["start", "end"] as const).map((handle) => {
           const value = handle === "start" ? span.startMs : span.endMs;
           return (
@@ -135,18 +176,16 @@ export function ClipBodyYoutube({ span, onChange }: ClipBodyYoutubeProps) {
               aria-valuemax={Math.round(scale / 1000)}
               aria-valuenow={Math.round(value / 1000)}
               aria-valuetext={formatClipTimestamp(value)}
+              title={handle === "start" ? "Drag to change where it starts" : "Drag to change where it ends"}
               onKeyDown={onHandleKeyDown(handle)}
-              onPointerDown={(event) => {
-                event.preventDefault();
-                dragging.current = handle;
-              }}
+              onPointerDown={beginDrag({ kind: "handle", handle })}
               style={{
                 position: "absolute",
-                top: -3,
-                bottom: -3,
+                top: -4,
+                bottom: -4,
                 left: percent(value),
-                width: 12,
-                marginLeft: -6,
+                width: HANDLE_WIDTH,
+                marginLeft: -HANDLE_WIDTH / 2,
                 // Light bar, dark outline — the one combination that reads
                 // against the acid band, the pale track, and (in dark mode) the
                 // near-black page the handle overhangs at either extreme.
@@ -154,20 +193,38 @@ export function ClipBodyYoutube({ span, onChange }: ClipBodyYoutubeProps) {
                 border: "2px solid var(--b-ink)",
                 cursor: "ew-resize",
                 touchAction: "none",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 2,
               }}
-            />
+            >
+              <GripLines />
+            </div>
           );
         })}
       </div>
 
-      <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 12 }}>
+      {/* The scale, so the band's position on the track means something. */}
+      <div
+        className="ann-dim ann-mono"
+        style={{ display: "flex", justifyContent: "space-between", fontSize: 10, marginBottom: 12 }}
+      >
+        <span>0:00</span>
+        <span>{durationMs > 0 ? formatClipTimestamp(durationMs) : "…"}</span>
+      </div>
+
+      <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 4 }}>
         <strong className="ann-mono" style={{ fontSize: 26, fontWeight: 900, lineHeight: 1 }}>
-          {durationLabel}
+          {formatClipTimestamp(span.endMs - span.startMs)}
         </strong>
         <span className="ann-dim ann-mono" style={{ fontSize: 12 }}>
           / {formatClipTimestamp(MAX_CLIP_MS)} max
         </span>
       </div>
+      <p className="ann-dim" style={{ fontSize: 11, margin: "0 0 12px" }}>
+        Drag the middle to move it · drag an end to stretch it
+      </p>
 
       <div style={{ display: "flex", gap: 8 }}>
         <ClockField
@@ -182,5 +239,27 @@ export function ClipBodyYoutube({ span, onChange }: ClipBodyYoutubeProps) {
         />
       </div>
     </section>
+  );
+}
+
+/** Three dots: the universal "this thing is draggable" mark. */
+function GripDots() {
+  return (
+    <span aria-hidden="true" style={{ display: "flex", gap: 3, pointerEvents: "none" }}>
+      {[0, 1, 2].map((dot) => (
+        <span key={dot} style={{ width: 3, height: 3, background: "var(--b-ink)", opacity: 0.55 }} />
+      ))}
+    </span>
+  );
+}
+
+/** Two rules down the middle of a handle — the resize grip. */
+function GripLines() {
+  return (
+    <span aria-hidden="true" style={{ display: "flex", gap: 2, pointerEvents: "none" }}>
+      {[0, 1].map((line) => (
+        <span key={line} style={{ width: 1, height: 12, background: "var(--b-ink)", opacity: 0.5 }} />
+      ))}
+    </span>
   );
 }

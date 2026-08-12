@@ -53,7 +53,10 @@ export function primaryAction(
       spanMs: null,
     };
   }
-  if (playheadMs === null || playheadMs <= 0) {
+  // You cannot clip the last sixty seconds of a video you are ten seconds into.
+  // Seeding from the playhead regardless produced a ten-second clip — or, if the
+  // panel opened the instant playback began, a *fraction of a second* one.
+  if (playheadMs === null || playheadMs < SEED_WINDOW_MS) {
     return { label: "Clip from the start", spanMs: { startMs: 0, endMs: SEED_WINDOW_MS } };
   }
   return {

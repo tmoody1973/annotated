@@ -20,10 +20,19 @@ describe("primaryAction", () => {
     });
   });
 
-  it("never seeds a negative start early in a video", () => {
+  it("opens on the first minute when the video has not run a minute yet", () => {
+    // Seeding from the playhead here would offer a twenty-second clip.
     const action = primaryAction(youtube, 20_000);
-    expect(action.spanMs?.startMs).toBe(0);
-    expect(action.spanMs?.endMs).toBe(20_000);
+    expect(action.label).toBe("Clip from the start");
+    expect(action.spanMs).toEqual({ startMs: 0, endMs: 60_000 });
+  });
+
+  it("never seeds a clip shorter than a second, however early the playhead", () => {
+    for (const playhead of [null, 0, 1, 400, 999, 20_000, 59_999]) {
+      const span = primaryAction(youtube, playhead).spanMs;
+      expect(span, `playhead ${playhead}`).not.toBeNull();
+      expect(span!.endMs - span!.startMs, `playhead ${playhead}`).toBeGreaterThanOrEqual(1_000);
+    }
   });
 
   it("falls back to the opening minute when the playhead cannot be read", () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { MAX_CLIP_MS } from "@annotated/shared";
-import { MIN_SPAN_MS, NUDGE_MS, NUDGE_COARSE_MS, moveHandle, nudgeHandle, spanAtFraction } from "./scrubber";
+import { MIN_SPAN_MS, NUDGE_MS, NUDGE_COARSE_MS, moveHandle, moveSpan, nudgeHandle, spanAtFraction } from "./scrubber";
 
 const DURATION = 600_000; // a ten-minute video
 const span = { startMs: 120_000, endMs: 180_000 };
@@ -89,5 +89,36 @@ describe("spanAtFraction", () => {
 
   it("returns zero for a video whose duration is not known yet", () => {
     expect(spanAtFraction(0.5, 0)).toBe(0);
+  });
+});
+
+describe("moveSpan", () => {
+  const sixty = { startMs: 120_000, endMs: 180_000 };
+
+  it("slides the window without resizing it", () => {
+    const moved = moveSpan(sixty, 300_000, DURATION);
+    expect(moved).toEqual({ startMs: 300_000, endMs: 360_000 });
+  });
+
+  it("keeps the duration when it runs into the start of the video", () => {
+    const moved = moveSpan(sixty, -40_000, DURATION);
+    expect(moved.startMs).toBe(0);
+    expect(moved.endMs - moved.startMs).toBe(60_000);
+  });
+
+  it("keeps the duration when it runs into the end of the video", () => {
+    const moved = moveSpan(sixty, DURATION, DURATION);
+    expect(moved.endMs).toBe(DURATION);
+    expect(moved.endMs - moved.startMs).toBe(60_000);
+  });
+
+  it("does not resize a window longer than the video itself", () => {
+    const moved = moveSpan({ startMs: 0, endMs: 90_000 }, 10_000, 45_000);
+    expect(moved.endMs - moved.startMs).toBe(90_000);
+    expect(moved.startMs).toBe(0);
+  });
+
+  it("snaps to whole seconds like every other movement", () => {
+    expect(moveSpan(sixty, 300_400, DURATION).startMs % 1000).toBe(0);
   });
 });

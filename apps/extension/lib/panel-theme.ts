@@ -21,9 +21,16 @@ export const MONO_STACK =
 export const STATUS_OK = "#1a7a40";
 export const STATUS_BAD = "#c0392b";
 
-/** Acid at 20% — the selection wash. Kept as a literal because it is an alpha
- * variant of a token, not a token, and only the panel uses it. */
-const ACID_WASH = "#e1ff0033";
+/**
+ * Acid at 20% over paper, flattened to an opaque colour.
+ *
+ * This used to be `#e1ff0033` — acid with an alpha channel. A translucent
+ * background does not tint the element, it *replaces* it, so a focused field
+ * showed the page straight through itself: near-black in dark mode, with dark
+ * text on top. Cards are light paper in both themes, so one opaque tint is
+ * correct for both.
+ */
+const ACID_WASH = "#f9ffcc";
 
 function block(tokens: Record<TokenName, string>, indent: string): string {
   return (Object.keys(tokens) as TokenName[])

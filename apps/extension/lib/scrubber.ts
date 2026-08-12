@@ -69,3 +69,19 @@ export function spanAtFraction(fraction: number, durationMs: number): number {
   if (durationMs <= 0) return 0;
   return Math.round(clamp(fraction, 0, 1) * durationMs);
 }
+
+/**
+ * Slide the whole window without changing how long it is.
+ *
+ * This is the gesture the first build was missing: only the two handles
+ * responded, so a clip could be stretched but never moved, and "grab sixty
+ * seconds from over there" meant dragging both ends one at a time. Grabbing
+ * the band itself now moves it, and the duration is preserved even when the
+ * window runs into either end of the video.
+ */
+export function moveSpan(span: Span, toStartMs: number, durationMs: number): Span {
+  const length = span.endMs - span.startMs;
+  const latestStart = Math.max(0, durationMs - length);
+  const startMs = toWholeSecond(clamp(toStartMs, 0, latestStart));
+  return { startMs, endMs: startMs + length };
+}
