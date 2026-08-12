@@ -16,6 +16,11 @@ function extractBearerToken(authorization: string | undefined): string | undefin
   return authorization.slice("Bearer ".length);
 }
 
+// Pulling a voice-note-sized clip out of Convex storage, not downloading a
+// podcast episode — short and generous is right; an unbounded fetch here
+// would hold a connection open indefinitely on a shared-cpu-1x box.
+const AUDIO_URL_FETCH_TIMEOUT_MS = 15_000;
+
 /**
  * POST /transcode-commentary — authorize, validate the base64 audio body,
  * transcode the recorded webm/opus voice note to mp3, upload it to Convex
@@ -41,7 +46,9 @@ export function registerTranscodeCommentaryRoute(
     let audioBytes: Buffer;
     if (parsed.data.audioUrl) {
       try {
-        const audioResponse = await fetch(parsed.data.audioUrl);
+        const audioResponse = await fetch(parsed.data.audioUrl, {
+          signal: AbortSignal.timeout(AUDIO_URL_FETCH_TIMEOUT_MS),
+        });
         if (!audioResponse.ok) {
           throw new Error(`fetch failed: ${audioResponse.status}`);
         }

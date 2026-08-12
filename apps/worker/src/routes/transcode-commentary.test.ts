@@ -168,4 +168,9 @@ test("rejects a body with neither audioBase64 nor audioUrl", async () => {
   const app = buildApp();
   const res = await post(app, { mimeType: "audio/webm" });
   expect(res.statusCode).toBe(400);
+  // Asserts the schema's own refine message, not just the status code — without
+  // it this would also 400 via the unrelated "empty audio payload" fallback.
+  expect(JSON.stringify(res.json())).toContain(
+    "Provide exactly one of audioBase64 or audioUrl"
+  );
 });
