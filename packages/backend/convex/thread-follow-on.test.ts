@@ -35,7 +35,7 @@ async function publishStandalone(
     selectedText: quote,
     textStart: 0,
     textEnd: quote.length,
-    commentaryText: `take on ${quote}`,
+    takeText: `take on ${quote}`,
     ...(threadId ? { threadId } : {}),
     topicIds: await oneTopic(t),
     workerToken: WORKER_TOKEN,

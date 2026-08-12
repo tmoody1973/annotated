@@ -24,7 +24,7 @@ async function seedAnnotation(t: TestCtx): Promise<Id<"annotations">> {
       authorId,
       sourceId,
       selectedText: "quote",
-      commentaryText: "take",
+      takeText: "take",
       isPublic: true,
       publishedAt: Date.now(),
       commentCount: 0,

@@ -1,13 +1,12 @@
 import { useState } from "react";
-import { useMutation } from "convex/react";
 import { makeFunctionReference } from "convex/server";
-import { getWorkerToken } from "./worker-client";
+import { buildAuthedClient } from "./convex-client";
 
-const startThreadDev = makeFunctionReference<
+const startFromAnnotation = makeFunctionReference<
   "mutation",
-  { annotationId: string; workerToken: string },
+  { annotationId: string },
   string
->("testing:startThreadDev");
+>("threads:startFromAnnotation");
 
 export interface ThreadState {
   /** The active thread id, or null when the next publish is a standalone clip. */
@@ -30,13 +29,15 @@ export interface ThreadState {
  * follow-on flow (no re-auth, no re-detect; the source is already resolved).
  */
 export function useThread(): ThreadState {
-  const startThread = useMutation(startThreadDev);
   const [threadId, setThreadId] = useState<string | null>(null);
 
   const continueThread = async (annotationId: string): Promise<void> => {
-    const id =
-      threadId ??
-      (await startThread({ annotationId, workerToken: getWorkerToken() }));
+    if (threadId !== null) return;
+    // The panel's reactive ConvexProvider carries no Clerk token (see
+    // sidepanel.tsx) — this needs the same one-shot authed client every other
+    // auth-gated call uses.
+    const client = await buildAuthedClient();
+    const id = await client.mutation(startFromAnnotation, { annotationId });
     setThreadId(id);
   };
 

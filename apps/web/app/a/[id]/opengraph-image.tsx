@@ -10,8 +10,8 @@ export const alt = "An annotated clip";
 
 interface OgAnnotation {
   selectedText?: string;
-  commentaryText?: string;
-  commentaryAudioTranscript?: string;
+  takeText?: string;
+  takeAudioTranscript?: string;
   screenshotUrl?: string | null;
   source:
     | { title: string; type: string; siteName?: string; imageUrl?: string | null; youtubeThumbnailUrl?: string | null }
@@ -44,11 +44,11 @@ export default async function Image({
         data = {
           quote:
             annotation.selectedText ??
-            annotation.commentaryText ??
-            annotation.commentaryAudioTranscript ??
+            annotation.takeText ??
+            annotation.takeAudioTranscript ??
             "A clip on Annotated",
-          commentary: annotation.selectedText
-            ? annotation.commentaryText
+          take: annotation.selectedText
+            ? annotation.takeText
             : undefined,
           author: annotation.author?.displayName,
           sourceTitle: annotation.source?.title,

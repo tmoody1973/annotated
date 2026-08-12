@@ -1,6 +1,6 @@
 export interface OgCardData {
   quote: string;
-  commentary?: string;
+  take?: string;
   author?: string;
   sourceTitle?: string;
   sourceType: string;
@@ -37,7 +37,7 @@ export function OgCard({ data }: { data: OgCardData }) {
   const hasImage = !!data.imageUrl;
   const quoteSize = hasImage ? 46 : 56;
   const quoteMax = hasImage ? 130 : 160;
-  const commentaryMax = hasImage ? 80 : 120;
+  const takeMax = hasImage ? 80 : 120;
 
   return (
     <div
@@ -94,7 +94,7 @@ export function OgCard({ data }: { data: OgCardData }) {
           “{clamp(data.quote, quoteMax)}”
         </div>
 
-        {data.commentary && (
+        {data.take && (
           <div
             style={{
               display: "flex",
@@ -104,7 +104,7 @@ export function OgCard({ data }: { data: OgCardData }) {
               color: "#333333",
             }}
           >
-            {clamp(data.commentary, commentaryMax)}
+            {clamp(data.take, takeMax)}
           </div>
         )}
 

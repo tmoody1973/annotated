@@ -1,11 +1,33 @@
 import { v } from "convex/values";
 import {
   internalMutation,
+  internalQuery,
   mutation,
   query,
   type MutationCtx,
 } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
+
+/**
+ * Internal-only lookup by id — lets an action (which has no `ctx.db`) read a
+ * source's server-held fields, e.g. `media.transcribePodcast` reading mp3Url
+ * without trusting a client-supplied URL.
+ */
+export const getById = internalQuery({
+  args: { sourceId: v.id("sources") },
+  returns: v.union(
+    v.object({
+      type: v.union(v.literal("youtube"), v.literal("podcast"), v.literal("article")),
+      mp3Url: v.optional(v.string()),
+    }),
+    v.null()
+  ),
+  handler: async (ctx, args) => {
+    const source = await ctx.db.get(args.sourceId);
+    if (!source) return null;
+    return { type: source.type, mp3Url: source.mp3Url };
+  },
+});
 
 /**
  * Looks up a source by its YouTube video ID. Public (no auth) — the extension

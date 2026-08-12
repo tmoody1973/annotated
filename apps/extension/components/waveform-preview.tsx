@@ -60,7 +60,7 @@ export function WaveformPreview({ blob }: { blob: Blob }) {
       ref={canvasRef}
       width={WIDTH}
       height={HEIGHT}
-      aria-label="Waveform of the recorded commentary"
+      aria-label="Waveform of the recorded take"
       style={{ width: "100%", height: HEIGHT, background: paper, display: "block" }}
     />
   );

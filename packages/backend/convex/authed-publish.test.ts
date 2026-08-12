@@ -37,7 +37,7 @@ test("createYoutube attributes the clip to the signed-in Clerk identity", async 
     clipStorageId,
     clipStartMs: 0,
     clipEndMs: 10_000,
-    commentaryText: "my take",
+    takeText: "my take",
     topicIds: await oneTopic(t),
   });
 
@@ -57,7 +57,7 @@ test("createYoutube rejects an unauthenticated caller", async () => {
       clipStorageId,
       clipStartMs: 0,
       clipEndMs: 10_000,
-      commentaryText: "my take",
+      takeText: "my take",
       topicIds: await oneTopic(t),
     })
   ).rejects.toThrow("Not authenticated");
@@ -70,22 +70,22 @@ test("createYoutube accepts audio commentary, anonymity, and a thread", async ()
   const clipStorageId = await seedClipStorage(t);
   const audioStorageId = await seedClipStorage(t);
 
-  // Anonymous audio-only clip (no commentaryText) must publish.
+  // Anonymous audio-only clip (no takeText) must publish.
   const annotationId = await tarik.mutation(api.annotations.createYoutube, {
     videoId: "abc123",
     title: "Another video",
     clipStorageId,
     clipStartMs: 1_000,
     clipEndMs: 5_000,
-    commentaryAudioStorageId: audioStorageId,
-    commentaryAudioTranscript: "spoken take",
+    takeAudioStorageId: audioStorageId,
+    takeAudioTranscript: "spoken take",
     isAnonymous: true,
     topicIds: await oneTopic(t),
   });
 
   const stored = await t.run((ctx) => ctx.db.get(annotationId));
   expect(stored?.isAnonymous).toBe(true);
-  expect(stored?.commentaryAudioStorageId).toBe(audioStorageId);
+  expect(stored?.takeAudioStorageId).toBe(audioStorageId);
 });
 
 test("createYoutube refuses to append to a thread the caller does not own", async () => {
@@ -120,7 +120,7 @@ test("createYoutube refuses to append to a thread the caller does not own", asyn
       clipStorageId,
       clipStartMs: 0,
       clipEndMs: 10_000,
-      commentaryText: "sneaky",
+      takeText: "sneaky",
       threadId: aliceThreadId,
       topicIds: topics,
     })
@@ -133,7 +133,7 @@ test("createYoutube refuses to append to a thread the caller does not own", asyn
     clipStorageId,
     clipStartMs: 0,
     clipEndMs: 10_000,
-    commentaryText: "mine",
+    takeText: "mine",
     threadId: aliceThreadId,
     topicIds: topics,
   });
@@ -155,5 +155,5 @@ test("createYoutube rejects a clip with no commentary at all", async () => {
       clipEndMs: 10_000,
       topicIds: await oneTopic(t),
     })
-  ).rejects.toThrow("Commentary is required");
+  ).rejects.toThrow("A take is required");
 });

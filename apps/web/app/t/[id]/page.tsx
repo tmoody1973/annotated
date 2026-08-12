@@ -12,16 +12,18 @@ import { SourceByline } from "../../_components/source-byline";
 import { AppShell } from "../../_components/app-shell";
 import { JsonLd } from "../../_components/json-ld";
 import { absoluteUrl, threadPath } from "../../_lib/urls";
+import type { MediaState } from "../../../components/clip-media";
 
 interface ThreadClip {
   _id: string;
   selectedText?: string;
-  commentaryText?: string;
-  commentaryAudioUrl?: string | null;
-  commentaryAudioTranscript?: string;
+  takeText?: string;
+  takeAudioUrl?: string | null;
+  takeAudioTranscript?: string;
   clipStartMs?: number;
   clipEndMs?: number;
   clipUrl: string | null;
+  mediaState?: MediaState;
   likeCount: number;
   downCount: number;
   threadOrder?: number;
@@ -125,7 +127,7 @@ export default async function ThreadPage({
       : {}),
     hasPart: thread.clips.map((clip) => ({
       "@type": "CreativeWork",
-      text: clip.commentaryText ?? clip.selectedText ?? "",
+      text: clip.takeText ?? clip.selectedText ?? "",
     })),
   };
 
@@ -185,12 +187,13 @@ export default async function ThreadPage({
               <ClipArticle
                 data={{
                   selectedText: clip.selectedText,
-                  commentaryText: clip.commentaryText,
-                  commentaryAudioUrl: clip.commentaryAudioUrl,
-                  commentaryAudioTranscript: clip.commentaryAudioTranscript,
+                  takeText: clip.takeText,
+                  takeAudioUrl: clip.takeAudioUrl,
+                  takeAudioTranscript: clip.takeAudioTranscript,
                   clipStartMs: clip.clipStartMs,
                   clipEndMs: clip.clipEndMs,
                   clipUrl: clip.clipUrl,
+                  mediaState: clip.mediaState,
                   sourceType: thread.source?.type,
                 }}
               />

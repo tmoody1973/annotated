@@ -1,22 +1,12 @@
-import { ConvexHttpClient } from "convex/browser";
 import { makeFunctionReference } from "convex/server";
-import { getConvexToken } from "./auth-token";
+import {
+  buildAuthedClient,
+  withTimeout,
+  CONVEX_TIMEOUT_MS,
+  CONVEX_UNREACHABLE,
+} from "./convex-client";
 
-const convexUrl = process.env.PLASMO_PUBLIC_CONVEX_URL ?? "";
-
-const CONVEX_TIMEOUT_MS = 25000;
-const CONVEX_UNREACHABLE =
-  "Couldn't reach Annotated's servers. Check your connection and try again.";
-
-/** Rejects with a clear message if a Convex call stalls, so publish never spins
- *  forever when the deployment is unreachable (e.g. a network/firewall dropping
- *  the connection — the WebSocket-1006 case). */
-function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
-  return Promise.race([
-    promise,
-    new Promise<T>((_, reject) => setTimeout(() => reject(new Error(message)), ms)),
-  ]);
-}
+export { NotSignedInError } from "./convex-client";
 
 export type YoutubePublishArgs = {
   videoId: string;
@@ -26,12 +16,11 @@ export type YoutubePublishArgs = {
   // server-side from the Clerk identity.
   author?: string;
   channelUrl?: string;
-  clipStorageId: string;
   clipStartMs: number;
   clipEndMs: number;
-  commentaryText?: string;
-  commentaryAudioStorageId?: string;
-  commentaryAudioTranscript?: string;
+  takeText?: string;
+  takeAudioStorageId?: string;
+  takeAudioTranscript?: string;
   isAnonymous?: boolean;
   threadId?: string;
   topicIds: string[];
@@ -39,13 +28,12 @@ export type YoutubePublishArgs = {
 
 export type PodcastPublishArgs = {
   sourceId: string;
-  clipStorageId: string;
   clipStartMs: number;
   clipEndMs: number;
   selectedText: string;
-  commentaryText?: string;
-  commentaryAudioStorageId?: string;
-  commentaryAudioTranscript?: string;
+  takeText?: string;
+  takeAudioStorageId?: string;
+  takeAudioTranscript?: string;
   isAnonymous?: boolean;
   threadId?: string;
   topicIds: string[];
@@ -60,9 +48,9 @@ export type ArticlePublishArgs = {
   selectedText: string;
   textStart: number;
   textEnd: number;
-  commentaryText?: string;
-  commentaryAudioStorageId?: string;
-  commentaryAudioTranscript?: string;
+  takeText?: string;
+  takeAudioStorageId?: string;
+  takeAudioTranscript?: string;
   screenshotStorageId?: string;
   isAnonymous?: boolean;
   threadId?: string;
@@ -80,38 +68,6 @@ const createPodcast = makeFunctionReference<"mutation", PodcastPublishArgs, stri
 const createArticle = makeFunctionReference<"mutation", ArticlePublishArgs, string>(
   "annotations:createArticle"
 );
-
-/** Mirrors the Clerk identity into a `users` row, idempotently. The web app runs
- *  this on sign-in, but a user who only ever authed through the extension's
- *  syncHost may not have a row yet — and createYoutube derives the author from it. */
-const ensureCurrentUser = makeFunctionReference<"mutation", Record<string, never>, string>(
-  "users:ensureCurrentUser"
-);
-
-/** Thrown when a publish is attempted with no Clerk session — the caller prompts
- *  sign-in rather than silently attributing the clip to the dev seed user. */
-export class NotSignedInError extends Error {
-  constructor() {
-    super("Sign in on the web app, then close and reopen this panel, to publish.");
-    this.name = "NotSignedInError";
-  }
-}
-
-/** Creates an authed one-shot ConvexHttpClient for the signed-in Clerk user.
- *  Throws NotSignedInError when no token is available. Guarantees the users
- *  row exists before the caller uses the client to derive the author. */
-async function buildAuthedClient(): Promise<ConvexHttpClient> {
-  if (!convexUrl) {
-    throw new Error("Missing PLASMO_PUBLIC_CONVEX_URL");
-  }
-  const token = await getConvexToken();
-  if (!token) throw new NotSignedInError();
-  const client = new ConvexHttpClient(convexUrl);
-  client.setAuth(token);
-  // Guarantee the users row exists before deriving the author from it.
-  await withTimeout(client.mutation(ensureCurrentUser, {}), CONVEX_TIMEOUT_MS, CONVEX_UNREACHABLE);
-  return client;
-}
 
 /**
  * Publishes a YouTube clip as the signed-in Clerk user via a one-shot authed

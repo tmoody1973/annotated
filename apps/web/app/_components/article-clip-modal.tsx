@@ -83,7 +83,7 @@ type CreateArticleArgs = {
   selectedText: string;
   textStart: number;
   textEnd: number;
-  commentaryText?: string;
+  takeText?: string;
   topicIds: string[];
 };
 
@@ -117,7 +117,7 @@ export function ArticleClipModal({ onClose }: { onClose: () => void }) {
   const [url, setUrl] = useState("");
   const [article, setArticle] = useState<(Extracted & { url: string }) | null>(null);
   const [highlight, setHighlight] = useState<ArticleHighlight | null>(null);
-  const [commentary, setCommentary] = useState("");
+  const [take, setTake] = useState("");
   const [topicIds, setTopicIds] = useState<string[]>([]);
   const [status, setStatus] = useState<"url" | "extracting" | "compose" | "publishing">("url");
   const [error, setError] = useState<string | null>(null);
@@ -163,7 +163,7 @@ export function ArticleClipModal({ onClose }: { onClose: () => void }) {
   }
 
   const canPublish =
-    !!article && !!highlight?.valid && commentary.trim().length > 0 && topicIds.length > 0;
+    !!article && !!highlight?.valid && take.trim().length > 0 && topicIds.length > 0;
 
   async function handlePublish() {
     if (!article || !highlight) return;
@@ -179,7 +179,7 @@ export function ArticleClipModal({ onClose }: { onClose: () => void }) {
         selectedText: highlight.selectedText,
         textStart: highlight.textStart,
         textEnd: highlight.textEnd,
-        commentaryText: commentary.trim(),
+        takeText: take.trim(),
         topicIds,
       });
       markManualPublish();
@@ -304,8 +304,8 @@ export function ArticleClipModal({ onClose }: { onClose: () => void }) {
                 </blockquote>
               )}
               <textarea
-                value={commentary}
-                onChange={(e) => setCommentary(e.target.value)}
+                value={take}
+                onChange={(e) => setTake(e.target.value)}
                 placeholder="Add your take…"
                 rows={3}
                 className="border-[3px] border-[color:var(--b-line)] px-3 py-2 text-sm"

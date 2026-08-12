@@ -8,6 +8,7 @@ import {
   type QueryCtx,
 } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
+import { internal } from "./_generated/api";
 import { upsertArticleSource, upsertYoutubeSource, youtubeThumbnailFor } from "./sources";
 import { requireCurrentUser } from "./users";
 import { countWords, MAX_QUOTE_WORDS, rankAnnotations } from "@annotated/shared";
@@ -54,15 +55,24 @@ async function toFeedItem(ctx: QueryCtx, annotation: Doc<"annotations">) {
   )
     .filter((t): t is Doc<"topics"> => t !== null)
     .map((t) => ({ slug: t.slug, name: t.name }));
+  const takeText = annotation.takeText ?? annotation.commentaryText;
+  const takeAudioTranscript =
+    annotation.takeAudioTranscript ?? annotation.commentaryAudioTranscript;
   return {
     _id: annotation._id,
     publishedAt: annotation.publishedAt,
     selectedText: annotation.selectedText,
-    commentaryText: annotation.commentaryText,
-    commentaryAudioTranscript: annotation.commentaryAudioTranscript,
+    takeText,
+    takeAudioTranscript,
+    // Transitional: the deployed web app still reads the pre-rename keys.
+    // Drop once it has shipped with takeText/takeAudioTranscript.
+    commentaryText: takeText,
+    commentaryAudioTranscript: takeAudioTranscript,
     clipStartMs: annotation.clipStartMs,
     clipEndMs: annotation.clipEndMs,
     clipUrl,
+    // Absent means "ready" (pre-optimistic-publish rows never set it).
+    mediaState: annotation.mediaState,
     screenshotUrl,
     commentCount: annotation.commentCount,
     likeCount: annotation.likeCount,
@@ -102,20 +112,20 @@ export const MAX_CLIP_MS = 90_000;
 
 /**
  * Validates the publish-time invariants shared by the authed `create` mutation
- * and the dev seed publish: commentary must be present as text OR recorded audio
+ * and the dev seed publish: a take must be present as text OR recorded audio
  * (SPEC), and the clip span must be ordered and within the 90s cap. Throws with
  * a readable reason.
  */
 export function assertPublishable(input: {
-  commentaryText?: string;
-  commentaryAudioStorageId?: Id<"_storage">;
+  takeText?: string;
+  takeAudioStorageId?: Id<"_storage">;
   clipStartMs: number;
   clipEndMs: number;
 }): void {
-  const hasText = (input.commentaryText ?? "").trim().length > 0;
-  const hasAudio = input.commentaryAudioStorageId !== undefined;
+  const hasText = (input.takeText ?? "").trim().length > 0;
+  const hasAudio = input.takeAudioStorageId !== undefined;
   if (!hasText && !hasAudio) {
-    throw new Error("Commentary is required (text or recorded audio)");
+    throw new Error("A take is required (text or recorded audio)");
   }
   if (
     input.clipEndMs <= input.clipStartMs ||
@@ -150,14 +160,15 @@ interface AnnotationInsert {
   authorId: Id<"users">;
   sourceId: Id<"sources">;
   clipStorageId?: Id<"_storage">;
+  mediaState?: "processing" | "ready" | "failed";
   clipStartMs?: number;
   clipEndMs?: number;
   textStart?: number;
   textEnd?: number;
   selectedText?: string;
-  commentaryText?: string;
-  commentaryAudioStorageId?: Id<"_storage">;
-  commentaryAudioTranscript?: string;
+  takeText?: string;
+  takeAudioStorageId?: Id<"_storage">;
+  takeAudioTranscript?: string;
   screenshotStorageId?: Id<"_storage">;
   threadId?: Id<"threads">;
   isAnonymous?: boolean;
@@ -197,14 +208,15 @@ export async function insertAnnotation(
     authorId: input.authorId,
     sourceId: input.sourceId,
     clipStorageId: input.clipStorageId,
+    mediaState: input.mediaState,
     clipStartMs: input.clipStartMs,
     clipEndMs: input.clipEndMs,
     textStart: input.textStart,
     textEnd: input.textEnd,
     selectedText: input.selectedText,
-    commentaryText: input.commentaryText,
-    commentaryAudioStorageId: input.commentaryAudioStorageId,
-    commentaryAudioTranscript: input.commentaryAudioTranscript,
+    takeText: input.takeText,
+    takeAudioStorageId: input.takeAudioStorageId,
+    takeAudioTranscript: input.takeAudioTranscript,
     screenshotStorageId: input.screenshotStorageId,
     threadId: input.threadId,
     threadOrder,
@@ -224,7 +236,7 @@ export async function insertAnnotation(
  * Publishes a YouTube clip annotation as the signed-in user. Upserts the shared
  * source, then inserts the annotation. Author is derived from the Clerk identity
  * (`requireCurrentUser`) — never accepted as an argument. Mirrors the field set
- * the sidepanel collects (audio commentary, anonymity, thread append), enforcing
+ * the sidepanel collects (audio take, anonymity, thread append), enforcing
  * the same `assertPublishable` invariants as the dev seed path.
  */
 export const createYoutube = mutation({
@@ -235,12 +247,12 @@ export const createYoutube = mutation({
     channelUrl: v.optional(v.string()),
     thumbnailUrl: v.optional(v.string()),
     durationMs: v.optional(v.number()),
-    clipStorageId: v.id("_storage"),
+    clipStorageId: v.optional(v.id("_storage")),
     clipStartMs: v.number(),
     clipEndMs: v.number(),
-    commentaryText: v.optional(v.string()),
-    commentaryAudioStorageId: v.optional(v.id("_storage")),
-    commentaryAudioTranscript: v.optional(v.string()),
+    takeText: v.optional(v.string()),
+    takeAudioStorageId: v.optional(v.id("_storage")),
+    takeAudioTranscript: v.optional(v.string()),
     isAnonymous: v.optional(v.boolean()),
     threadId: v.optional(v.id("threads")),
     topicIds: v.array(v.id("topics")),
@@ -260,19 +272,32 @@ export const createYoutube = mutation({
     }
 
     const sourceId = await upsertYoutubeSource(ctx, args);
-    return await insertAnnotation(ctx, {
+    const annotationId = await insertAnnotation(ctx, {
       authorId: user._id,
       sourceId,
       clipStorageId: args.clipStorageId,
+      mediaState: args.clipStorageId === undefined ? "processing" : "ready",
       clipStartMs: args.clipStartMs,
       clipEndMs: args.clipEndMs,
-      commentaryText: args.commentaryText,
-      commentaryAudioStorageId: args.commentaryAudioStorageId,
-      commentaryAudioTranscript: args.commentaryAudioTranscript,
+      takeText: args.takeText,
+      takeAudioStorageId: args.takeAudioStorageId,
+      takeAudioTranscript: args.takeAudioTranscript,
       isAnonymous: args.isAnonymous,
       threadId: args.threadId,
       topicIds: args.topicIds,
     });
+
+    // Optimistic publish: the row (and its URL) exist now; the slice happens
+    // after. Skipped when the caller already supplied a clip.
+    if (args.clipStorageId === undefined) {
+      await ctx.scheduler.runAfter(0, internal.clips.sliceYoutube, {
+        annotationId,
+        videoId: args.videoId,
+        startMs: args.clipStartMs,
+        endMs: args.clipEndMs,
+      });
+    }
+    return annotationId;
   },
 });
 
@@ -280,20 +305,20 @@ export const createYoutube = mutation({
  * Publishes a podcast clip annotation as the signed-in user. The source row is
  * identified by the `sourceId` created during the podcast-resolution step
  * (Step 6). Validates that the source is actually a podcast, that the transcript
- * quote is non-empty, and that the clip span + commentary meet the publish
+ * quote is non-empty, and that the clip span + take meet the publish
  * invariants. Author is derived from the Clerk identity — never accepted as an
  * argument.
  */
 export const createPodcast = mutation({
   args: {
     sourceId: v.id("sources"),
-    clipStorageId: v.id("_storage"),
+    clipStorageId: v.optional(v.id("_storage")),
     clipStartMs: v.number(),
     clipEndMs: v.number(),
     selectedText: v.string(),
-    commentaryText: v.optional(v.string()),
-    commentaryAudioStorageId: v.optional(v.id("_storage")),
-    commentaryAudioTranscript: v.optional(v.string()),
+    takeText: v.optional(v.string()),
+    takeAudioStorageId: v.optional(v.id("_storage")),
+    takeAudioTranscript: v.optional(v.string()),
     isAnonymous: v.optional(v.boolean()),
     threadId: v.optional(v.id("threads")),
     topicIds: v.array(v.id("topics")),
@@ -316,29 +341,64 @@ export const createPodcast = mutation({
         throw new Error("Cannot append to a thread you do not own");
       }
     }
-    return await insertAnnotation(ctx, {
+    const annotationId = await insertAnnotation(ctx, {
       authorId: user._id,
       sourceId: args.sourceId,
       clipStorageId: args.clipStorageId,
+      mediaState: args.clipStorageId === undefined ? "processing" : "ready",
       clipStartMs: args.clipStartMs,
       clipEndMs: args.clipEndMs,
       selectedText: args.selectedText,
-      commentaryText: args.commentaryText,
-      commentaryAudioStorageId: args.commentaryAudioStorageId,
-      commentaryAudioTranscript: args.commentaryAudioTranscript,
+      takeText: args.takeText,
+      takeAudioStorageId: args.takeAudioStorageId,
+      takeAudioTranscript: args.takeAudioTranscript,
       isAnonymous: args.isAnonymous,
       threadId: args.threadId,
       topicIds: args.topicIds,
     });
+
+    if (args.clipStorageId === undefined) {
+      // `.first()`, not `.unique()`: concurrent transcribe requests for the
+      // same episode can insert more than one row (no dedup upstream), and
+      // the first is the timeline-correct one — the row whose word
+      // timestamps the extension actually displayed.
+      const transcript = await ctx.db
+        .query("transcripts")
+        .withIndex("by_source", (q) => q.eq("sourceId", args.sourceId))
+        .first();
+      // The frozen episode is what the displayed word timestamps belong to.
+      // Clipping the live enclosure would drift against ad insertion (9cf7ac0).
+      if (!transcript || transcript.status === "pending" || transcript.status === "processing") {
+        // Transient: transcription hasn't finished yet, retrying later works.
+        throw new Error(
+          "This episode isn't ready to clip yet — its audio is still being prepared."
+        );
+      }
+      if (transcript.status === "failed" || !transcript.episodeStorageId) {
+        // Permanent: transcription itself failed, or it finished but the
+        // frozen download failed (transcribe.ts's live-URL fallback) — no
+        // episode audio will ever show up here, so don't tell the user to wait.
+        throw new Error(
+          "This episode's audio couldn't be prepared for clipping. Try a different clip."
+        );
+      }
+      await ctx.scheduler.runAfter(0, internal.clips.slicePodcast, {
+        annotationId,
+        episodeStorageId: transcript.episodeStorageId,
+        startMs: args.clipStartMs,
+        endMs: args.clipEndMs,
+      });
+    }
+    return annotationId;
   },
 });
 
 /**
  * Publishes an article clip annotation as the signed-in user. An article has
  * no media clip — the "clip" is the highlighted quote (`selectedText` +
- * char offsets) plus commentary. Does NOT call `assertPublishable` (which
+ * char offsets) plus a take. Does NOT call `assertPublishable` (which
  * assumes an audio/video span); instead validates the quote, offsets, and
- * commentary directly. Upserts the article source by canonical URL. Author is
+ * take directly. Upserts the article source by canonical URL. Author is
  * derived from the Clerk identity — never accepted as an argument.
  */
 export const createArticle = mutation({
@@ -351,9 +411,9 @@ export const createArticle = mutation({
     selectedText: v.string(),
     textStart: v.number(),
     textEnd: v.number(),
-    commentaryText: v.optional(v.string()),
-    commentaryAudioStorageId: v.optional(v.id("_storage")),
-    commentaryAudioTranscript: v.optional(v.string()),
+    takeText: v.optional(v.string()),
+    takeAudioStorageId: v.optional(v.id("_storage")),
+    takeAudioTranscript: v.optional(v.string()),
     screenshotStorageId: v.optional(v.id("_storage")),
     isAnonymous: v.optional(v.boolean()),
     threadId: v.optional(v.id("threads")),
@@ -365,9 +425,9 @@ export const createArticle = mutation({
     if (args.selectedText.trim().length === 0) {
       throw new Error("A highlighted quote is required");
     }
-    const hasCommentaryText = (args.commentaryText ?? "").trim().length > 0;
-    if (!hasCommentaryText && args.commentaryAudioStorageId === undefined) {
-      throw new Error("Commentary is required (text or recorded audio)");
+    const hasTakeText = (args.takeText ?? "").trim().length > 0;
+    if (!hasTakeText && args.takeAudioStorageId === undefined) {
+      throw new Error("A take is required (text or recorded audio)");
     }
     if (
       !Number.isInteger(args.textStart) ||
@@ -407,9 +467,9 @@ export const createArticle = mutation({
       selectedText: args.selectedText,
       textStart: args.textStart,
       textEnd: args.textEnd,
-      commentaryText: args.commentaryText,
-      commentaryAudioStorageId: args.commentaryAudioStorageId,
-      commentaryAudioTranscript: args.commentaryAudioTranscript,
+      takeText: args.takeText,
+      takeAudioStorageId: args.takeAudioStorageId,
+      takeAudioTranscript: args.takeAudioTranscript,
       screenshotStorageId: args.screenshotStorageId,
       isAnonymous: args.isAnonymous,
       threadId: args.threadId,
@@ -556,12 +616,17 @@ export async function toLandingView(
   const clipUrl = annotation.clipStorageId
     ? await ctx.storage.getUrl(annotation.clipStorageId)
     : null;
-  const commentaryAudioUrl = annotation.commentaryAudioStorageId
-    ? await ctx.storage.getUrl(annotation.commentaryAudioStorageId)
+  const takeAudioStorageId =
+    annotation.takeAudioStorageId ?? annotation.commentaryAudioStorageId;
+  const takeAudioUrl = takeAudioStorageId
+    ? await ctx.storage.getUrl(takeAudioStorageId)
     : null;
   const screenshotUrl = annotation.screenshotStorageId
     ? await ctx.storage.getUrl(annotation.screenshotStorageId)
     : null;
+  const takeText = annotation.takeText ?? annotation.commentaryText;
+  const takeAudioTranscript =
+    annotation.takeAudioTranscript ?? annotation.commentaryAudioTranscript;
 
   return {
     ...annotation,
@@ -573,8 +638,18 @@ export async function toLandingView(
     // Pre-§2 rows have no `downCount`; default to 0 so the vote control gets a
     // number (mirrors the `listFeed` projection).
     downCount: annotation.downCount ?? 0,
+    takeText,
+    takeAudioTranscript,
     clipUrl,
-    commentaryAudioUrl,
+    takeAudioUrl,
+    // Transitional: the deployed web app still reads the pre-rename keys
+    // (the `...annotation` spread above only carries their *raw*, possibly
+    // undefined, DB values for post-rename rows — these overrides make them
+    // correct for every row's vintage). Drop once it has shipped with
+    // takeText/takeAudioUrl/takeAudioTranscript.
+    commentaryText: takeText,
+    commentaryAudioUrl: takeAudioUrl,
+    commentaryAudioTranscript: takeAudioTranscript,
     screenshotUrl,
     source: source
       ? {

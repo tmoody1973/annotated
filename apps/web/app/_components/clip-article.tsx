@@ -1,6 +1,6 @@
 import { formatClipTimestamp } from "@annotated/shared";
-import { WaveformPlayer } from "./waveform-player";
 import { SourceByline } from "./source-byline";
+import { ClipMedia, type MediaState } from "../../components/clip-media";
 
 /**
  * The source screenshot, capped in height and top-anchored so the head of the
@@ -32,9 +32,9 @@ function SourceVisual({
 
 export interface ClipArticleData {
   selectedText?: string;
-  commentaryText?: string;
-  commentaryAudioUrl?: string | null;
-  commentaryAudioTranscript?: string;
+  takeText?: string;
+  takeAudioUrl?: string | null;
+  takeAudioTranscript?: string;
   // The transcript text for the clip window (youtube-vtt / podcast deepgram),
   // shown in an accordion — the WCAG text alternative for the clip's audio.
   clipTranscript?: string;
@@ -43,6 +43,7 @@ export interface ClipArticleData {
   clipStartMs?: number;
   clipEndMs?: number;
   clipUrl: string | null;
+  mediaState?: MediaState;
   // A capture of the original article page (gap §4), shown as the citation
   // visual so the clip reads as "pointing at" the source, not replacing it.
   screenshotUrl?: string | null;
@@ -65,7 +66,7 @@ const label = "font-mono text-[11px] font-bold uppercase tracking-[0.14em]";
 
 /**
  * The brutalist clip card: media (by source type), the quote, text + voice
- * commentary, author, and (optionally) the source attribution. Presentational
+ * take, author, and (optionally) the source attribution. Presentational
  * and server-renderable — shared by the /a/[id] landing and the /t/[id] thread
  * so a clip looks identical standalone or in a thread. Reads --b-* tokens, so it
  * flips light/dark with the theme.
@@ -83,22 +84,13 @@ export function ClipArticle({ data }: { data: ClipArticleData }) {
 
   return (
     <article className="border-[3px] border-[color:var(--b-line)] bg-[color:var(--b-card)] text-[color:var(--b-ink)] shadow-[8px_8px_0_0_var(--b-shadow)]">
-      {!isArticle && !data.clipUrl && (
-        <div className="border-b-[3px] border-[color:var(--b-line)] bg-[color:var(--b-chrome)]">
-          <p className={`p-8 text-center ${label} text-[color:var(--b-acid)]`}>clip unavailable</p>
-        </div>
-      )}
-      {!isArticle && data.clipUrl && isPodcast && <WaveformPlayer src={data.clipUrl} />}
-      {!isArticle && data.clipUrl && !isPodcast && (
-        <div className="border-b-[3px] border-[color:var(--b-line)] bg-[color:var(--b-chrome)]">
-          <video controls className="block max-h-[60vh] w-full bg-black">
-            <source src={data.clipUrl} />
-            {data.captionsUrl && (
-              <track kind="captions" srcLang="en" label="English" src={data.captionsUrl} default />
-            )}
-          </video>
-        </div>
-      )}
+      <ClipMedia
+        mediaState={data.mediaState}
+        clipUrl={data.clipUrl}
+        sourceType={isArticle ? "article" : isPodcast ? "podcast" : "youtube"}
+        captionsUrl={data.captionsUrl}
+        className="border-b-[3px] border-[color:var(--b-line)]"
+      />
 
       {isArticle && articleVisual && (
         <figure className="border-b-[3px] border-[color:var(--b-line)]">
@@ -132,17 +124,17 @@ export function ClipArticle({ data }: { data: ClipArticleData }) {
           </blockquote>
         )}
 
-        {data.commentaryText && (
-          <p className="mt-5 text-[17px] leading-relaxed">{data.commentaryText}</p>
+        {data.takeText && (
+          <p className="mt-5 text-[17px] leading-relaxed">{data.takeText}</p>
         )}
 
-        {data.commentaryAudioUrl && (
+        {data.takeAudioUrl && (
           <div className="mt-5 border-l-[6px] border-[color:var(--b-acid)] pl-4">
-            <p className={`mb-2 ${label} text-[color:var(--b-dim)]`}>Voice commentary</p>
-            <audio controls src={data.commentaryAudioUrl} className="w-full" />
-            {data.commentaryAudioTranscript && (
+            <p className={`mb-2 ${label} text-[color:var(--b-dim)]`}>Voice take</p>
+            <audio controls src={data.takeAudioUrl} className="w-full" />
+            {data.takeAudioTranscript && (
               <p className="mt-2 text-[15px] italic leading-relaxed text-[color:var(--b-dim)]">
-                “{data.commentaryAudioTranscript}”
+                “{data.takeAudioTranscript}”
               </p>
             )}
           </div>

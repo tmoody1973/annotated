@@ -4,7 +4,7 @@ export type ShareFormat = "story" | "grid";
 
 export interface ShareCardData {
   quote: string;
-  commentary?: string;
+  take?: string;
   authorName?: string; // undefined => anonymous
   avatarUrl?: string | null;
   isVerified?: boolean;
@@ -101,11 +101,11 @@ export function ShareCard({
   const isStory = format === "story";
   const pad = isStory ? 88 : 64;
   const quoteSize = isStory ? 72 : 60;
-  const commentarySize = isStory ? 34 : 30;
+  const takeSize = isStory ? 34 : 30;
   const avatarSize = isStory ? 72 : 60;
   const identitySize = isStory ? 34 : 30;
   const quoteMax = isStory ? 220 : 180;
-  const commentaryMax = isStory ? 200 : 140;
+  const takeMax = isStory ? 200 : 140;
   const anonymous = !data.authorName;
   const name = data.authorName ?? "Anonymous";
 
@@ -158,17 +158,17 @@ export function ShareCard({
         “{clamp(data.quote, quoteMax)}”
       </div>
 
-      {data.commentary && (
+      {data.take && (
         <div
           style={{
             display: "flex",
             marginTop: 28,
-            fontSize: commentarySize,
+            fontSize: takeSize,
             lineHeight: 1.3,
             color: COLORS.dim,
           }}
         >
-          {clamp(data.commentary, commentaryMax)}
+          {clamp(data.take, takeMax)}
         </div>
       )}
 

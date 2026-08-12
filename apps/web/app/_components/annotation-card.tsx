@@ -3,18 +3,19 @@
 import Link from "next/link";
 import { slugId, formatRelativeTime } from "@annotated/shared";
 import { VoteButtons } from "./vote-buttons";
-import { WaveformPlayer } from "./waveform-player";
 import { AuthorAvatar, VerifiedBadge } from "./author-avatar";
 import { CardShareMenu } from "./card-share-menu";
 import { SourceByline } from "./source-byline";
+import { ClipMedia, type MediaState } from "../../components/clip-media";
 
 export interface FeedItem {
   _id: string;
   publishedAt?: number;
   selectedText?: string;
-  commentaryText?: string;
-  commentaryAudioTranscript?: string;
+  takeText?: string;
+  takeAudioTranscript?: string;
   clipUrl: string | null;
+  mediaState?: MediaState;
   screenshotUrl?: string | null;
   commentCount: number;
   likeCount: number;
@@ -64,8 +65,8 @@ export function AnnotationCard({ item }: { item: FeedItem }) {
   const cardSlug = slugId(source?.title ?? "clip", item._id);
   const shareQuote =
     item.selectedText ??
-    item.commentaryText ??
-    item.commentaryAudioTranscript ??
+    item.takeText ??
+    item.takeAudioTranscript ??
     source?.title ??
     "";
   const age = item.publishedAt ? formatRelativeTime(item.publishedAt) : "";
@@ -125,11 +126,13 @@ export function AnnotationCard({ item }: { item: FeedItem }) {
         </div>
       )}
 
-      {type === "youtube" && item.clipUrl && (
-        <video controls src={item.clipUrl} className="block w-full border-y-[3px] border-[color:var(--b-line)] bg-black" />
-      )}
-
-      {type === "podcast" && item.clipUrl && <WaveformPlayer src={item.clipUrl} />}
+      <ClipMedia
+        mediaState={item.mediaState}
+        clipUrl={item.clipUrl}
+        sourceType={type}
+        bare
+        className="border-y-[3px] border-[color:var(--b-line)]"
+      />
 
       {type === "article" && (item.screenshotUrl ?? item.source?.imageUrl) && (
         <Link href={detailHref} className="block border-y-[3px] border-[color:var(--b-line)]">
@@ -150,11 +153,11 @@ export function AnnotationCard({ item }: { item: FeedItem }) {
         </blockquote>
       )}
 
-      {item.commentaryText ? (
-        <p className="px-4 pt-3 text-[15px] leading-relaxed">{item.commentaryText}</p>
-      ) : item.commentaryAudioTranscript ? (
+      {item.takeText ? (
+        <p className="px-4 pt-3 text-[15px] leading-relaxed">{item.takeText}</p>
+      ) : item.takeAudioTranscript ? (
         <p className="px-4 pt-3 text-[15px] italic leading-relaxed text-[color:var(--b-dim)]">
-          🎙 “{item.commentaryAudioTranscript}”
+          🎙 “{item.takeAudioTranscript}”
         </p>
       ) : null}
 

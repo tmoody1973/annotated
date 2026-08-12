@@ -10,7 +10,7 @@ export const alt = "An annotated thread";
 
 interface OgThreadClip {
   selectedText?: string;
-  commentaryText?: string;
+  takeText?: string;
 }
 interface OgThread {
   title: string | null;
@@ -48,7 +48,7 @@ export default async function Image({
           quote:
             thread.title ??
             first?.selectedText ??
-            first?.commentaryText ??
+            first?.takeText ??
             thread.source?.title ??
             "A thread on Annotated",
           author: thread.author?.displayName,

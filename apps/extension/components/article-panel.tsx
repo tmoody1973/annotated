@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { useMutation } from "convex/react";
 import {
   selectArticleHighlight,
   MAX_QUOTE_WORDS,
@@ -9,8 +8,8 @@ import type { ArticleDetection } from "../lib/use-active-tab-article";
 import {
   extractArticle,
   getWebUrl,
-  getWorkerToken,
-  transcodeCommentary,
+  mintUploadUrl,
+  uploadTakeAudio,
   type ExtractedArticle,
 } from "../lib/worker-client";
 import { publishArticleAuthed, NotSignedInError } from "../lib/convex-publish";
@@ -25,12 +24,8 @@ import {
   sansStack,
   valid,
 } from "../lib/clip-styles";
-import {
-  captureVisibleArticle,
-  generateUploadUrlRef,
-  uploadToConvexStorage,
-} from "../lib/screenshot";
-import { CommentaryComposer } from "./commentary-composer";
+import { captureVisibleArticle, uploadToConvexStorage } from "../lib/screenshot";
+import { TakeComposer } from "./take-composer";
 import { AnonymousToggle } from "./anonymous-toggle";
 import { TopicPicker } from "./topic-picker";
 import { useThread } from "../lib/use-thread";
@@ -71,7 +66,6 @@ function readSelectionOffsets(
  * publish to a source-linked landing page. No transcription, no ffmpeg.
  */
 export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
-  const generateUploadUrl = useMutation(generateUploadUrlRef);
   const thread = useThread();
   const textRef = useRef<HTMLDivElement | null>(null);
   const publishing = useRef(false);
@@ -135,7 +129,7 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
     try {
       const blob = await captureVisibleArticle();
       if (!blob) return undefined;
-      const uploadUrl = await generateUploadUrl({ workerToken: getWorkerToken() });
+      const uploadUrl = await mintUploadUrl();
       return await uploadToConvexStorage(uploadUrl, blob);
     } catch {
       return undefined;
@@ -155,8 +149,8 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
     setStatus("publishing");
     setError(null);
     try {
-      const commentaryAudio = audioBlob
-        ? await transcodeCommentary(audioBlob)
+      const takeAudio = audioBlob
+        ? await uploadTakeAudio(audioBlob)
         : null;
       const screenshotStorageId = await captureSourceScreenshot();
       const annotationId = await publishArticleAuthed({
@@ -167,9 +161,9 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
         selectedText: highlight.selectedText,
         textStart: highlight.textStart,
         textEnd: highlight.textEnd,
-        commentaryText: take.trim(),
-        commentaryAudioStorageId: commentaryAudio?.storageId,
-        commentaryAudioTranscript: commentaryAudio?.transcript ?? undefined,
+        takeText: take.trim(),
+        takeAudioStorageId: takeAudio?.storageId,
+        takeAudioTranscript: takeAudio?.transcript ?? undefined,
         ...(screenshotStorageId ? { screenshotStorageId } : {}),
         ...(article.imageUrl ? { sourceImageUrl: article.imageUrl } : {}),
         isAnonymous,
@@ -333,7 +327,7 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
       )}
 
       <div style={{ marginTop: 10 }}>
-        <CommentaryComposer
+        <TakeComposer
           text={take}
           onTextChange={setTake}
           onAudioChange={setAudioBlob}

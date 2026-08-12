@@ -1,5 +1,8 @@
 import { execFile } from "node:child_process";
 import { mkdtemp, rm, readFile } from "node:fs/promises";
+import { createReadStream } from "node:fs";
+import { createServer, type Server } from "node:http";
+import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -14,14 +17,17 @@ const WORKER_TOKEN = "test-worker-token";
 const STORAGE_ID = "kg2fakestorageid000000000000000";
 
 let webmBase64: string;
+let webmPath: string;
 let fixtureDir: string;
+let fixtureServer: Server;
+let fixtureAudioUrl: string;
 
 // Controllable transcript behavior per test: the stub resolves/rejects from here.
 let transcribeFileImpl: (audio: Buffer, mimetype: string) => Promise<string>;
 
 beforeAll(async () => {
   fixtureDir = await mkdtemp(join(tmpdir(), "transcode-route-fixture-"));
-  const webmPath = join(fixtureDir, "voice.webm");
+  webmPath = join(fixtureDir, "voice.webm");
   // A real 1s opus-in-webm clip — what MediaRecorder emits in Chrome — so the
   // route's transcodeToMp3 step runs for real (no ffmpeg mock).
   await execFileAsync("ffmpeg", [
@@ -35,10 +41,21 @@ beforeAll(async () => {
     webmPath,
   ]);
   webmBase64 = (await readFile(webmPath)).toString("base64");
+
+  // Serves the same fixture over http://127.0.0.1 so the audioUrl branch can
+  // fetch it exactly like it would fetch a Convex storage URL.
+  fixtureServer = createServer((_req, res) => {
+    res.writeHead(200, { "content-type": "audio/webm" });
+    createReadStream(webmPath).pipe(res);
+  });
+  await new Promise<void>((resolve) => fixtureServer.listen(0, "127.0.0.1", () => resolve()));
+  const address = fixtureServer.address() as AddressInfo;
+  fixtureAudioUrl = `http://127.0.0.1:${address.port}/voice.webm`;
 });
 
 afterAll(async () => {
   await rm(fixtureDir, { recursive: true, force: true });
+  await new Promise<void>((resolve) => fixtureServer.close(() => resolve()));
 });
 
 function buildApp(): FastifyInstance {
@@ -125,4 +142,35 @@ test("rejects an empty base64 audio payload with 400", async () => {
   const app = buildApp();
   const res = await post(app, { audioBase64: "", mimeType: "audio/webm" });
   expect(res.statusCode).toBe(400);
+});
+
+test("accepts audioUrl, fetches it, and returns the same storageId/transcript shape", async () => {
+  const app = buildApp();
+  const res = await post(app, { audioUrl: fixtureAudioUrl, mimeType: "audio/webm" });
+  expect(res.statusCode).toBe(200);
+  expect(res.json()).toEqual({
+    storageId: STORAGE_ID,
+    transcript: "This is a real test of recorded voice commentary.",
+  });
+});
+
+test("rejects a body with both audioBase64 and audioUrl", async () => {
+  const app = buildApp();
+  const res = await post(app, {
+    audioBase64: webmBase64,
+    audioUrl: fixtureAudioUrl,
+    mimeType: "audio/webm",
+  });
+  expect(res.statusCode).toBe(400);
+});
+
+test("rejects a body with neither audioBase64 nor audioUrl", async () => {
+  const app = buildApp();
+  const res = await post(app, { mimeType: "audio/webm" });
+  expect(res.statusCode).toBe(400);
+  // Asserts the schema's own refine message, not just the status code — without
+  // it this would also 400 via the unrelated "empty audio payload" fallback.
+  expect(JSON.stringify(res.json())).toContain(
+    "Provide exactly one of audioBase64 or audioUrl"
+  );
 });

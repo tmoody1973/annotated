@@ -112,16 +112,32 @@ export default defineSchema({
     clipEndMs: v.optional(v.number()),
     // Storage ID for the sliced clip file (set by the worker after slicing).
     clipStorageId: v.optional(v.id("_storage")),
+    // Optimistic publish: the row is created the moment the user hits Publish,
+    // before the worker has sliced anything, so a shareable URL exists in ~2s.
+    // A Convex action patches `clipStorageId` and flips this to "ready" when the
+    // slice lands, or to "failed" if it doesn't. Absent means "ready" — every
+    // pre-existing row was created with its clip already attached, so there is
+    // no backfill.
+    mediaState: v.optional(
+      v.union(v.literal("processing"), v.literal("ready"), v.literal("failed"))
+    ),
     // Text selection boundaries for article sources.
     textStart: v.optional(v.number()),
     textEnd: v.optional(v.number()),
     selectedText: v.optional(v.string()),
-    // Commentary — at least one of these must be present.
+    // Commentary — at least one of these must be present. Pre-rename names,
+    // kept so existing rows validate; new rows write take* below.
     commentaryText: v.optional(v.string()),
     commentaryAudioStorageId: v.optional(v.id("_storage")),
     // Deepgram transcript of the recorded commentary (best-effort; for captions
     // + feed previews of audio-only annotations).
     commentaryAudioTranscript: v.optional(v.string()),
+    // The Take — the user's argument about the clip. Named per the locked
+    // conceptual model (docs/conceptual-model.md). Projections read
+    // take* ?? commentary* so pre-rename rows keep rendering.
+    takeText: v.optional(v.string()),
+    takeAudioStorageId: v.optional(v.id("_storage")),
+    takeAudioTranscript: v.optional(v.string()),
     // Source screenshot (gap §4): a capture of the original page taken in the
     // extension at clip time, so an article landing reads as a citation ("we
     // point at it, we don't replace it") rather than a bare quote. Per-annotation

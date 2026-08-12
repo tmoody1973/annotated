@@ -4,11 +4,7 @@ import {
   formatClipTimestamp,
   type TranscriptWord,
 } from "@annotated/shared";
-import {
-  clipAudio,
-  getWebUrl,
-  transcodeCommentary,
-} from "../lib/worker-client";
+import { getWebUrl, uploadTakeAudio } from "../lib/worker-client";
 import { publishPodcastAuthed, NotSignedInError } from "../lib/convex-publish";
 import {
   accent,
@@ -21,7 +17,7 @@ import {
   sansStack,
   valid,
 } from "../lib/clip-styles";
-import { CommentaryComposer } from "./commentary-composer";
+import { TakeComposer } from "./take-composer";
 import { AnonymousToggle } from "./anonymous-toggle";
 import { TopicPicker } from "./topic-picker";
 import { useThread } from "../lib/use-thread";
@@ -47,22 +43,17 @@ function groupBySpeaker(words: TranscriptWord[]): SpeakerSegment[] {
 
 /**
  * The transcript-as-canvas: tap a word to anchor, tap another to complete the
- * span. The selection auto-fills the verbatim quote (never machine-authored)
- * and drives the audio clip. The user's take is the product; publishing cuts the
- * audio span on the worker and writes the annotation.
+ * span. The selection auto-fills the verbatim quote (never machine-authored).
+ * The user's take is the product; publishing writes the annotation immediately
+ * and the audio span is cut server-side afterward (mirrors the YouTube path) —
+ * the frozen episode copy the slice cuts from is resolved server-side from the
+ * source's transcript row, not passed by the client.
  */
 export function TranscriptCanvas({
   sourceId,
-  mp3Url,
-  clipUrl,
   words,
 }: {
   sourceId: string;
-  mp3Url: string;
-  /** The frozen episode copy (Convex storage) the transcript was made from. When
-   *  present, cut the clip from it so the audio matches the selected words; falls
-   *  back to the live enclosure (drift-prone) when absent. */
-  clipUrl?: string;
   words: TranscriptWord[];
 }) {
   const thread = useThread();
@@ -73,9 +64,6 @@ export function TranscriptCanvas({
   const [topicIds, setTopicIds] = useState<string[]>([]);
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [status, setStatus] = useState<"idle" | "publishing" | "error">("idle");
-  // The current step of a publish, so the button names what's happening: cutting
-  // the audio on the worker (~2s) vs. writing the annotation. No bar — too fast.
-  const [phase, setPhase] = useState<"slicing" | "saving" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [link, setLink] = useState<string | null>(null);
   const [publishedId, setPublishedId] = useState<string | null>(null);
@@ -115,27 +103,19 @@ export function TranscriptCanvas({
     if (!selection || publishing.current) return;
     publishing.current = true;
     setStatus("publishing");
-    setPhase("slicing");
     setError(null);
     try {
-      const clipStorageId = await clipAudio(
-        clipUrl ?? mp3Url,
-        selection.clipStartMs,
-        selection.clipEndMs
-      );
-      const commentaryAudio = audioBlob
-        ? await transcodeCommentary(audioBlob)
-        : null;
-      setPhase("saving");
+      // A recorded take still has to reach storage before publish, because the
+      // annotation row references it. Text-only takes skip this entirely.
+      const takeAudio = audioBlob ? await uploadTakeAudio(audioBlob) : null;
       const annotationId = await publishPodcastAuthed({
         sourceId,
-        clipStorageId,
         clipStartMs: selection.clipStartMs,
         clipEndMs: selection.clipEndMs,
         selectedText: selection.quote,
-        commentaryText: take.trim(),
-        commentaryAudioStorageId: commentaryAudio?.storageId,
-        commentaryAudioTranscript: commentaryAudio?.transcript ?? undefined,
+        takeText: take.trim(),
+        takeAudioStorageId: takeAudio?.storageId,
+        takeAudioTranscript: takeAudio?.transcript ?? undefined,
         isAnonymous,
         threadId: thread.threadId ?? undefined,
         topicIds,
@@ -143,11 +123,9 @@ export function TranscriptCanvas({
       setPublishedId(annotationId);
       setLink(`${getWebUrl()}/a/${annotationId}`);
       setStatus("idle");
-      setPhase(null);
     } catch (e) {
       publishing.current = false;
       setStatus("error");
-      setPhase(null);
       if (e instanceof NotSignedInError) {
         setError(e.message);
       } else {
@@ -278,7 +256,7 @@ export function TranscriptCanvas({
       )}
 
       <div style={{ marginTop: 10 }}>
-        <CommentaryComposer
+        <TakeComposer
           text={take}
           onTextChange={setTake}
           onAudioChange={setAudioBlob}
@@ -307,8 +285,8 @@ export function TranscriptCanvas({
         style={{ marginTop: 10 }}
       >
         {status === "publishing"
-          ? phase === "slicing"
-            ? "Slicing clip… (~2s)"
+          ? audioBlob
+            ? "Uploading your take…"
             : "Saving annotation…"
           : "Publish clip"}
       </button>

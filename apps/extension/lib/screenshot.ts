@@ -1,12 +1,3 @@
-import { makeFunctionReference } from "convex/server";
-
-/** Token-guarded mutation that mints a short-lived Convex storage upload URL. */
-export const generateUploadUrlRef = makeFunctionReference<
-  "mutation",
-  { workerToken: string },
-  string
->("files:generateUploadUrl");
-
 /**
  * Captures the visible area of the active tab as a JPEG blob — the article page
  * the clipper is looking at — so the landing can show it as a citation visual
