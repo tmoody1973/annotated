@@ -16,9 +16,9 @@ import { absoluteUrl, threadPath } from "../../_lib/urls";
 interface ThreadClip {
   _id: string;
   selectedText?: string;
-  commentaryText?: string;
-  commentaryAudioUrl?: string | null;
-  commentaryAudioTranscript?: string;
+  takeText?: string;
+  takeAudioUrl?: string | null;
+  takeAudioTranscript?: string;
   clipStartMs?: number;
   clipEndMs?: number;
   clipUrl: string | null;
@@ -125,7 +125,7 @@ export default async function ThreadPage({
       : {}),
     hasPart: thread.clips.map((clip) => ({
       "@type": "CreativeWork",
-      text: clip.commentaryText ?? clip.selectedText ?? "",
+      text: clip.takeText ?? clip.selectedText ?? "",
     })),
   };
 
@@ -185,9 +185,9 @@ export default async function ThreadPage({
               <ClipArticle
                 data={{
                   selectedText: clip.selectedText,
-                  commentaryText: clip.commentaryText,
-                  commentaryAudioUrl: clip.commentaryAudioUrl,
-                  commentaryAudioTranscript: clip.commentaryAudioTranscript,
+                  takeText: clip.takeText,
+                  takeAudioUrl: clip.takeAudioUrl,
+                  takeAudioTranscript: clip.takeAudioTranscript,
                   clipStartMs: clip.clipStartMs,
                   clipEndMs: clip.clipEndMs,
                   clipUrl: clip.clipUrl,

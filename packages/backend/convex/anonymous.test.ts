@@ -30,7 +30,7 @@ const articleBase = {
   selectedText: quote,
   textStart: 0,
   textEnd: quote.length,
-  commentaryText: "my anonymous take",
+  takeText: "my anonymous take",
   workerToken: WORKER_TOKEN,
 };
 

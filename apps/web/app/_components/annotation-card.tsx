@@ -12,8 +12,8 @@ export interface FeedItem {
   _id: string;
   publishedAt?: number;
   selectedText?: string;
-  commentaryText?: string;
-  commentaryAudioTranscript?: string;
+  takeText?: string;
+  takeAudioTranscript?: string;
   clipUrl: string | null;
   screenshotUrl?: string | null;
   commentCount: number;
@@ -64,8 +64,8 @@ export function AnnotationCard({ item }: { item: FeedItem }) {
   const cardSlug = slugId(source?.title ?? "clip", item._id);
   const shareQuote =
     item.selectedText ??
-    item.commentaryText ??
-    item.commentaryAudioTranscript ??
+    item.takeText ??
+    item.takeAudioTranscript ??
     source?.title ??
     "";
   const age = item.publishedAt ? formatRelativeTime(item.publishedAt) : "";
@@ -150,11 +150,11 @@ export function AnnotationCard({ item }: { item: FeedItem }) {
         </blockquote>
       )}
 
-      {item.commentaryText ? (
-        <p className="px-4 pt-3 text-[15px] leading-relaxed">{item.commentaryText}</p>
-      ) : item.commentaryAudioTranscript ? (
+      {item.takeText ? (
+        <p className="px-4 pt-3 text-[15px] leading-relaxed">{item.takeText}</p>
+      ) : item.takeAudioTranscript ? (
         <p className="px-4 pt-3 text-[15px] italic leading-relaxed text-[color:var(--b-dim)]">
-          🎙 “{item.commentaryAudioTranscript}”
+          🎙 “{item.takeAudioTranscript}”
         </p>
       ) : null}
 

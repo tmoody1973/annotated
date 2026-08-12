@@ -59,8 +59,9 @@ async function toFeedItem(ctx: QueryCtx, annotation: Doc<"annotations">) {
     _id: annotation._id,
     publishedAt: annotation.publishedAt,
     selectedText: annotation.selectedText,
-    commentaryText: annotation.commentaryText,
-    commentaryAudioTranscript: annotation.commentaryAudioTranscript,
+    takeText: annotation.takeText ?? annotation.commentaryText,
+    takeAudioTranscript:
+      annotation.takeAudioTranscript ?? annotation.commentaryAudioTranscript,
     clipStartMs: annotation.clipStartMs,
     clipEndMs: annotation.clipEndMs,
     clipUrl,
@@ -103,20 +104,20 @@ export const MAX_CLIP_MS = 90_000;
 
 /**
  * Validates the publish-time invariants shared by the authed `create` mutation
- * and the dev seed publish: commentary must be present as text OR recorded audio
+ * and the dev seed publish: a take must be present as text OR recorded audio
  * (SPEC), and the clip span must be ordered and within the 90s cap. Throws with
  * a readable reason.
  */
 export function assertPublishable(input: {
-  commentaryText?: string;
-  commentaryAudioStorageId?: Id<"_storage">;
+  takeText?: string;
+  takeAudioStorageId?: Id<"_storage">;
   clipStartMs: number;
   clipEndMs: number;
 }): void {
-  const hasText = (input.commentaryText ?? "").trim().length > 0;
-  const hasAudio = input.commentaryAudioStorageId !== undefined;
+  const hasText = (input.takeText ?? "").trim().length > 0;
+  const hasAudio = input.takeAudioStorageId !== undefined;
   if (!hasText && !hasAudio) {
-    throw new Error("Commentary is required (text or recorded audio)");
+    throw new Error("A take is required (text or recorded audio)");
   }
   if (
     input.clipEndMs <= input.clipStartMs ||
@@ -157,9 +158,9 @@ interface AnnotationInsert {
   textStart?: number;
   textEnd?: number;
   selectedText?: string;
-  commentaryText?: string;
-  commentaryAudioStorageId?: Id<"_storage">;
-  commentaryAudioTranscript?: string;
+  takeText?: string;
+  takeAudioStorageId?: Id<"_storage">;
+  takeAudioTranscript?: string;
   screenshotStorageId?: Id<"_storage">;
   threadId?: Id<"threads">;
   isAnonymous?: boolean;
@@ -205,9 +206,9 @@ export async function insertAnnotation(
     textStart: input.textStart,
     textEnd: input.textEnd,
     selectedText: input.selectedText,
-    commentaryText: input.commentaryText,
-    commentaryAudioStorageId: input.commentaryAudioStorageId,
-    commentaryAudioTranscript: input.commentaryAudioTranscript,
+    takeText: input.takeText,
+    takeAudioStorageId: input.takeAudioStorageId,
+    takeAudioTranscript: input.takeAudioTranscript,
     screenshotStorageId: input.screenshotStorageId,
     threadId: input.threadId,
     threadOrder,
@@ -241,9 +242,9 @@ export const createYoutube = mutation({
     clipStorageId: v.optional(v.id("_storage")),
     clipStartMs: v.number(),
     clipEndMs: v.number(),
-    commentaryText: v.optional(v.string()),
-    commentaryAudioStorageId: v.optional(v.id("_storage")),
-    commentaryAudioTranscript: v.optional(v.string()),
+    takeText: v.optional(v.string()),
+    takeAudioStorageId: v.optional(v.id("_storage")),
+    takeAudioTranscript: v.optional(v.string()),
     isAnonymous: v.optional(v.boolean()),
     threadId: v.optional(v.id("threads")),
     topicIds: v.array(v.id("topics")),
@@ -270,9 +271,9 @@ export const createYoutube = mutation({
       mediaState: args.clipStorageId === undefined ? "processing" : "ready",
       clipStartMs: args.clipStartMs,
       clipEndMs: args.clipEndMs,
-      commentaryText: args.commentaryText,
-      commentaryAudioStorageId: args.commentaryAudioStorageId,
-      commentaryAudioTranscript: args.commentaryAudioTranscript,
+      takeText: args.takeText,
+      takeAudioStorageId: args.takeAudioStorageId,
+      takeAudioTranscript: args.takeAudioTranscript,
       isAnonymous: args.isAnonymous,
       threadId: args.threadId,
       topicIds: args.topicIds,
@@ -307,9 +308,9 @@ export const createPodcast = mutation({
     clipStartMs: v.number(),
     clipEndMs: v.number(),
     selectedText: v.string(),
-    commentaryText: v.optional(v.string()),
-    commentaryAudioStorageId: v.optional(v.id("_storage")),
-    commentaryAudioTranscript: v.optional(v.string()),
+    takeText: v.optional(v.string()),
+    takeAudioStorageId: v.optional(v.id("_storage")),
+    takeAudioTranscript: v.optional(v.string()),
     isAnonymous: v.optional(v.boolean()),
     threadId: v.optional(v.id("threads")),
     topicIds: v.array(v.id("topics")),
@@ -340,9 +341,9 @@ export const createPodcast = mutation({
       clipStartMs: args.clipStartMs,
       clipEndMs: args.clipEndMs,
       selectedText: args.selectedText,
-      commentaryText: args.commentaryText,
-      commentaryAudioStorageId: args.commentaryAudioStorageId,
-      commentaryAudioTranscript: args.commentaryAudioTranscript,
+      takeText: args.takeText,
+      takeAudioStorageId: args.takeAudioStorageId,
+      takeAudioTranscript: args.takeAudioTranscript,
       isAnonymous: args.isAnonymous,
       threadId: args.threadId,
       topicIds: args.topicIds,
@@ -402,9 +403,9 @@ export const createArticle = mutation({
     selectedText: v.string(),
     textStart: v.number(),
     textEnd: v.number(),
-    commentaryText: v.optional(v.string()),
-    commentaryAudioStorageId: v.optional(v.id("_storage")),
-    commentaryAudioTranscript: v.optional(v.string()),
+    takeText: v.optional(v.string()),
+    takeAudioStorageId: v.optional(v.id("_storage")),
+    takeAudioTranscript: v.optional(v.string()),
     screenshotStorageId: v.optional(v.id("_storage")),
     isAnonymous: v.optional(v.boolean()),
     threadId: v.optional(v.id("threads")),
@@ -416,9 +417,9 @@ export const createArticle = mutation({
     if (args.selectedText.trim().length === 0) {
       throw new Error("A highlighted quote is required");
     }
-    const hasCommentaryText = (args.commentaryText ?? "").trim().length > 0;
-    if (!hasCommentaryText && args.commentaryAudioStorageId === undefined) {
-      throw new Error("Commentary is required (text or recorded audio)");
+    const hasTakeText = (args.takeText ?? "").trim().length > 0;
+    if (!hasTakeText && args.takeAudioStorageId === undefined) {
+      throw new Error("A take is required (text or recorded audio)");
     }
     if (
       !Number.isInteger(args.textStart) ||
@@ -458,9 +459,9 @@ export const createArticle = mutation({
       selectedText: args.selectedText,
       textStart: args.textStart,
       textEnd: args.textEnd,
-      commentaryText: args.commentaryText,
-      commentaryAudioStorageId: args.commentaryAudioStorageId,
-      commentaryAudioTranscript: args.commentaryAudioTranscript,
+      takeText: args.takeText,
+      takeAudioStorageId: args.takeAudioStorageId,
+      takeAudioTranscript: args.takeAudioTranscript,
       screenshotStorageId: args.screenshotStorageId,
       isAnonymous: args.isAnonymous,
       threadId: args.threadId,
@@ -607,8 +608,10 @@ export async function toLandingView(
   const clipUrl = annotation.clipStorageId
     ? await ctx.storage.getUrl(annotation.clipStorageId)
     : null;
-  const commentaryAudioUrl = annotation.commentaryAudioStorageId
-    ? await ctx.storage.getUrl(annotation.commentaryAudioStorageId)
+  const takeAudioStorageId =
+    annotation.takeAudioStorageId ?? annotation.commentaryAudioStorageId;
+  const takeAudioUrl = takeAudioStorageId
+    ? await ctx.storage.getUrl(takeAudioStorageId)
     : null;
   const screenshotUrl = annotation.screenshotStorageId
     ? await ctx.storage.getUrl(annotation.screenshotStorageId)
@@ -624,8 +627,11 @@ export async function toLandingView(
     // Pre-§2 rows have no `downCount`; default to 0 so the vote control gets a
     // number (mirrors the `listFeed` projection).
     downCount: annotation.downCount ?? 0,
+    takeText: annotation.takeText ?? annotation.commentaryText,
+    takeAudioTranscript:
+      annotation.takeAudioTranscript ?? annotation.commentaryAudioTranscript,
     clipUrl,
-    commentaryAudioUrl,
+    takeAudioUrl,
     screenshotUrl,
     source: source
       ? {

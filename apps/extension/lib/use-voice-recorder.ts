@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-/** SPEC caps clips at 90s; voice commentary follows the same ceiling. */
+/** SPEC caps clips at 90s; a voice take follows the same ceiling. */
 export const MAX_RECORDING_MS = 90_000;
 
 export type RecorderState = "idle" | "recording" | "recorded" | "denied";
@@ -19,7 +19,7 @@ export interface VoiceRecorder {
 }
 
 const DENIED_MESSAGE =
-  "Microphone access was blocked. Allow the mic on this page to record commentary.";
+  "Microphone access was blocked. Allow the mic on this page to record a take.";
 
 async function getActiveTabId(): Promise<number | null> {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -27,7 +27,7 @@ async function getActiveTabId(): Promise<number | null> {
 }
 
 /**
- * MediaRecorder wrapper for recorded voice commentary. The mic is captured in
+ * MediaRecorder wrapper for a recorded voice take. The mic is captured in
  * the ACTIVE TAB's page context via `chrome.scripting.executeScript` — not in
  * the side panel — because a `chrome-extension://` panel page has no surface for
  * Chrome to show the mic permission prompt (getUserMedia silently fails there).

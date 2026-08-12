@@ -32,9 +32,9 @@ function SourceVisual({
 
 export interface ClipArticleData {
   selectedText?: string;
-  commentaryText?: string;
-  commentaryAudioUrl?: string | null;
-  commentaryAudioTranscript?: string;
+  takeText?: string;
+  takeAudioUrl?: string | null;
+  takeAudioTranscript?: string;
   // The transcript text for the clip window (youtube-vtt / podcast deepgram),
   // shown in an accordion — the WCAG text alternative for the clip's audio.
   clipTranscript?: string;
@@ -65,7 +65,7 @@ const label = "font-mono text-[11px] font-bold uppercase tracking-[0.14em]";
 
 /**
  * The brutalist clip card: media (by source type), the quote, text + voice
- * commentary, author, and (optionally) the source attribution. Presentational
+ * take, author, and (optionally) the source attribution. Presentational
  * and server-renderable — shared by the /a/[id] landing and the /t/[id] thread
  * so a clip looks identical standalone or in a thread. Reads --b-* tokens, so it
  * flips light/dark with the theme.
@@ -132,17 +132,17 @@ export function ClipArticle({ data }: { data: ClipArticleData }) {
           </blockquote>
         )}
 
-        {data.commentaryText && (
-          <p className="mt-5 text-[17px] leading-relaxed">{data.commentaryText}</p>
+        {data.takeText && (
+          <p className="mt-5 text-[17px] leading-relaxed">{data.takeText}</p>
         )}
 
-        {data.commentaryAudioUrl && (
+        {data.takeAudioUrl && (
           <div className="mt-5 border-l-[6px] border-[color:var(--b-acid)] pl-4">
-            <p className={`mb-2 ${label} text-[color:var(--b-dim)]`}>Voice commentary</p>
-            <audio controls src={data.commentaryAudioUrl} className="w-full" />
-            {data.commentaryAudioTranscript && (
+            <p className={`mb-2 ${label} text-[color:var(--b-dim)]`}>Voice take</p>
+            <audio controls src={data.takeAudioUrl} className="w-full" />
+            {data.takeAudioTranscript && (
               <p className="mt-2 text-[15px] italic leading-relaxed text-[color:var(--b-dim)]">
-                “{data.commentaryAudioTranscript}”
+                “{data.takeAudioTranscript}”
               </p>
             )}
           </div>

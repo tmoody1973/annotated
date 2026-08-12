@@ -36,7 +36,7 @@ export default function PrivacyPage() {
               of the page, captured only when you take a clip.
             </li>
             <li>
-              <strong>Your commentary</strong> — the text or recorded-audio note you add to
+              <strong>Your take</strong> — the text or recorded-audio note you add to
               a clip, and the topics you assign.
             </li>
           </ul>

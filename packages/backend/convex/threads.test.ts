@@ -33,7 +33,7 @@ test("threads: create, append clips in order, getWithClips joins source + author
         authorId: aliceId,
         sourceId,
         selectedText: label,
-        commentaryText: `take on ${label}`,
+        takeText: `take on ${label}`,
         threadId,
       })
     );
@@ -74,7 +74,7 @@ test("listFeed collapses a thread to one head card with a clip count", async () 
         authorId: aliceId,
         sourceId,
         selectedText: label,
-        commentaryText: "take",
+        takeText: "take",
         threadId,
       })
     );
@@ -86,7 +86,7 @@ test("listFeed collapses a thread to one head card with a clip count", async () 
       authorId: aliceId,
       sourceId: otherSource,
       selectedText: "lone",
-      commentaryText: "take",
+      takeText: "take",
     })
   );
 
@@ -114,7 +114,7 @@ test("a standalone clip has no thread fields", async () => {
       authorId: aliceId,
       sourceId,
       selectedText: "lone",
-      commentaryText: "take",
+      takeText: "take",
     })
   );
   const row = await t.run((ctx) => ctx.db.get(id));

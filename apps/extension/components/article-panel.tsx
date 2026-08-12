@@ -30,7 +30,7 @@ import {
   generateUploadUrlRef,
   uploadToConvexStorage,
 } from "../lib/screenshot";
-import { CommentaryComposer } from "./commentary-composer";
+import { TakeComposer } from "./take-composer";
 import { AnonymousToggle } from "./anonymous-toggle";
 import { TopicPicker } from "./topic-picker";
 import { useThread } from "../lib/use-thread";
@@ -155,7 +155,7 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
     setStatus("publishing");
     setError(null);
     try {
-      const commentaryAudio = audioBlob
+      const takeAudio = audioBlob
         ? await transcodeCommentary(audioBlob)
         : null;
       const screenshotStorageId = await captureSourceScreenshot();
@@ -167,9 +167,9 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
         selectedText: highlight.selectedText,
         textStart: highlight.textStart,
         textEnd: highlight.textEnd,
-        commentaryText: take.trim(),
-        commentaryAudioStorageId: commentaryAudio?.storageId,
-        commentaryAudioTranscript: commentaryAudio?.transcript ?? undefined,
+        takeText: take.trim(),
+        takeAudioStorageId: takeAudio?.storageId,
+        takeAudioTranscript: takeAudio?.transcript ?? undefined,
         ...(screenshotStorageId ? { screenshotStorageId } : {}),
         ...(article.imageUrl ? { sourceImageUrl: article.imageUrl } : {}),
         isAnonymous,
@@ -333,7 +333,7 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
       )}
 
       <div style={{ marginTop: 10 }}>
-        <CommentaryComposer
+        <TakeComposer
           text={take}
           onTextChange={setTake}
           onAudioChange={setAudioBlob}

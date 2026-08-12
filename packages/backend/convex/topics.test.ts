@@ -44,7 +44,7 @@ test("createYoutube requires 1-3 valid topics and writes join rows", async () =>
     clipStorageId,
     clipStartMs: 0,
     clipEndMs: 10_000,
-    commentaryText: "take",
+    takeText: "take",
   };
 
   await expect(
@@ -107,7 +107,7 @@ test("listByTopic ranks Hot/Top/New and collapses thread follow-ons", async () =
       const id = await ctx.db.insert("annotations", {
         authorId,
         sourceId,
-        commentaryText: "c",
+        takeText: "c",
         isPublic: true,
         publishedAt,
         commentCount: 0,

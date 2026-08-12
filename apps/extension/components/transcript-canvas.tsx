@@ -21,7 +21,7 @@ import {
   sansStack,
   valid,
 } from "../lib/clip-styles";
-import { CommentaryComposer } from "./commentary-composer";
+import { TakeComposer } from "./take-composer";
 import { AnonymousToggle } from "./anonymous-toggle";
 import { TopicPicker } from "./topic-picker";
 import { useThread } from "../lib/use-thread";
@@ -123,7 +123,7 @@ export function TranscriptCanvas({
         selection.clipStartMs,
         selection.clipEndMs
       );
-      const commentaryAudio = audioBlob
+      const takeAudio = audioBlob
         ? await transcodeCommentary(audioBlob)
         : null;
       setPhase("saving");
@@ -133,9 +133,9 @@ export function TranscriptCanvas({
         clipStartMs: selection.clipStartMs,
         clipEndMs: selection.clipEndMs,
         selectedText: selection.quote,
-        commentaryText: take.trim(),
-        commentaryAudioStorageId: commentaryAudio?.storageId,
-        commentaryAudioTranscript: commentaryAudio?.transcript ?? undefined,
+        takeText: take.trim(),
+        takeAudioStorageId: takeAudio?.storageId,
+        takeAudioTranscript: takeAudio?.transcript ?? undefined,
         isAnonymous,
         threadId: thread.threadId ?? undefined,
         topicIds,
@@ -278,7 +278,7 @@ export function TranscriptCanvas({
       )}
 
       <div style={{ marginTop: 10 }}>
-        <CommentaryComposer
+        <TakeComposer
           text={take}
           onTextChange={setTake}
           onAudioChange={setAudioBlob}

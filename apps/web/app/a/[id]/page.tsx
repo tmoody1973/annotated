@@ -16,9 +16,9 @@ import { absoluteUrl, clipPath, threadPath } from "../../_lib/urls";
 interface AnnotationView {
   _id: string;
   sourceId: string;
-  commentaryText?: string;
-  commentaryAudioUrl?: string | null;
-  commentaryAudioTranscript?: string;
+  takeText?: string;
+  takeAudioUrl?: string | null;
+  takeAudioTranscript?: string;
   selectedText?: string;
   clipStartMs?: number;
   clipEndMs?: number;
@@ -112,8 +112,8 @@ export async function generateMetadata({
   if (!annotation) return { title: "Not found — Annotated" };
   const title = `${annotation.source?.title ?? "Clip"} — Annotated`;
   const description =
-    annotation.commentaryText ??
-    annotation.commentaryAudioTranscript ??
+    annotation.takeText ??
+    annotation.takeAudioTranscript ??
     "A clip annotated on Annotated.";
   const canonical = absoluteUrl(
     clipPath(annotation.source?.title ?? "clip", annotation._id)
@@ -167,13 +167,13 @@ export default async function AnnotationPage({
         )
       : undefined;
 
-  // Structured data: the commentary is the original work; it cites the source.
+  // Structured data: the take is the original work; it cites the source.
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "CreativeWork",
     url: absoluteUrl(`/a/${canonicalParam}`),
-    headline: annotation.commentaryText ?? annotation.selectedText ?? "Clip",
-    ...(annotation.commentaryText ? { text: annotation.commentaryText } : {}),
+    headline: annotation.takeText ?? annotation.selectedText ?? "Clip",
+    ...(annotation.takeText ? { text: annotation.takeText } : {}),
     ...(annotation.author
       ? { author: { "@type": "Person", name: annotation.author.displayName } }
       : {}),
@@ -194,9 +194,9 @@ export default async function AnnotationPage({
       <ClipArticle
           data={{
             selectedText: annotation.selectedText,
-            commentaryText: annotation.commentaryText,
-            commentaryAudioUrl: annotation.commentaryAudioUrl,
-            commentaryAudioTranscript: annotation.commentaryAudioTranscript,
+            takeText: annotation.takeText,
+            takeAudioUrl: annotation.takeAudioUrl,
+            takeAudioTranscript: annotation.takeAudioTranscript,
             clipTranscript,
             captionsUrl:
               annotation.source?.type === "youtube" && clipTranscript

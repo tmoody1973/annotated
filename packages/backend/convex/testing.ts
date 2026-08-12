@@ -76,7 +76,7 @@ export const seedAnnotation = mutation({
       clipStorageId: args.clipStorageId,
       clipStartMs: 0,
       clipEndMs: 10_000,
-      commentaryText: "Seed commentary",
+      takeText: "Seed take",
     });
   },
 });
@@ -116,7 +116,7 @@ export const seedThreadDev = mutation({
         authorId,
         sourceId,
         selectedText: quote,
-        commentaryText: `Commentary on: ${quote}`,
+        takeText: `Take on: ${quote}`,
         threadId,
       });
     }
@@ -127,7 +127,7 @@ export const seedThreadDev = mutation({
 /**
  * Dev publish path for the extension before syncHost auth exists. Token-guarded
  * (the panel has no Clerk session) and attributes the clip to the dev seed user.
- * Accepts the real span, commentary, and source metadata the sidepanel collects,
+ * Accepts the real span, take, and source metadata the sidepanel collects,
  * and enforces the same publish invariants as the authed `annotations.createYoutube`.
  * DEBT: production must replace this with real auth + a server-side worker call.
  */
@@ -141,9 +141,9 @@ export const publishYoutubeClipDev = mutation({
     clipStorageId: v.id("_storage"),
     clipStartMs: v.number(),
     clipEndMs: v.number(),
-    commentaryText: v.optional(v.string()),
-    commentaryAudioStorageId: v.optional(v.id("_storage")),
-    commentaryAudioTranscript: v.optional(v.string()),
+    takeText: v.optional(v.string()),
+    takeAudioStorageId: v.optional(v.id("_storage")),
+    takeAudioTranscript: v.optional(v.string()),
     isAnonymous: v.optional(v.boolean()),
     threadId: v.optional(v.id("threads")),
     topicIds: v.array(v.id("topics")),
@@ -166,9 +166,9 @@ export const publishYoutubeClipDev = mutation({
       clipStorageId: args.clipStorageId,
       clipStartMs: args.clipStartMs,
       clipEndMs: args.clipEndMs,
-      commentaryText: args.commentaryText,
-      commentaryAudioStorageId: args.commentaryAudioStorageId,
-      commentaryAudioTranscript: args.commentaryAudioTranscript,
+      takeText: args.takeText,
+      takeAudioStorageId: args.takeAudioStorageId,
+      takeAudioTranscript: args.takeAudioTranscript,
       isAnonymous: args.isAnonymous,
       threadId: args.threadId,
       topicIds: args.topicIds,
@@ -180,7 +180,7 @@ export const publishYoutubeClipDev = mutation({
  * Dev publish path for podcast clips before syncHost auth exists. Token-guarded
  * (the panel has no Clerk session) and attributed to the dev seed user. Reuses
  * the podcast `sources` row created during Step 6 resolution (passed by id), and
- * persists the transcript-derived quote alongside the span and commentary.
+ * persists the transcript-derived quote alongside the span and take.
  * DEBT: production must replace this with real auth + a server-side worker call.
  */
 export const publishPodcastClipDev = mutation({
@@ -190,9 +190,9 @@ export const publishPodcastClipDev = mutation({
     clipStartMs: v.number(),
     clipEndMs: v.number(),
     selectedText: v.string(),
-    commentaryText: v.optional(v.string()),
-    commentaryAudioStorageId: v.optional(v.id("_storage")),
-    commentaryAudioTranscript: v.optional(v.string()),
+    takeText: v.optional(v.string()),
+    takeAudioStorageId: v.optional(v.id("_storage")),
+    takeAudioTranscript: v.optional(v.string()),
     isAnonymous: v.optional(v.boolean()),
     threadId: v.optional(v.id("threads")),
     topicIds: v.array(v.id("topics")),
@@ -221,9 +221,9 @@ export const publishPodcastClipDev = mutation({
       clipStartMs: args.clipStartMs,
       clipEndMs: args.clipEndMs,
       selectedText: args.selectedText,
-      commentaryText: args.commentaryText,
-      commentaryAudioStorageId: args.commentaryAudioStorageId,
-      commentaryAudioTranscript: args.commentaryAudioTranscript,
+      takeText: args.takeText,
+      takeAudioStorageId: args.takeAudioStorageId,
+      takeAudioTranscript: args.takeAudioTranscript,
       isAnonymous: args.isAnonymous,
       threadId: args.threadId,
       topicIds: args.topicIds,
@@ -234,9 +234,9 @@ export const publishPodcastClipDev = mutation({
 /**
  * Dev publish path for article clips before syncHost auth exists. Token-guarded
  * and attributed to the dev seed user. An article has no media clip — the "clip"
- * is the highlighted quote (`selectedText` + char offsets) plus commentary, so
+ * is the highlighted quote (`selectedText` + char offsets) plus a take, so
  * this does NOT use `assertPublishable` (which assumes an audio/video span) and
- * instead requires both a non-empty quote and non-empty commentary directly.
+ * instead requires both a non-empty quote and non-empty take directly.
  * DEBT: production must replace this with real auth + a server-side worker call.
  */
 export const publishArticleClipDev = mutation({
@@ -249,9 +249,9 @@ export const publishArticleClipDev = mutation({
     selectedText: v.string(),
     textStart: v.number(),
     textEnd: v.number(),
-    commentaryText: v.optional(v.string()),
-    commentaryAudioStorageId: v.optional(v.id("_storage")),
-    commentaryAudioTranscript: v.optional(v.string()),
+    takeText: v.optional(v.string()),
+    takeAudioStorageId: v.optional(v.id("_storage")),
+    takeAudioTranscript: v.optional(v.string()),
     screenshotStorageId: v.optional(v.id("_storage")),
     isAnonymous: v.optional(v.boolean()),
     threadId: v.optional(v.id("threads")),
@@ -266,9 +266,9 @@ export const publishArticleClipDev = mutation({
     if (args.selectedText.trim().length === 0) {
       throw new Error("A highlighted quote is required");
     }
-    const hasText = (args.commentaryText ?? "").trim().length > 0;
-    if (!hasText && args.commentaryAudioStorageId === undefined) {
-      throw new Error("Commentary is required (text or recorded audio)");
+    const hasText = (args.takeText ?? "").trim().length > 0;
+    if (!hasText && args.takeAudioStorageId === undefined) {
+      throw new Error("A take is required (text or recorded audio)");
     }
     // Trust-boundary checks (the token is bundled = client-trusted): the offsets
     // must be ordered, non-negative, and consistent with the quote, and the
@@ -306,9 +306,9 @@ export const publishArticleClipDev = mutation({
       selectedText: args.selectedText,
       textStart: args.textStart,
       textEnd: args.textEnd,
-      commentaryText: args.commentaryText,
-      commentaryAudioStorageId: args.commentaryAudioStorageId,
-      commentaryAudioTranscript: args.commentaryAudioTranscript,
+      takeText: args.takeText,
+      takeAudioStorageId: args.takeAudioStorageId,
+      takeAudioTranscript: args.takeAudioTranscript,
       screenshotStorageId: args.screenshotStorageId,
       isAnonymous: args.isAnonymous,
       threadId: args.threadId,

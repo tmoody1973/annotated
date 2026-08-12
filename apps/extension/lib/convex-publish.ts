@@ -29,9 +29,9 @@ export type YoutubePublishArgs = {
   clipStorageId: string;
   clipStartMs: number;
   clipEndMs: number;
-  commentaryText?: string;
-  commentaryAudioStorageId?: string;
-  commentaryAudioTranscript?: string;
+  takeText?: string;
+  takeAudioStorageId?: string;
+  takeAudioTranscript?: string;
   isAnonymous?: boolean;
   threadId?: string;
   topicIds: string[];
@@ -43,9 +43,9 @@ export type PodcastPublishArgs = {
   clipStartMs: number;
   clipEndMs: number;
   selectedText: string;
-  commentaryText?: string;
-  commentaryAudioStorageId?: string;
-  commentaryAudioTranscript?: string;
+  takeText?: string;
+  takeAudioStorageId?: string;
+  takeAudioTranscript?: string;
   isAnonymous?: boolean;
   threadId?: string;
   topicIds: string[];
@@ -60,9 +60,9 @@ export type ArticlePublishArgs = {
   selectedText: string;
   textStart: number;
   textEnd: number;
-  commentaryText?: string;
-  commentaryAudioStorageId?: string;
-  commentaryAudioTranscript?: string;
+  takeText?: string;
+  takeAudioStorageId?: string;
+  takeAudioTranscript?: string;
   screenshotStorageId?: string;
   isAnonymous?: boolean;
   threadId?: string;

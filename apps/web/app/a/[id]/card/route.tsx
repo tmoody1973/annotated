@@ -7,8 +7,8 @@ import { ShareCard, type ShareFormat, type ShareCardData } from "../../../_compo
 interface CardAnnotation {
   _id: string;
   selectedText?: string;
-  commentaryText?: string;
-  commentaryAudioTranscript?: string;
+  takeText?: string;
+  takeAudioTranscript?: string;
   isAnonymous?: boolean;
   screenshotUrl?: string | null;
   source:
@@ -50,10 +50,10 @@ export async function GET(
         data = {
           quote:
             annotation.selectedText ??
-            annotation.commentaryText ??
-            annotation.commentaryAudioTranscript ??
+            annotation.takeText ??
+            annotation.takeAudioTranscript ??
             "A clip on Annotated",
-          commentary: annotation.selectedText ? annotation.commentaryText : undefined,
+          take: annotation.selectedText ? annotation.takeText : undefined,
           authorName: anonymous ? undefined : annotation.author?.displayName,
           avatarUrl: anonymous ? undefined : annotation.author?.avatarUrl,
           isVerified: anonymous ? false : annotation.author?.isVerified,

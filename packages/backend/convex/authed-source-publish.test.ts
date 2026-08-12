@@ -72,7 +72,7 @@ test("createPodcast attributes the clip to the signed-in user", async () => {
     clipStartMs: 0,
     clipEndMs: 10_000,
     selectedText: "This is the transcript quote",
-    commentaryText: "my take on this",
+    takeText: "my take on this",
     topicIds: await oneTopic(t),
   });
 
@@ -96,7 +96,7 @@ test("createPodcast writes annotationTopics join rows", async () => {
     clipStartMs: 0,
     clipEndMs: 10_000,
     selectedText: "A quote from the transcript",
-    commentaryText: "take",
+    takeText: "take",
     topicIds: topics,
   });
 
@@ -123,7 +123,7 @@ test("createPodcast rejects a non-podcast source", async () => {
       clipStartMs: 0,
       clipEndMs: 10_000,
       selectedText: "some quote",
-      commentaryText: "take",
+      takeText: "take",
       topicIds: await oneTopic(t),
     })
   ).rejects.toThrow("Source is not a podcast");
@@ -141,7 +141,7 @@ test("createPodcast rejects an unauthenticated caller", async () => {
       clipStartMs: 0,
       clipEndMs: 10_000,
       selectedText: "some quote",
-      commentaryText: "take",
+      takeText: "take",
       topicIds: await oneTopic(t),
     })
   ).rejects.toThrow("Not authenticated");
@@ -161,7 +161,7 @@ test("createPodcast rejects zero topics", async () => {
       clipStartMs: 0,
       clipEndMs: 10_000,
       selectedText: "some quote",
-      commentaryText: "take",
+      takeText: "take",
       topicIds: [],
     })
   ).rejects.toThrow(/1.?3 topics/);
@@ -186,7 +186,7 @@ test("createPodcast rejects more than 3 topics", async () => {
       clipStartMs: 0,
       clipEndMs: 10_000,
       selectedText: "some quote",
-      commentaryText: "take",
+      takeText: "take",
       topicIds: fourTopics,
     })
   ).rejects.toThrow(/1.?3 topics/);
@@ -208,7 +208,7 @@ test("createArticle attributes the clip to the signed-in user", async () => {
     selectedText: quote,
     textStart: 0,
     textEnd: quote.length,
-    commentaryText: "my take",
+    takeText: "my take",
     topicIds: await oneTopic(t),
   });
 
@@ -233,7 +233,7 @@ test("createArticle writes annotationTopics join rows", async () => {
     selectedText: quote,
     textStart: 5,
     textEnd: 5 + quote.length,
-    commentaryText: "interesting",
+    takeText: "interesting",
     topicIds: topics,
   });
 
@@ -257,7 +257,7 @@ test("createArticle rejects an unauthenticated caller", async () => {
       selectedText: quote,
       textStart: 0,
       textEnd: quote.length,
-      commentaryText: "take",
+      takeText: "take",
       topicIds: await oneTopic(t),
     })
   ).rejects.toThrow("Not authenticated");
@@ -275,7 +275,7 @@ test("createArticle rejects an empty quote", async () => {
       selectedText: "   ",
       textStart: 0,
       textEnd: 3,
-      commentaryText: "take",
+      takeText: "take",
       topicIds: await oneTopic(t),
     })
   ).rejects.toThrow("A highlighted quote is required");
@@ -293,7 +293,7 @@ test("createArticle rejects bad offsets (length mismatch)", async () => {
       selectedText: "Hello",
       textStart: 0,
       textEnd: 99, // length mismatch: "Hello".length === 5, not 99
-      commentaryText: "take",
+      takeText: "take",
       topicIds: await oneTopic(t),
     })
   ).rejects.toThrow("Highlight offsets are invalid");
@@ -312,7 +312,7 @@ test("createArticle rejects negative textStart", async () => {
       selectedText: quote,
       textStart: -1,
       textEnd: -1 + quote.length,
-      commentaryText: "take",
+      takeText: "take",
       topicIds: await oneTopic(t),
     })
   ).rejects.toThrow("Highlight offsets are invalid");
@@ -331,7 +331,7 @@ test("createArticle rejects zero topics", async () => {
       selectedText: quote,
       textStart: 0,
       textEnd: quote.length,
-      commentaryText: "take",
+      takeText: "take",
       topicIds: [],
     })
   ).rejects.toThrow(/1.?3 topics/);
@@ -355,7 +355,7 @@ test("createArticle rejects more than 3 topics", async () => {
       selectedText: quote,
       textStart: 0,
       textEnd: quote.length,
-      commentaryText: "take",
+      takeText: "take",
       topicIds: fourTopics,
     })
   ).rejects.toThrow(/1.?3 topics/);

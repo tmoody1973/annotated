@@ -40,7 +40,7 @@ test("article publish: text-only lands, audio-only lands, neither is rejected", 
   // text-only — unchanged behavior
   const textId = await t.mutation(api.testing.publishArticleClipDev, {
     ...articleBase,
-    commentaryText: "my take",
+    takeText: "my take",
     topicIds: topics,
   });
   expect(textId).toBeTruthy();
@@ -51,18 +51,18 @@ test("article publish: text-only lands, audio-only lands, neither is rejected", 
   );
   const audioAnnId = await t.mutation(api.testing.publishArticleClipDev, {
     ...articleBase,
-    commentaryAudioStorageId: audioStorageId,
+    takeAudioStorageId: audioStorageId,
     topicIds: topics,
   });
   const row = await t.run((ctx) => ctx.db.get(audioAnnId));
-  expect(row?.commentaryAudioStorageId).toBe(audioStorageId);
-  expect(row?.commentaryText).toBeUndefined();
+  expect(row?.takeAudioStorageId).toBe(audioStorageId);
+  expect(row?.takeText).toBeUndefined();
 
-  // getById projects a playable commentary audio URL
+  // getById projects a playable take audio URL
   const view = await t.query(api.annotations.getById, { annotationId: audioAnnId });
-  expect(view?.commentaryAudioUrl).toBeTruthy();
+  expect(view?.takeAudioUrl).toBeTruthy();
 
-  // neither text nor audio — rejected (commentary check runs before topic check)
+  // neither text nor audio — rejected (take check runs before topic check)
   await expect(
     t.mutation(api.testing.publishArticleClipDev, { ...articleBase, topicIds: topics })
   ).rejects.toThrow();
@@ -78,7 +78,7 @@ test("article publish: a quote over the 100-word fair-use ceiling is rejected", 
       selectedText: overLimit,
       textStart: 0,
       textEnd: overLimit.length,
-      commentaryText: "too long",
+      takeText: "too long",
       topicIds: topics,
     })
   ).rejects.toThrow(/fair-use/);
@@ -90,7 +90,7 @@ test("article publish: a quote over the 100-word fair-use ceiling is rejected", 
     selectedText: atLimit,
     textStart: 0,
     textEnd: atLimit.length,
-    commentaryText: "ok",
+    takeText: "ok",
     topicIds: topics,
   });
   expect(id).toBeTruthy();
@@ -112,7 +112,7 @@ test("youtube publish: audio-only lands via assertPublishable, neither is reject
     clipStorageId,
     clipStartMs: 0,
     clipEndMs: 10_000,
-    commentaryAudioStorageId: audioStorageId,
+    takeAudioStorageId: audioStorageId,
     topicIds: topics,
     workerToken: WORKER_TOKEN,
   });

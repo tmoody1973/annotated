@@ -27,7 +27,7 @@ describe("optimistic publish", () => {
       title: "The AI capex bubble",
       clipStartMs: 60_000,
       clipEndMs: 120_000,
-      commentaryText: "This is exactly backwards.",
+      takeText: "This is exactly backwards.",
       topicIds: [topicId],
     });
 
@@ -47,7 +47,7 @@ describe("optimistic publish", () => {
         clipEndMs: 30_000,
         topicIds: [topicId],
       })
-    ).rejects.toThrow(/Commentary is required/);
+    ).rejects.toThrow(/A take is required/);
   });
 
   test("still rejects a span over 90 seconds", async () => {
@@ -58,7 +58,7 @@ describe("optimistic publish", () => {
         title: "Too long",
         clipStartMs: 0,
         clipEndMs: 120_000,
-        commentaryText: "Nope",
+        takeText: "Nope",
         topicIds: [topicId],
       })
     ).rejects.toThrow(/Invalid clip span/);
@@ -73,7 +73,7 @@ describe("slice lifecycle", () => {
       title: "Ready flow",
       clipStartMs: 0,
       clipEndMs: 30_000,
-      commentaryText: "Take",
+      takeText: "Take",
       topicIds: [topicId],
     });
 
@@ -94,7 +94,7 @@ describe("slice lifecycle", () => {
       title: "Failed flow",
       clipStartMs: 0,
       clipEndMs: 30_000,
-      commentaryText: "Take",
+      takeText: "Take",
       topicIds: [topicId],
     });
 
@@ -115,7 +115,7 @@ describe("slice lifecycle", () => {
       title: "Late reply",
       clipStartMs: 0,
       clipEndMs: 30_000,
-      commentaryText: "Take",
+      takeText: "Take",
       topicIds: [topicId],
     });
     await t.mutation(internal.clips.markFailed, { annotationId, reason: "timeout" });
@@ -136,7 +136,7 @@ describe("slice lifecycle", () => {
       title: "Already ready",
       clipStartMs: 0,
       clipEndMs: 30_000,
-      commentaryText: "Take",
+      takeText: "Take",
       topicIds: [topicId],
     });
     const storageId = await t.run(async (ctx) =>
@@ -159,7 +159,7 @@ describe("slice lifecycle", () => {
       title: "Re-slice",
       clipStartMs: 0,
       clipEndMs: 30_000,
-      commentaryText: "Take",
+      takeText: "Take",
       topicIds: [topicId],
     });
     const firstStorageId = await t.run(async (ctx) =>
@@ -219,7 +219,7 @@ describe("podcast slice scheduling", () => {
       clipStartMs: 0,
       clipEndMs: 30_000,
       selectedText: "quote",
-      commentaryText: "take",
+      takeText: "take",
       topicIds: [topicId],
     });
 
@@ -245,7 +245,7 @@ describe("podcast slice scheduling", () => {
         clipStartMs: 0,
         clipEndMs: 30_000,
         selectedText: "quote",
-        commentaryText: "take",
+        takeText: "take",
         topicIds: [topicId],
       })
     ).rejects.toThrow(/still being prepared/);
@@ -266,7 +266,7 @@ describe("podcast slice scheduling", () => {
         clipStartMs: 0,
         clipEndMs: 30_000,
         selectedText: "quote",
-        commentaryText: "take",
+        takeText: "take",
         topicIds: [topicId],
       })
     ).rejects.toThrow(/couldn't be prepared/);
@@ -285,7 +285,7 @@ describe("podcast slice scheduling", () => {
         clipStartMs: 0,
         clipEndMs: 30_000,
         selectedText: "quote",
-        commentaryText: "take",
+        takeText: "take",
         topicIds: [topicId],
       })
     ).rejects.toThrow(/couldn't be prepared/);
