@@ -183,7 +183,14 @@ file**, so a stale one ships silently.
 Verify every package before distributing:
 
 ```bash
-unzip -p <zip> '*.js' | grep -c "pk_live_"          # must be 1 — a pk_test_ key means you built from .env
+# The Clerk publishable key is NO LONGER bundled — Plan A moved auth to the
+# web-tab relay and dropped the Clerk SDK (3.5MB -> 0.16MB), so nothing in the
+# extension reads PLASMO_PUBLIC_CLERK_PUBLISHABLE_KEY. Zero pk_live_ hits is
+# correct now; a pk_test_ hit still means you built from the dev .env.
+unzip -p <zip> '*.js' | grep -c "pk_test_"          # must be 0
+# Prove the production env was loaded by its endpoints instead:
+unzip -p <zip> '*.js' | grep -c "strong-eel-665"    # must be >= 1
+unzip -p <zip> '*.js' | grep -c "annotated.sh"      # must be >= 1
 cd /tmp && rm -rf zipcheck && mkdir zipcheck && unzip -q <zip> -d zipcheck
 grep -rl 'fly\.dev' zipcheck                                # must print nothing — no worker host
 grep -rl 'startThreadDev' zipcheck                          # must print nothing — no token-guarded mutation
