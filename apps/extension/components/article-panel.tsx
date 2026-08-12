@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { useMutation } from "convex/react";
 import {
   selectArticleHighlight,
   MAX_QUOTE_WORDS,
@@ -9,8 +8,8 @@ import type { ArticleDetection } from "../lib/use-active-tab-article";
 import {
   extractArticle,
   getWebUrl,
-  getWorkerToken,
-  transcodeCommentary,
+  mintUploadUrl,
+  uploadTakeAudio,
   type ExtractedArticle,
 } from "../lib/worker-client";
 import { publishArticleAuthed, NotSignedInError } from "../lib/convex-publish";
@@ -25,11 +24,7 @@ import {
   sansStack,
   valid,
 } from "../lib/clip-styles";
-import {
-  captureVisibleArticle,
-  generateUploadUrlRef,
-  uploadToConvexStorage,
-} from "../lib/screenshot";
+import { captureVisibleArticle, uploadToConvexStorage } from "../lib/screenshot";
 import { TakeComposer } from "./take-composer";
 import { AnonymousToggle } from "./anonymous-toggle";
 import { TopicPicker } from "./topic-picker";
@@ -71,7 +66,6 @@ function readSelectionOffsets(
  * publish to a source-linked landing page. No transcription, no ffmpeg.
  */
 export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
-  const generateUploadUrl = useMutation(generateUploadUrlRef);
   const thread = useThread();
   const textRef = useRef<HTMLDivElement | null>(null);
   const publishing = useRef(false);
@@ -93,7 +87,7 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
     setArticle(null);
     setExtractError(null);
     setHighlight(null);
-    extractArticle(detection.url, detection.html)
+    extractArticle(detection.url)
       .then((res) => {
         if (!cancelled) setArticle(res);
       })
@@ -135,7 +129,7 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
     try {
       const blob = await captureVisibleArticle();
       if (!blob) return undefined;
-      const uploadUrl = await generateUploadUrl({ workerToken: getWorkerToken() });
+      const uploadUrl = await mintUploadUrl();
       return await uploadToConvexStorage(uploadUrl, blob);
     } catch {
       return undefined;
@@ -156,7 +150,7 @@ export function ArticlePanel({ detection }: { detection: ArticleDetection }) {
     setError(null);
     try {
       const takeAudio = audioBlob
-        ? await transcodeCommentary(audioBlob)
+        ? await uploadTakeAudio(audioBlob)
         : null;
       const screenshotStorageId = await captureSourceScreenshot();
       const annotationId = await publishArticleAuthed({

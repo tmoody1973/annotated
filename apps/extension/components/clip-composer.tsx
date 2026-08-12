@@ -14,11 +14,10 @@ import {
 } from "../lib/player-time";
 import { ProgressIndicator } from "./progress-indicator";
 import {
-  clipYoutube,
   fetchYoutubeChapters,
   getWebUrl,
-  transcodeCommentary,
-  transcribeYoutube,
+  transcribeSource,
+  uploadTakeAudio,
 } from "../lib/worker-client";
 import { publishYoutubeAuthed } from "../lib/convex-publish";
 import { accent, danger, ink, muted, monoStack, panel, sansStack, surface, valid } from "../lib/clip-styles";
@@ -28,7 +27,7 @@ import { TopicPicker } from "./topic-picker";
 import { useThread } from "../lib/use-thread";
 import { clearClipDraft, loadClipDraft, saveClipDraft } from "../lib/clip-draft";
 
-type Status = "idle" | "clipping" | "publishing" | "done" | "error";
+type Status = "idle" | "publishing" | "done" | "error";
 
 /** True when the take is an untouched "Chapter: X — " stub (no user text after it). */
 function isUneditedChapterSeed(text: string): boolean {
@@ -251,7 +250,7 @@ export function ClipComposer({ videoId }: { videoId: string }) {
   const endMs = clockToMs(endInput);
   const span = startMs !== null && endMs !== null ? evaluateClipSpan(startMs, endMs) : null;
   const takeOk = take.trim().length > 0 || audioBlob !== null;
-  const busy = status === "clipping" || status === "publishing";
+  const busy = status === "publishing";
   const canPublish = (span?.ok ?? false) && takeOk && !busy;
 
   async function capture(target: "start" | "end") {
@@ -268,7 +267,7 @@ export function ClipComposer({ videoId }: { videoId: string }) {
 
   async function handlePublish() {
     if (startMs === null || endMs === null) return;
-    setStatus("clipping");
+    setStatus("publishing");
     setProcessingStartedAt(Date.now());
     setErrorMsg(null);
     try {
@@ -282,17 +281,14 @@ export function ClipComposer({ videoId }: { videoId: string }) {
         channelName: fresh.channelName ?? source?.channelName ?? null,
         channelUrl: fresh.channelUrl ?? source?.channelUrl ?? null,
       };
-      const { storageId } = await clipYoutube({ videoId, startMs, endMs });
-      const takeAudio = audioBlob
-        ? await transcodeCommentary(audioBlob)
-        : null;
-      setStatus("publishing");
+      // A recorded take still has to reach storage before publish, because the
+      // annotation row references it. Text-only takes skip this entirely.
+      const takeAudio = audioBlob ? await uploadTakeAudio(audioBlob) : null;
       const id = await publishYoutubeAuthed({
         videoId,
         title: captured.title,
         author: captured.channelName ?? undefined,
         channelUrl: captured.channelUrl ?? undefined,
-        clipStorageId: storageId,
         clipStartMs: startMs,
         clipEndMs: endMs,
         takeText: take.trim(),
@@ -309,7 +305,7 @@ export function ClipComposer({ videoId }: { videoId: string }) {
       void clearClipDraft(videoId);
       // Fire-and-forget: backfill the video's transcript once per source so the
       // landing page can show the clip-window accordion. Never blocks publish.
-      void transcribeYoutube(videoId);
+      void transcribeSource(videoId);
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : "Publish failed");
       setStatus("error");
@@ -415,13 +411,13 @@ export function ClipComposer({ videoId }: { videoId: string }) {
         disabled={!canPublish || topicIds.length === 0}
         onClick={handlePublish}
       >
-        {status === "clipping" ? "Clipping…" : status === "publishing" ? "Saving annotation…" : "Publish clip →"}
+        {status === "publishing" ? "Saving annotation…" : "Publish clip →"}
       </button>
 
       {busy && processingStartedAt !== null && (
         <ProgressIndicator
-          label={status === "publishing" ? "Saving annotation…" : "Processing clip…"}
-          estimateMs={audioBlob ? 9000 : 6000}
+          label={audioBlob ? "Uploading your take…" : "Publishing…"}
+          estimateMs={audioBlob ? 4000 : 1500}
           startedAt={processingStartedAt}
         />
       )}

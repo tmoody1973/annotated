@@ -1,105 +1,36 @@
-import { parseYoutubeChapters, type Chapter } from "@annotated/shared";
+import { makeFunctionReference } from "convex/server";
+import type { Chapter } from "@annotated/shared";
+import { buildAuthedClient } from "./convex-client";
 
-const workerUrl = process.env.PLASMO_PUBLIC_WORKER_URL;
+// The extension no longer talks to the Fly worker directly — every former
+// worker call now routes through a Convex action/mutation, which holds the
+// worker token server-side. `workerToken` survives only for the pre-existing
+// `testing:startThreadDev` debt path (see lib/use-thread.ts) — a known,
+// separately-tracked gap ("DEBT: production must replace this with the real
+// authed threads.create", convex/testing.ts) that this task does not touch.
 const workerToken = process.env.PLASMO_PUBLIC_WORKER_TOKEN;
 
-export interface ClipResult {
-  storageId: string;
-  durationMs: number;
-}
+const youtubeChapters = makeFunctionReference<
+  "action", { videoId: string }, Chapter[]
+>("media:youtubeChapters");
 
-export interface ClipRequest {
-  videoId: string;
-  startMs: number;
-  endMs: number;
-}
+const transcodeTake = makeFunctionReference<
+  "action",
+  { audioStorageId: string; mimeType: string },
+  { storageId: string; transcript: string | null }
+>("media:transcodeTake");
 
-/**
- * Asks the worker to clip the given YouTube span and store it, returning the
- * Convex storageId. DEBT: the worker token is bundled (dev only) — production
- * should route this through a Convex action so the secret stays server-side.
- */
-export async function clipYoutube(input: ClipRequest): Promise<ClipResult> {
-  if (!workerUrl || !workerToken) {
-    throw new Error("Worker is not configured (PLASMO_PUBLIC_WORKER_URL/_TOKEN)");
-  }
+const transcribePodcastAction = makeFunctionReference<
+  "action", { sourceId: string }, null
+>("media:transcribePodcast");
 
-  const response = await fetch(`${workerUrl}/clip-youtube`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${workerToken}`,
-    },
-    body: JSON.stringify(input),
-  });
+const transcribeSourceAction = makeFunctionReference<
+  "action", { videoId: string }, null
+>("media:transcribeSource");
 
-  if (!response.ok) {
-    const detail = await response.text().catch(() => "");
-    throw new Error(
-      `Clip failed (${response.status})${detail ? `: ${detail}` : ""}`
-    );
-  }
-
-  const body = (await response.json()) as Partial<ClipResult>;
-  if (typeof body.storageId !== "string") {
-    throw new Error("Worker returned an unexpected response (no storageId)");
-  }
-  return { storageId: body.storageId, durationMs: body.durationMs ?? 0 };
-}
-
-/**
- * Asks the worker to transcribe a podcast episode (sync Deepgram) and write the
- * transcript row for this source. Idempotent on the caller's side — only invoked
- * when no transcript exists yet.
- */
-export async function transcribePodcast(
-  sourceId: string,
-  mp3Url: string
-): Promise<void> {
-  if (!workerUrl || !workerToken) {
-    throw new Error("Worker is not configured (PLASMO_PUBLIC_WORKER_URL/_TOKEN)");
-  }
-  const response = await fetch(`${workerUrl}/transcribe`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${workerToken}`,
-    },
-    body: JSON.stringify({ sourceId, mp3Url }),
-  });
-  if (!response.ok) {
-    const detail = await response.text().catch(() => "");
-    throw new Error(`Transcribe failed (${response.status})${detail ? `: ${detail}` : ""}`);
-  }
-}
-
-/** Asks the worker to cut a podcast audio span and store it; returns the storageId. */
-export async function clipAudio(
-  mp3Url: string,
-  startMs: number,
-  endMs: number
-): Promise<string> {
-  if (!workerUrl || !workerToken) {
-    throw new Error("Worker is not configured (PLASMO_PUBLIC_WORKER_URL/_TOKEN)");
-  }
-  const response = await fetch(`${workerUrl}/clip-audio`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${workerToken}`,
-    },
-    body: JSON.stringify({ mp3Url, startMs, endMs }),
-  });
-  if (!response.ok) {
-    const detail = await response.text().catch(() => "");
-    throw new Error(`Audio clip failed (${response.status})${detail ? `: ${detail}` : ""}`);
-  }
-  const body = (await response.json()) as { storageId?: string };
-  if (typeof body.storageId !== "string") {
-    throw new Error("Worker returned no storageId for the audio clip");
-  }
-  return body.storageId;
-}
+const generateUploadUrlForUser = makeFunctionReference<
+  "mutation", Record<string, never>, string
+>("files:generateUploadUrlForUser");
 
 export interface ExtractedArticle {
   title: string;
@@ -109,151 +40,96 @@ export interface ExtractedArticle {
   imageUrl: string | null;
 }
 
-/**
- * Asks the worker to run Mozilla Readability over the page. Sends the live HTML
- * grabbed by the content script (so the worker sees what the user sees), with the
- * URL for the canonical source. CORS-free because the extension has the worker
- * host permission. DEBT: the worker token is bundled (dev only).
- */
-export async function extractArticle(
-  url: string,
-  html: string
-): Promise<ExtractedArticle> {
-  if (!workerUrl || !workerToken) {
-    throw new Error("Worker is not configured (PLASMO_PUBLIC_WORKER_URL/_TOKEN)");
-  }
-  const response = await fetch(`${workerUrl}/extract-article`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${workerToken}`,
-    },
-    body: JSON.stringify({ url, html }),
-  });
-  if (!response.ok) {
-    // 422 is the worker's "this page has no readable article" signal — show a
-    // friendly, actionable message instead of the raw JSON error.
-    if (response.status === 422) {
-      throw new Error(
-        "This page doesn't have a clippable article. Try a news story or blog post — or clip a YouTube video or podcast instead."
-      );
-    }
-    throw new Error("Couldn't read this article. Please try again in a moment.");
-  }
-  const body = (await response.json()) as Partial<ExtractedArticle>;
-  if (typeof body.title !== "string" || typeof body.textContent !== "string") {
-    throw new Error("Worker returned an unexpected article response");
-  }
-  return {
-    title: body.title,
-    textContent: body.textContent,
-    byline: body.byline ?? null,
-    siteName: body.siteName ?? null,
-    imageUrl: body.imageUrl ?? null,
-  };
-}
-
-/** Encodes a recorded audio blob to base64 (no data-URL prefix) for JSON transport. */
-async function blobToBase64(blob: Blob): Promise<string> {
-  const bytes = new Uint8Array(await blob.arrayBuffer());
-  let binary = "";
-  const CHUNK = 0x8000;
-  for (let i = 0; i < bytes.length; i += CHUNK) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
-  }
-  return btoa(binary);
-}
+const extractArticleAction = makeFunctionReference<
+  "action", { url: string }, ExtractedArticle
+>("articles:extractArticle");
 
 /**
- * Uploads a recorded voice-commentary blob (webm/opus) to the worker, which
- * transcodes it to mp3, stores it, and returns the Convex storageId. DEBT: the
- * worker token is bundled (dev only) — production routes this server-side.
+ * Runs Mozilla Readability over the article at `url`, server-side. NOTE: the
+ * server action (`convex/articles.ts`, built for the web composer) only
+ * accepts a URL — it re-fetches the page itself rather than taking the live
+ * outerHTML the content script captures. This drops the extension's former
+ * "B primary" HTML path (paywalled/JS-rendered pages the worker's own fetch
+ * can't reach); see the Task 7 report for the tradeoff.
  */
-export interface CommentaryResult {
-  storageId: string;
-  /** Best-effort Deepgram transcript of the voice note, or null. */
-  transcript: string | null;
+export async function extractArticle(url: string): Promise<ExtractedArticle> {
+  const client = await buildAuthedClient();
+  return await client.action(extractArticleAction, { url });
 }
 
-export async function transcodeCommentary(blob: Blob): Promise<CommentaryResult> {
-  if (!workerUrl || !workerToken) {
-    throw new Error("Worker is not configured (PLASMO_PUBLIC_WORKER_URL/_TOKEN)");
-  }
-  const audioBase64 = await blobToBase64(blob);
-  const response = await fetch(`${workerUrl}/transcode-commentary`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${workerToken}`,
-    },
-    body: JSON.stringify({ audioBase64, mimeType: blob.type || "audio/webm" }),
-  });
-  if (!response.ok) {
-    const detail = await response.text().catch(() => "");
-    throw new Error(
-      `Commentary transcode failed (${response.status})${detail ? `: ${detail}` : ""}`
-    );
-  }
-  const body = (await response.json()) as {
-    storageId?: string;
-    transcript?: string | null;
-  };
-  if (typeof body.storageId !== "string") {
-    throw new Error("Worker returned no storageId for the commentary audio");
-  }
-  return { storageId: body.storageId, transcript: body.transcript ?? null };
-}
-
-/**
- * Asks the worker for a YouTube video's chapters (metadata-only yt-dlp), then
- * normalizes the raw payload with the shared parser. Returns [] when the video
- * has no chapters. CORS-free via the worker host permission.
- */
+/** Chapters are an enhancement — a failure must never block clipping. */
 export async function fetchYoutubeChapters(videoId: string): Promise<Chapter[]> {
-  if (!workerUrl || !workerToken) {
-    throw new Error("Worker is not configured (PLASMO_PUBLIC_WORKER_URL/_TOKEN)");
+  try {
+    const client = await buildAuthedClient();
+    return await client.action(youtubeChapters, { videoId });
+  } catch {
+    return [];
   }
-  const response = await fetch(`${workerUrl}/youtube-chapters`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${workerToken}`,
-    },
-    body: JSON.stringify({ videoId }),
-  });
-  if (!response.ok) {
-    const detail = await response.text().catch(() => "");
-    throw new Error(
-      `Chapters failed (${response.status})${detail ? `: ${detail}` : ""}`
-    );
-  }
-  const body = (await response.json()) as { chapters?: unknown };
-  return parseYoutubeChapters(body.chapters);
+}
+
+/** Mints a short-lived Convex storage upload URL for the signed-in user. Shared
+ *  by uploadTakeAudio (recorded take) and the article panel (source screenshot)
+ *  — both need "put a blob in storage" with no worker involvement. */
+export async function mintUploadUrl(): Promise<string> {
+  const client = await buildAuthedClient();
+  return await client.mutation(generateUploadUrlForUser, {});
 }
 
 /**
- * Fire-and-forget: asks the worker to fetch + store this video's captions as a
+ * Puts a recorded take into Convex storage, then asks the server to transcode
+ * it to mp3 and transcribe it. The blob goes straight to storage rather than
+ * through an action argument — a 90s recording exceeds Convex's argument size
+ * limit as base64.
+ */
+export async function uploadTakeAudio(
+  blob: Blob
+): Promise<{ storageId: string; transcript: string | null }> {
+  const uploadUrl = await mintUploadUrl();
+  const uploaded = await fetch(uploadUrl, {
+    method: "POST",
+    headers: { "Content-Type": blob.type || "audio/webm" },
+    body: blob,
+  });
+  if (!uploaded.ok) {
+    throw new Error("Couldn't upload that recording. Try again.");
+  }
+  const { storageId } = (await uploaded.json()) as { storageId: string };
+  const client = await buildAuthedClient();
+  return await client.action(transcodeTake, {
+    audioStorageId: storageId,
+    mimeType: blob.type || "audio/webm",
+  });
+}
+
+/**
+ * Asks the server to transcribe a podcast episode (Deepgram) and write the
+ * transcript row for this source. The server reads the source's mp3Url itself
+ * — the client no longer forwards it (that would be an SSRF vector now that
+ * the fetch originates server-side). Idempotent on the caller's side — only
+ * invoked when no transcript exists yet.
+ */
+export async function transcribePodcast(sourceId: string): Promise<void> {
+  const client = await buildAuthedClient();
+  await client.action(transcribePodcastAction, { sourceId });
+}
+
+/**
+ * Fire-and-forget: asks the server to fetch + store this video's captions as a
  * youtube-vtt transcript (idempotent per source, resolved server-side from the
  * videoId). Best-effort — a failure must never affect the publish, so this
  * never throws. Called once after a YouTube clip is published.
  */
-export async function transcribeYoutube(videoId: string): Promise<void> {
-  if (!workerUrl || !workerToken) return;
+export async function transcribeSource(videoId: string): Promise<void> {
   try {
-    await fetch(`${workerUrl}/transcribe-youtube`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${workerToken}`,
-      },
-      body: JSON.stringify({ videoId }),
-    });
+    const client = await buildAuthedClient();
+    await client.action(transcribeSourceAction, { videoId });
   } catch {
     // Transcript is an enhancement; swallow.
   }
 }
 
-/** The dev worker token, passed to the token-guarded publish mutation. */
+/** The dev worker token, passed to the token-guarded `testing:startThreadDev`
+ *  mutation (lib/use-thread.ts) — the one caller this task leaves in place. */
 export function getWorkerToken(): string {
   if (!workerToken) {
     throw new Error("Missing PLASMO_PUBLIC_WORKER_TOKEN");

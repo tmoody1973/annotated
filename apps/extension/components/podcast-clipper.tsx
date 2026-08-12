@@ -42,35 +42,26 @@ const getTranscriptBySource = makeFunctionReference<
   TranscriptRow | null
 >("transcripts:getBySource");
 
-const getStorageUrl = makeFunctionReference<
-  "query",
-  { storageId: string },
-  string | null
->("files:getUrl");
-
 const note = { fontFamily: monoStack, fontSize: 12, color: muted, margin: "10px 0 0" };
 
 /**
  * Once a podcast is resolved, ensures the episode is transcribed (one idempotent
- * worker call when no transcript exists) and subscribes to the transcript row.
- * Renders the drag-select canvas as soon as the words are ready.
+ * server-side call when no transcript exists) and subscribes to the transcript
+ * row. Renders the drag-select canvas as soon as the words are ready. The frozen
+ * episode audio a clip is cut from is resolved server-side at publish time (see
+ * `annotations.createPodcast`) — this component no longer needs its URL.
  */
 export function PodcastClipper({
   sourceId,
-  mp3Url,
+  // ponytail: unused now that transcription/slicing are triggered by sourceId
+  // alone (server resolves the enclosure). Kept on the prop type so the caller
+  // (podcast-panel.tsx) doesn't need a matching edit for a dead-code trim.
+  mp3Url: _mp3Url,
 }: {
   sourceId: string;
   mp3Url: string;
 }) {
   const transcript = useQuery(getTranscriptBySource, { sourceId });
-  // Resolve the frozen episode's URL so clips cut from the same bytes that were
-  // transcribed (no ad drift). Skips until the row carries an episodeStorageId.
-  const episodeStorageId =
-    transcript?.status === "ready" ? transcript.episodeStorageId : undefined;
-  const frozenUrl = useQuery(
-    getStorageUrl,
-    episodeStorageId ? { storageId: episodeStorageId } : "skip"
-  );
   const requested = useRef<string | null>(null);
   // Local fallback start time for the brief window after we trigger transcription
   // but before the worker has inserted the row (which carries the real start).
@@ -82,13 +73,13 @@ export function PodcastClipper({
     if (transcript === null && requested.current !== sourceId) {
       requested.current = sourceId;
       localStartedAt.current = Date.now();
-      void transcribePodcast(sourceId, mp3Url).catch((e: unknown) => {
+      void transcribePodcast(sourceId).catch((e: unknown) => {
         // If the worker rejects before writing a row, no "failed" status will
         // ever arrive — surface the error here instead of hanging forever.
         setTriggerError(e instanceof Error ? e.message : "Couldn't start transcription.");
       });
     }
-  }, [transcript, sourceId, mp3Url]);
+  }, [transcript, sourceId]);
 
   if (triggerError) return <p style={note}>{triggerError} Reopen the sidebar to retry.</p>;
   if (transcript === undefined) return <p style={note}>Loading…</p>;
@@ -107,12 +98,5 @@ export function PodcastClipper({
     return <p style={note}>Transcription failed — try reopening the sidebar.</p>;
   }
 
-  return (
-    <TranscriptCanvas
-      sourceId={sourceId}
-      mp3Url={mp3Url}
-      clipUrl={frozenUrl ?? undefined}
-      words={parseWords(transcript)}
-    />
-  );
+  return <TranscriptCanvas sourceId={sourceId} words={parseWords(transcript)} />;
 }
