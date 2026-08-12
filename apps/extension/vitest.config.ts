@@ -8,6 +8,9 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   test: {
     environment: "node",
+    // `.ts` only, deliberately. Plasmo's tsconfig sets `jsx: "preserve"`, which
+    // vite's transform refuses, so a screen's testable logic (span seeding,
+    // dead-end copy) lives in a plain module beside its JSX rather than inside it.
     include: ["lib/**/*.test.ts", "components/**/*.test.ts"],
   },
 });

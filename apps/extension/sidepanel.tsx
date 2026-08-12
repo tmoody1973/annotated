@@ -1,21 +1,20 @@
-import { ConvexProvider, ConvexReactClient, useQuery } from "convex/react";
-import { makeFunctionReference } from "convex/server";
-import { useActiveTabYoutubeId } from "./lib/use-active-tab-youtube";
-import { useActiveTabPodcast } from "./lib/use-active-tab-podcast";
-import { useActiveTabArticle } from "./lib/use-active-tab-article";
-import { ClipComposer } from "./components/clip-composer";
-import { PodcastPanel } from "./components/podcast-panel";
-import { ArticlePanel } from "./components/article-panel";
-import { AuthSlot } from "./components/auth-slot";
-import {
-  accent,
-  clipPanelCss,
-  ink,
-  monoStack,
-  muted,
-  paper,
-  sansStack,
-} from "./lib/clip-styles";
+/**
+ * The side panel router.
+ *
+ * This file used to be the panel: a detection ladder in JSX, three racing hooks,
+ * inline brutalist styling, a raw video id printed on screen and a note that
+ * read "Checking Convex…". All of it is gone. What remains is a Convex
+ * provider, one detection hook, one state machine, and a switch.
+ */
+import { useEffect, useRef } from "react";
+import { ConvexProvider, ConvexReactClient } from "convex/react";
+import { PanelShell } from "./components/panel-shell";
+import { SourceScreen } from "./components/screens/source-screen";
+import { panelCss } from "./lib/panel-theme";
+import { sourceHeading } from "./lib/source-states";
+import { useAuthState } from "./lib/use-auth-state";
+import { detectionKey, useDetectedSource } from "./lib/use-detected-source";
+import { usePanelFlow } from "./lib/use-panel-flow";
 
 const convexUrl = process.env.PLASMO_PUBLIC_CONVEX_URL;
 if (!convexUrl) {
@@ -23,117 +22,60 @@ if (!convexUrl) {
 }
 const convex = new ConvexReactClient(convexUrl);
 
-interface SourceSummary {
-  _id: string;
-  title: string;
-}
-
-const getSourceByYoutubeId = makeFunctionReference<
-  "query",
-  { youtubeVideoId: string },
-  SourceSummary | null
->("sources:getByYoutubeId");
-
-function SourceNote({ videoId }: { videoId: string }) {
-  const source = useQuery(getSourceByYoutubeId, { youtubeVideoId: videoId });
-  const text =
-    source === undefined
-      ? "Checking Convex…"
-      : source === null
-        ? "New video — not clipped yet."
-        : `Already clipped: ${source.title}`;
-  return <p style={{ fontSize: 12, color: muted, margin: "6px 0 0" }}>{text}</p>;
-}
-
-function Header() {
-  return (
-    <header
-      style={{
-        background: "#000000",
-        color: "#ffffff",
-        padding: "10px 14px",
-        marginBottom: 16,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        borderBottom: `3px solid ${ink}`,
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <span
-          style={{
-            width: 22,
-            height: 22,
-            background: accent,
-            color: ink,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontFamily: sansStack,
-            fontWeight: 900,
-            fontSize: 13,
-          }}
-        >
-          A
-        </span>
-        <h1 style={{ margin: 0, fontFamily: sansStack, fontWeight: 900, fontSize: 14, letterSpacing: "0.12em", textTransform: "uppercase", color: "#ffffff" }}>
-          Annotated
-        </h1>
-      </div>
-      <AuthSlot />
-    </header>
-  );
+/** Removed as each screen lands (Tasks 5–8). */
+function ComingNext({ label }: { label: string }) {
+  return <p className="ann-dim">{label} is being rebuilt.</p>;
 }
 
 function Sidepanel() {
-  const videoId = useActiveTabYoutubeId();
-  const podcast = useActiveTabPodcast();
-  const article = useActiveTabArticle();
+  const detected = useDetectedSource();
+  const auth = useAuthState();
+  const flow = usePanelFlow();
+  const sourceKey = detectionKey(detected);
 
-  // Apple/Spotify podcast pages win outright. But many news articles also
-  // advertise a site RSS feed, which the generic podcast detector picks up — so
-  // a page declaring og:type=article is treated as an article even when it has
-  // an RSS link. A generic-RSS page with no article markup stays a podcast.
-  const explicitPodcast = podcast !== null && podcast.kind !== "generic";
+  // A different page is a different clip. Only a move between two *known*
+  // sources counts: the first detection isn't a change, and a transient null
+  // must never reset a screen the user is typing into.
+  const lastSourceKey = useRef<string | null>(null);
+  const { dispatch } = flow;
+  useEffect(() => {
+    if (sourceKey === null) return;
+    const previous = lastSourceKey.current;
+    lastSourceKey.current = sourceKey;
+    if (previous !== null && previous !== sourceKey) dispatch({ type: "sourceChanged" });
+  }, [sourceKey, dispatch]);
+
+  const heading =
+    flow.screen === "source"
+      ? sourceHeading(detected, auth.status)
+      : flow.screen === "clip"
+        ? "Choose the evidence"
+        : flow.screen === "take"
+          ? "State the claim"
+          : "Published";
 
   return (
     <ConvexProvider client={convex}>
-      <style>{clipPanelCss}</style>
-      <main
-        className="ann-root"
-        style={{
-          minHeight: "100vh",
-          background: paper,
-          color: ink,
-          fontFamily: sansStack,
-        }}
+      <style>{panelCss()}</style>
+      <PanelShell
+        screen={flow.screen}
+        heading={heading}
+        onBack={flow.canGoBack ? () => flow.dispatch({ type: "back" }) : null}
       >
-        <Header />
-        <div style={{ padding: "0 16px 16px" }}>
-        {videoId ? (
-          <>
-            <section style={{ marginBottom: 18 }}>
-              <div style={{ fontFamily: sansStack, fontSize: 11, fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: muted }}>
-                YouTube clip
-              </div>
-              <code style={{ fontFamily: monoStack, fontSize: 13, fontWeight: 700 }}>{videoId}</code>
-              <SourceNote videoId={videoId} />
-            </section>
-            <ClipComposer videoId={videoId} />
-          </>
-        ) : explicitPodcast && podcast ? (
-          <PodcastPanel detection={podcast} />
-        ) : article ? (
-          <ArticlePanel detection={article} />
-        ) : podcast ? (
-          <PodcastPanel detection={podcast} />
+        {flow.screen === "source" ? (
+          <SourceScreen
+            detected={detected}
+            auth={auth}
+            onStartClip={(spanMs) => flow.dispatch({ type: "startClip", spanMs })}
+          />
+        ) : flow.screen === "clip" ? (
+          <ComingNext label="The clip screen" />
+        ) : flow.screen === "take" ? (
+          <ComingNext label="The take screen" />
         ) : (
-          <p style={{ fontSize: 14, color: muted }}>
-            Open a YouTube video, podcast, or article to clip it.
-          </p>
+          <ComingNext label="The published screen" />
         )}
-        </div>
-      </main>
+      </PanelShell>
     </ConvexProvider>
   );
 }
