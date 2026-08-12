@@ -5,6 +5,7 @@ const LINKS = [
   { label: "Topics", href: "/topics" },
   { label: "Publishers", href: "/publishers" },
   { label: "Extension", href: "/extension" },
+  { label: "Changelog", href: "/changelog" },
   { label: "Privacy", href: "/privacy" },
 ];
 
