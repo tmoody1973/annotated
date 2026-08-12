@@ -36,6 +36,8 @@ import { ClockField } from "./clock-field";
 const PLAYHEAD_POLL_MS = 500;
 const TRACK_HEIGHT = 52;
 const HANDLE_WIDTH = 16;
+/** How far past each track edge a drag may reach, as a fraction of the window. */
+const OVERSHOOT = 0.08;
 
 type Drag =
   | { kind: "handle"; handle: Handle }
@@ -71,8 +73,9 @@ export function ClipBodyYoutube({ span, onChange }: ClipBodyYoutubeProps) {
     };
   }, []);
 
-  // The window follows the clip only once the clip reaches its edge — otherwise
-  // dragging would move the scenery and pin the band in place.
+  // The window sits still while the clip has room, then pans by the smallest
+  // distance that keeps it in frame. Re-centring instead made a drag past the
+  // edge lurch: the band jumped back to the middle, out from under the cursor.
   useEffect(() => {
     setView((current) => keepInView(current, span, durationMs));
   }, [span.startMs, span.endMs, durationMs]);
@@ -86,7 +89,15 @@ export function ClipBodyYoutube({ span, onChange }: ClipBodyYoutubeProps) {
       const track = trackRef.current;
       if (!track) return view.startMs;
       const box = track.getBoundingClientRect();
-      const fraction = Math.max(0, Math.min(1, (clientX - box.left) / box.width));
+      // A little overshoot past each edge is allowed on purpose: hard-clamping
+      // at the track edge pinned the clip there, so a drag that kept going did
+      // nothing until the window jumped. With overshoot the target keeps
+      // advancing and the window pans smoothly to follow. Bounded so a wide
+      // flick scrolls rather than teleports. Kept small: the window pans to follow,
+      // so overshoot compounds across pointer events and a generous value turns a
+      // drag past the edge into a scrub through half the video.
+      const raw = (clientX - box.left) / box.width;
+      const fraction = Math.max(-OVERSHOOT, Math.min(1 + OVERSHOOT, raw));
       return Math.round(view.startMs + fraction * viewMs);
     },
     [view.startMs, viewMs],

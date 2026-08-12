@@ -118,14 +118,31 @@ export function viewFor(span: Span, durationMs: number): View {
 }
 
 /**
- * Re-centre only once the clip reaches the edge of the window.
+ * Follow the clip out of the window by panning the *minimum* distance that
+ * brings it back inside — never by re-centring.
  *
- * Recomputing the window on every change would keep the clip permanently
- * centred — so dragging it would move the *scenery* and the band would appear
- * nailed in place. It has to stay still while the clip moves within it.
+ * Both halves of that matter and both were learned the hard way. Recomputing
+ * the window on every change keeps the clip permanently centred, so dragging it
+ * moves the scenery while the band sits nailed in place. But re-centring only
+ * at the edge is worse: the clip pins against the boundary, the window jumps to
+ * put it back in the middle, and the band lurches out from under the cursor —
+ * then does it again on the next pointer event, which is the stutter you feel
+ * when you drag past the end.
+ *
+ * Panning by the shortest distance that restores the margin does neither. The
+ * window sits still while there is room, then scrolls smoothly under a drag
+ * that keeps going.
  */
 export function keepInView(view: View, span: Span, durationMs: number): View {
-  const margin = (view.endMs - view.startMs) * 0.1;
-  const inside = span.startMs >= view.startMs + margin && span.endMs <= view.endMs - margin;
-  return inside ? view : viewFor(span, durationMs);
+  const length = view.endMs - view.startMs;
+  const margin = length * 0.1;
+  const bound = durationMs > 0 ? durationMs : Math.max(length, span.endMs);
+
+  let startMs = view.startMs;
+  if (span.startMs < view.startMs + margin) startMs = span.startMs - margin;
+  else if (span.endMs > view.endMs - margin) startMs = span.endMs + margin - length;
+  else return view;
+
+  startMs = Math.round(clamp(startMs, 0, Math.max(0, bound - length)));
+  return { startMs, endMs: startMs + length };
 }

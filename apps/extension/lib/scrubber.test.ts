@@ -173,12 +173,44 @@ describe("keepInView", () => {
     expect(keepInView(view, nudged, duration)).toEqual(view);
   });
 
-  it("re-centres once the clip reaches the edge", () => {
+  it("pans just far enough to bring the clip back, never re-centring it", () => {
     const span = { startMs: 1_084_000, endMs: 1_174_000 };
     const view = viewFor(span, duration);
     const far = { startMs: view.endMs - 10_000, endMs: view.endMs + 80_000 };
     const moved = keepInView(view, far, duration);
-    expect(moved).not.toEqual(view);
+
     expect(far.endMs).toBeLessThanOrEqual(moved.endMs);
+    // Same width — a pan, not a rebuild.
+    expect(moved.endMs - moved.startMs).toBe(view.endMs - view.startMs);
+    // And the clip must NOT have been dragged back to the middle: that jump is
+    // exactly what made dragging past the edge stutter.
+    const centre = (moved.startMs + moved.endMs) / 2;
+    const clipCentre = (far.startMs + far.endMs) / 2;
+    expect(Math.abs(clipCentre - centre)).toBeGreaterThan(10_000);
+  });
+
+  it("pans by the same small step for each further nudge past the edge", () => {
+    const span = { startMs: 600_000, endMs: 690_000 };
+    let view = viewFor(span, duration);
+    const steps = [];
+    let clip = span;
+    for (let i = 0; i < 4; i++) {
+      clip = { startMs: clip.startMs + 30_000, endMs: clip.endMs + 30_000 };
+      const next = keepInView(view, clip, duration);
+      steps.push(next.startMs - view.startMs);
+      view = next;
+    }
+    // Every pan is a small, even follow — not one big jump then nothing.
+    for (const step of steps.filter((s) => s > 0)) {
+      expect(step).toBeLessThanOrEqual(30_000);
+    }
+  });
+
+  it("stops panning at the end of the video", () => {
+    const view = viewFor({ startMs: 600_000, endMs: 690_000 }, duration);
+    const atEnd = { startMs: duration - 90_000, endMs: duration };
+    const moved = keepInView(view, atEnd, duration);
+    expect(moved.endMs).toBeLessThanOrEqual(duration);
+    expect(moved.startMs).toBeGreaterThanOrEqual(0);
   });
 });

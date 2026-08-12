@@ -132,6 +132,34 @@ async function main() {
     assert.equal(after.out - after.in, before.out - before.in, "moving the clip changed its length");
     console.log(`  ok  band drag moved it ${after.in - before.in}s, still ${after.out - after.in}s long`);
 
+    // Dragging well past the right edge must keep advancing the clip, panning
+    // the window along with it — this is where it used to pin and stutter.
+    const beforeFar = clock(await inField.inputValue());
+    const seen = new Set();
+    const bandNow = await band.boundingBox();
+    await panel.mouse.move(bandNow.x + bandNow.width / 2, bandNow.y + bandNow.height / 2);
+    await panel.mouse.down();
+    for (let push = 1; push <= 4; push++) {
+      await panel.mouse.move(bandNow.x + bandNow.width + 120 * push, bandNow.y + bandNow.height / 2, {
+        steps: 6,
+      });
+      await panel.waitForTimeout(200);
+      const at = await inField.inputValue();
+      seen.add(at);
+    }
+    await panel.mouse.up();
+    const afterFar = clock(await inField.inputValue());
+    assert.ok(afterFar > beforeFar, "dragging past the edge did not advance the clip");
+    assert.ok(seen.size >= 3, `clip pinned instead of scrolling (only ${seen.size} positions)`);
+    assert.equal(
+      clock(await outField.inputValue()) - afterFar,
+      90,
+      "scrolling past the edge changed the clip length",
+    );
+    console.log(
+      `  ok  drag past the edge scrolled through ${seen.size} positions to ${await inField.inputValue()}, still 90s`,
+    );
+
     // The zoom is honest about itself.
     const zoomNote = await panel.getByText(/zoomed ·/).count();
     assert.equal(zoomNote, 1, "no indication the track is zoomed");
