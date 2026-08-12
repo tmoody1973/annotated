@@ -19,6 +19,8 @@ import {
   type ArticleHighlight,
 } from "@annotated/shared";
 import { extractArticle, type ExtractedArticle } from "../../lib/worker-client";
+import { NotSignedInError } from "../../lib/convex-publish";
+import { openSignIn } from "../../lib/use-auth-state";
 import type { ArticleDetection } from "../../lib/use-active-tab-article";
 
 /**
@@ -47,19 +49,26 @@ export function ClipBodyArticle({ detection, highlight, onChange }: ClipBodyArti
   const textRef = useRef<HTMLDivElement>(null);
   const [article, setArticle] = useState<ExtractedArticle | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [needsSignIn, setNeedsSignIn] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     setArticle(null);
     setError(null);
+    setNeedsSignIn(false);
     extractArticle(detection.url, detection.html)
       .then((result) => {
         if (!cancelled) setArticle(result);
       })
       .catch((cause: unknown) => {
-        if (!cancelled) {
-          setError(cause instanceof Error ? cause.message : "Couldn't read this article.");
-        }
+        if (cancelled) return;
+        // Reading the article runs server-side, which means it needs an identity
+        // — unlike a video or a podcast, where the clip is chosen entirely in
+        // the browser. So the article path meets the sign-in wall one screen
+        // earlier than the others, and has to say so rather than showing a raw
+        // authentication error.
+        if (cause instanceof NotSignedInError) setNeedsSignIn(true);
+        else setError(cause instanceof Error ? cause.message : "Couldn't read this article.");
       });
     return () => {
       cancelled = true;
@@ -76,6 +85,19 @@ export function ClipBodyArticle({ detection, highlight, onChange }: ClipBodyArti
     const next = selectArticleHighlight(article.textContent, offsets.start, offsets.end);
     onChange(next.valid ? next : null);
   };
+
+  if (needsSignIn) {
+    return (
+      <div>
+        <p style={{ fontSize: 14, lineHeight: 1.5, margin: "0 0 12px" }}>
+          Sign in to pull this article's text into the panel, then highlight the part you want.
+        </p>
+        <button type="button" className="ann-publish ann-press" onClick={openSignIn}>
+          Sign in
+        </button>
+      </div>
+    );
+  }
 
   if (error) {
     return (

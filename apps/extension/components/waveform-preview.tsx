@@ -1,6 +1,5 @@
 import { useEffect, useRef } from "react";
 import { computeWaveformPeaks } from "@annotated/shared";
-import { accent, paper } from "../lib/clip-styles";
 
 const WIDTH = 320;
 const HEIGHT = 44;
@@ -32,7 +31,7 @@ export function WaveformPreview({ blob }: { blob: Blob }) {
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
       ctx.clearRect(0, 0, WIDTH, HEIGHT);
-      ctx.fillStyle = accent;
+      ctx.fillStyle = "var(--b-acid)";
       const barWidth = WIDTH / peaks.length;
       peaks.forEach((peak, i) => {
         const barHeight = Math.max(1, peak * HEIGHT);
@@ -61,7 +60,7 @@ export function WaveformPreview({ blob }: { blob: Blob }) {
       width={WIDTH}
       height={HEIGHT}
       aria-label="Waveform of the recorded take"
-      style={{ width: "100%", height: HEIGHT, background: paper, display: "block" }}
+      style={{ width: "100%", height: HEIGHT, background: "var(--b-bg)", display: "block" }}
     />
   );
 }

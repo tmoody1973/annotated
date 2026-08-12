@@ -1,16 +1,16 @@
 import { useEffect } from "react";
 import { formatClipTimestamp } from "@annotated/shared";
+import { SANS_STACK, STATUS_BAD, STATUS_OK } from "../lib/panel-theme";
 import { useVoiceRecorder, MAX_RECORDING_MS } from "../lib/use-voice-recorder";
-import { accent, danger, ink, monoStack, muted, sansStack, valid } from "../lib/clip-styles";
 import { WaveformPreview } from "./waveform-preview";
 
 const labelStyle: React.CSSProperties = {
-  fontFamily: sansStack,
+  fontFamily: SANS_STACK,
   fontSize: 11,
   fontWeight: 700,
   letterSpacing: "0.12em",
   textTransform: "uppercase",
-  color: muted,
+  color: "var(--b-dim)",
   marginBottom: 6,
 };
 
@@ -60,7 +60,7 @@ export function TakeComposer({
           <button
             type="button"
             className="ann-capture ann-press"
-            style={{ ...recordButton, background: accent, color: ink, border: `2px solid ${ink}` }}
+            style={{ ...recordButton, background: "var(--b-acid)", color: "var(--b-ink)", border: "2px solid var(--b-ink)" }}
             onClick={recorder.stop}
           >
             ■ Stop · {formatClipTimestamp(recorder.elapsedMs)} /{" "}
@@ -98,13 +98,13 @@ export function TakeComposer({
         )}
 
         {recorder.state === "recorded" && (
-          <p style={{ color: valid, fontFamily: sansStack, fontSize: 12, fontWeight: 700, marginTop: 6 }}>
+          <p style={{ color: STATUS_OK, fontFamily: SANS_STACK, fontSize: 12, fontWeight: 700, marginTop: 6 }}>
             Voice note attached
             {recorder.takeCount > 0 ? ` · Take ${recorder.takeCount}` : ""}.
           </p>
         )}
         {recorder.state === "denied" && recorder.error && (
-          <p style={{ color: danger, fontFamily: sansStack, fontSize: 12, marginTop: 8 }}>
+          <p style={{ color: STATUS_BAD, fontFamily: SANS_STACK, fontSize: 12, marginTop: 8 }}>
             {recorder.error}
           </p>
         )}

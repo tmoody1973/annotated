@@ -16,6 +16,11 @@ export const SANS_STACK =
 export const MONO_STACK =
   'ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace';
 
+/** Flat status colours. The palette is one accent by design, so "recording" and
+ * "signed in" borrow these two rather than diluting the acid. */
+export const STATUS_OK = "#1a7a40";
+export const STATUS_BAD = "#c0392b";
+
 /** Acid at 20% — the selection wash. Kept as a literal because it is an alpha
  * variant of a token, not a token, and only the panel uses it. */
 const ACID_WASH = "#e1ff0033";

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { progressFraction } from "@annotated/shared";
-import { accent, ink, monoStack, muted, surface } from "../lib/clip-styles";
+import { MONO_STACK } from "../lib/panel-theme";
 
 /**
  * A determinate-feeling progress bar for an operation with no measurable percent
@@ -31,7 +31,7 @@ export function ProgressIndicator({
 
   return (
     <section style={{ margin: "10px 0 0" }} role="status" aria-live="polite">
-      <div style={{ fontFamily: monoStack, fontSize: 12, fontWeight: 700, color: ink }}>
+      <div style={{ fontFamily: MONO_STACK, fontSize: 12, fontWeight: 700, color: "var(--b-ink)" }}>
         {label}
       </div>
       <div
@@ -40,20 +40,20 @@ export function ProgressIndicator({
           height: 10,
           borderRadius: 0,
           overflow: "hidden",
-          border: `2px solid ${ink}`,
-          background: surface,
+          border: "2px solid var(--b-ink)",
+          background: "var(--b-bg)",
         }}
       >
         <div
           style={{
             height: "100%",
             width: `${Math.round(fraction * 100)}%`,
-            background: accent,
+            background: "var(--b-acid)",
             transition: "width 250ms linear",
           }}
         />
       </div>
-      <div style={{ fontFamily: monoStack, fontSize: 11, color: muted, marginTop: 4 }}>
+      <div style={{ fontFamily: MONO_STACK, fontSize: 11, color: "var(--b-dim)", marginTop: 4 }}>
         {elapsedSec}s elapsed · ~{estimateSec}s expected
       </div>
     </section>

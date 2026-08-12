@@ -101,15 +101,17 @@ async function main() {
       waitUntil: "domcontentloaded",
     });
 
-    // If the executeScript fallback worked, the ArticlePanel mounts (this label
-    // shows in every article-panel state). If it didn't, we'd see the empty
-    // "Open a YouTube video, podcast, or article" state instead.
-    await panel.getByText(/Article detected/i).waitFor({ timeout: 15000 });
-    const detected = await panel.getByText(/Article detected/i).count();
-    const emptyState = await panel.getByText(/Open a YouTube video/i).count();
+    // If the executeScript fallback worked, screen 1 offers the article action.
+    // If it didn't, we'd land on the nothing-to-clip / welcome state instead.
+    const action = panel.getByRole("button", { name: /Highlight on the page/i });
+    await action.waitFor({ timeout: 20000 });
 
-    assert.ok(detected > 0, "article panel did not mount via the executeScript fallback");
-    assert.equal(emptyState, 0, "still showing the empty state — fallback failed");
+    assert.equal(await action.count(), 1, "screen 1 did not detect the article via executeScript");
+    assert.equal(
+      await panel.getByText(/Nothing to clip on this page/i).count(),
+      0,
+      "still showing the nothing-to-clip state — fallback failed",
+    );
 
     console.log(
       "PASS: content-script message forced to fail → executeScript fallback detected the article (bundled detector serialized + ran)."

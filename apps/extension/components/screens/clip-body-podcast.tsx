@@ -23,6 +23,7 @@ import { transcribePodcast } from "../../lib/worker-client";
 import type { PodcastDetection } from "../../lib/use-active-tab-podcast";
 import { ProgressIndicator } from "../progress-indicator";
 import { TranscriptWords } from "./transcript-words";
+import { Retry, Waiting } from "./transcript-states";
 import { resolveArgs, type ResolveArgs, type ResolveResult } from "../../lib/podcast-resolve";
 
 interface TranscriptRow {
@@ -191,31 +192,5 @@ function Transcript({
           : "Drag across the words you want · up to 90 seconds"}
       </p>
     </section>
-  );
-}
-
-function Waiting({
-  label,
-  estimateMs,
-  startedAt,
-}: {
-  label: string;
-  estimateMs: number;
-  startedAt?: number;
-}) {
-  const fallback = useRef(Date.now());
-  return (
-    <ProgressIndicator label={label} estimateMs={estimateMs} startedAt={startedAt ?? fallback.current} />
-  );
-}
-
-function Retry({ message, onRetry }: { message: string; onRetry: () => void }) {
-  return (
-    <div role="alert">
-      <p style={{ fontSize: 14, margin: "0 0 10px" }}>{message}</p>
-      <button type="button" className="ann-capture ann-press" style={{ padding: 10 }} onClick={onRetry}>
-        Try again
-      </button>
-    </div>
   );
 }
