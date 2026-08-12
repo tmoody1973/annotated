@@ -21,12 +21,12 @@ const recordButton: React.CSSProperties = {
 };
 
 /**
- * Shared commentary input across all three clip paths: a text take, a recorded
+ * Shared take input across all three clip paths: a text take, a recorded
  * voice note, or both (SPEC: "commentary supports text and recorded audio").
  * Owns the MediaRecorder lifecycle and lifts the recorded blob up via
  * `onAudioChange` so the parent can transcode + publish it.
  */
-export function CommentaryComposer({
+export function TakeComposer({
   text,
   onTextChange,
   onAudioChange,
@@ -45,14 +45,14 @@ export function CommentaryComposer({
 
   return (
     <div>
-      <div style={labelStyle}>Commentary</div>
+      <div style={labelStyle}>Take</div>
       <textarea
         className="ann-textarea ann-shadow"
         placeholder="Add your take (text), record a voice note, or both"
         value={text}
         onChange={(event) => onTextChange(event.target.value)}
         disabled={disabled}
-        aria-label="Commentary text"
+        aria-label="Take text"
       />
 
       <div style={{ marginTop: 10 }}>
@@ -73,7 +73,7 @@ export function CommentaryComposer({
               controls
               src={recorder.previewUrl}
               style={{ width: "100%" }}
-              aria-label="Recorded commentary preview"
+              aria-label="Recorded take preview"
             />
             <button
               type="button"
