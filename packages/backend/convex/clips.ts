@@ -14,11 +14,18 @@ import type { Id } from "./_generated/dataModel";
 
 // Bounds the worker fetch so a hung Fly instance can't leave a row stuck
 // "processing" forever — Convex would otherwise only cut it off at the
-// action's own runtime limit, well past the point of being useful. 90s caps
-// the clip itself; ffmpeg range-seek copies run single-digit seconds even on
-// shared CPU, so 60s leaves generous headroom for the yt-dlp/download hop
-// without approving an effectively-unbounded wait.
-export const WORKER_FETCH_TIMEOUT_MS = 60_000;
+// action's own runtime limit, well past the point of being useful.
+//
+// Raised from 60s on 2026-08-12. 60s was set when a slice took 4-10s, which
+// made it look like generous headroom. Measured on the live worker: throughput
+// to YouTube is around 30KB/s, so a 90-second 360p section is ~3.5MB and takes
+// about two minutes to fetch — and every clip of a dense video was being killed
+// at 60s and marked "failed" while the download was still healthy.
+//
+// The wait costs nothing that matters: publish is optimistic, so the annotation
+// and its page already exist and the panel is showing "clip processing…". This
+// only decides how long we let a *working* download run before giving up on it.
+export const WORKER_FETCH_TIMEOUT_MS = 240_000;
 
 /** Attaches a finished clip and flips the row to ready. */
 export const attachClip = internalMutation({
