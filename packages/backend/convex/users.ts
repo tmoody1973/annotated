@@ -1,11 +1,12 @@
 import { v } from "convex/values";
 import {
+  internalMutation,
   mutation,
   query,
   type MutationCtx,
   type QueryCtx,
 } from "./_generated/server";
-import type { Doc } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 
 export async function getCurrentUser(ctx: QueryCtx) {
   const identity = await ctx.auth.getUserIdentity();
@@ -217,5 +218,76 @@ export const ensureCurrentUser = mutation({
       displayName,
       avatarUrl: identity.pictureUrl ?? undefined,
     });
+  },
+});
+
+/**
+ * One-off repair for usernames that collided before `ensureUniqueUsername`
+ * existed (Fix 4 stops new collisions; this resolves the ones already stored).
+ *
+ * Policy — deliberate, because a username IS the profile URL:
+ * the account with the MOST published annotations keeps the original slug, so
+ * links already shared in the wild keep resolving. Ties break toward the oldest
+ * account. Every other account in the group takes `-2`, `-3`, … .
+ *
+ * Idempotent: a second run finds no groups larger than one and changes nothing.
+ * Internal — run it with `npx convex run users:disambiguateUsernames '{}'`.
+ */
+export const disambiguateUsernames = internalMutation({
+  args: {},
+  returns: v.array(
+    v.object({
+      userId: v.id("users"),
+      from: v.string(),
+      to: v.string(),
+      annotationCount: v.number(),
+    })
+  ),
+  handler: async (ctx) => {
+    const users = await ctx.db.query("users").collect();
+
+    const counts = new Map<Id<"users">, number>();
+    for (const user of users) {
+      const owned = await ctx.db
+        .query("annotations")
+        .withIndex("by_author", (q) => q.eq("authorId", user._id))
+        .collect();
+      counts.set(user._id, owned.length);
+    }
+
+    const groups = new Map<string, typeof users>();
+    for (const user of users) {
+      const group = groups.get(user.username) ?? [];
+      group.push(user);
+      groups.set(user.username, group);
+    }
+
+    const renames: {
+      userId: Id<"users">;
+      from: string;
+      to: string;
+      annotationCount: number;
+    }[] = [];
+
+    for (const [username, group] of groups) {
+      if (group.length < 2) continue;
+      // Most annotations wins the slug; oldest account breaks a tie.
+      const ranked = [...group].sort((a, b) => {
+        const byCount = (counts.get(b._id) ?? 0) - (counts.get(a._id) ?? 0);
+        return byCount !== 0 ? byCount : a._creationTime - b._creationTime;
+      });
+      for (const loser of ranked.slice(1)) {
+        const next = await ensureUniqueUsername(ctx, username);
+        await ctx.db.patch(loser._id, { username: next });
+        renames.push({
+          userId: loser._id,
+          from: username,
+          to: next,
+          annotationCount: counts.get(loser._id) ?? 0,
+        });
+      }
+    }
+
+    return renames;
   },
 });
