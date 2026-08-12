@@ -110,22 +110,63 @@ export const updateProfile = mutation({
 
 /**
  * Up to `limit` suggested accounts for the feed's "people worth following" rail:
- * most-recent users, excluding the signed-in user. Lightweight — no ranking yet.
+ * most-recent users, excluding the signed-in user, anyone already followed, and
+ * anyone with zero published annotations (an empty account isn't "worth
+ * following"). Accounts sharing a username (possible pre-Fix-4 — see
+ * `ensureUniqueUsername`) are collapsed to the one with the most annotations.
  */
 export const suggestions = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
     const me = await getCurrentUser(ctx);
     const limit = Math.min(args.limit ?? 4, 12);
-    const recent = await ctx.db.query("users").order("desc").take(limit + 2);
-    return recent
-      .filter((u) => !me || u._id !== me._id)
+
+    const alreadyFollowing = me
+      ? new Set(
+          (
+            await ctx.db
+              .query("follows")
+              .withIndex("by_follower", (q) => q.eq("followerId", me._id))
+              .collect()
+          ).map((f) => f.followingId)
+        )
+      : new Set();
+
+    // Over-fetch recent users since most candidates get filtered out below;
+    // capped so this stays cheap regardless of `limit`.
+    const candidatePoolSize = Math.min(limit * 6 + 12, 60);
+    const recent = await ctx.db.query("users").order("desc").take(candidatePoolSize);
+    const eligible = recent.filter(
+      (u) => (!me || u._id !== me._id) && !alreadyFollowing.has(u._id)
+    );
+
+    const withPublishedCount = await Promise.all(
+      eligible.map(async (user) => {
+        const posts = await ctx.db
+          .query("annotations")
+          .withIndex("by_author", (q) => q.eq("authorId", user._id))
+          .take(50);
+        const publishedCount = posts.filter((a) => a.isPublic && !a.isAnonymous).length;
+        return { user, publishedCount };
+      })
+    );
+
+    const byUsername = new Map<string, { user: Doc<"users">; publishedCount: number }>();
+    for (const candidate of withPublishedCount) {
+      if (candidate.publishedCount === 0) continue;
+      const existing = byUsername.get(candidate.user.username);
+      if (!existing || candidate.publishedCount > existing.publishedCount) {
+        byUsername.set(candidate.user.username, candidate);
+      }
+    }
+
+    return Array.from(byUsername.values())
       .slice(0, limit)
-      .map((u) => ({
-        _id: u._id,
-        username: u.username,
-        displayName: u.displayName,
-        avatarUrl: u.avatarUrl,
+      .map(({ user }) => ({
+        _id: user._id,
+        username: user.username,
+        displayName: user.displayName,
+        avatarUrl: user.avatarUrl,
       }));
   },
 });
