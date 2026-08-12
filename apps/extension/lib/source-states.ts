@@ -6,6 +6,7 @@
  * first (docs/superpowers/specs/2026-08-11-extension-experience-design.md).
  */
 import type { DetectedSource } from "./use-detected-source";
+import { formatClipTimestamp } from "@annotated/shared";
 import type { SpanMs } from "./use-panel-flow";
 import type { AuthState } from "./use-auth-state";
 
@@ -57,11 +58,15 @@ export function primaryAction(
   // Seeding from the playhead regardless produced a ten-second clip — or, if the
   // panel opened the instant playback began, a *fraction of a second* one.
   if (playheadMs === null || playheadMs < SEED_WINDOW_MS) {
-    return { label: "Clip from the start", spanMs: { startMs: 0, endMs: SEED_WINDOW_MS } };
+    return { label: "Clip the first minute", spanMs: { startMs: 0, endMs: SEED_WINDOW_MS } };
   }
+  // Name the span rather than the rule. "Clip last 60s" read as a decision made
+  // on the user's behalf; "Clip 26:06–27:06" reads as a starting point they can
+  // see — and the line under the button says it is adjustable.
+  const spanMs = { startMs: Math.max(0, playheadMs - SEED_WINDOW_MS), endMs: playheadMs };
   return {
-    label: "Clip last 60s",
-    spanMs: { startMs: Math.max(0, playheadMs - SEED_WINDOW_MS), endMs: playheadMs },
+    label: `Clip ${formatClipTimestamp(spanMs.startMs)}–${formatClipTimestamp(spanMs.endMs)}`,
+    spanMs,
   };
 }
 

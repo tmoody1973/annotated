@@ -84,7 +84,7 @@ async function main() {
       waitUntil: "domcontentloaded",
     });
 
-    const go = panel.getByRole("button", { name: /Clip (last 60s|from the start)/i });
+    const go = panel.getByRole("button", { name: /^Clip / });
     await go.waitFor({ timeout: 20000 });
     await go.click();
 

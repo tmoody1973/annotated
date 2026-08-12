@@ -67,7 +67,7 @@ const CASES = [
     heading: /Choose the evidence/i,
     // The playhead can't be read on a page that never plays, so the seeded
     // fallback label is the one that must appear — and it must appear enabled.
-    action: /Clip (last 60s|from the start)/i,
+    action: /^Clip /,
   },
   {
     name: "podcast",

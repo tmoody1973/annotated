@@ -96,7 +96,7 @@ async function main() {
     });
 
     // Screen 1 seeds the last 60 seconds off the playhead.
-    const start = panel.getByRole("button", { name: /Clip (last 60s|from the start)/i });
+    const start = panel.getByRole("button", { name: /^Clip / });
     await start.waitFor({ timeout: 20000 });
     const seededLabel = (await start.textContent()) ?? "";
     await start.click();

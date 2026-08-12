@@ -159,6 +159,11 @@ export function SourceScreen({ detected, auth, onStartClip }: SourceScreenProps)
       >
         {action.label}
       </button>
+      {action.spanMs ? (
+        <p className="ann-dim" style={{ fontSize: 12, margin: "8px 0 0" }}>
+          You'll adjust it on the next screen
+        </p>
+      ) : null}
       <p className="ann-dim" style={{ fontSize: 12, margin: "10px 0 0" }}>
         Up to 90 seconds · fair use
       </p>

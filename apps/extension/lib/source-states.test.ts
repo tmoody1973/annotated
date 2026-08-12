@@ -15,7 +15,7 @@ const podcast: DetectedSource = {
 describe("primaryAction", () => {
   it("offers the last 60 seconds up to the playhead", () => {
     expect(primaryAction(youtube, 300_000)).toEqual({
-      label: "Clip last 60s",
+      label: "Clip 4:00–5:00",
       spanMs: { startMs: 240_000, endMs: 300_000 },
     });
   });
@@ -23,7 +23,7 @@ describe("primaryAction", () => {
   it("opens on the first minute when the video has not run a minute yet", () => {
     // Seeding from the playhead here would offer a twenty-second clip.
     const action = primaryAction(youtube, 20_000);
-    expect(action.label).toBe("Clip from the start");
+    expect(action.label).toBe("Clip the first minute");
     expect(action.spanMs).toEqual({ startMs: 0, endMs: 60_000 });
   });
 
@@ -37,13 +37,17 @@ describe("primaryAction", () => {
 
   it("falls back to the opening minute when the playhead cannot be read", () => {
     expect(primaryAction(youtube, null)).toEqual({
-      label: "Clip from the start",
+      label: "Clip the first minute",
       spanMs: { startMs: 0, endMs: 60_000 },
     });
   });
 
   it("still offers an action when the playhead reads zero", () => {
-    expect(primaryAction(youtube, 0).label).toBe("Clip from the start");
+    expect(primaryAction(youtube, 0).label).toBe("Clip the first minute");
+  });
+
+  it("names the span it is about to open on, not the rule behind it", () => {
+    expect(primaryAction(youtube, 1_626_000).label).toBe("Clip 26:06–27:06");
   });
 
   it("always produces a label — the primary action is never disabled", () => {

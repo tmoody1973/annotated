@@ -147,7 +147,7 @@ async function main() {
     await walk(context, extensionId, {
       name: "youtube",
       url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-      startAction: /Clip (last 60s|from the start)/i,
+      startAction: /^Clip /,
       chooseEvidence: async (panel) => {
         // The seeded span is already valid; just prove the scrubber is there.
         await panel.getByRole("slider", { name: "Clip start" }).waitFor({ timeout: 10000 });
