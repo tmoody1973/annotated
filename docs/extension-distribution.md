@@ -117,14 +117,33 @@ trigger extra scrutiny (see the justification note above).
 
 ## Security — the bundled token
 
-**Resolved, 2026-08-11 (Plan A Task 8).** The extension no longer holds a worker credential —
-`PLASMO_PUBLIC_WORKER_TOKEN` and `PLASMO_PUBLIC_WORKER_URL` were deleted from `.env`,
-`.env.production`, and `.env.example`. Every former worker call (`/clip-youtube`,
-`/transcribe`, `/clip-audio`, `/extract-article`, transcode-commentary) now runs through a
-Convex action/mutation, which holds `WORKER_AUTH_TOKEN` server-side. Verified: the built
-bundle and both packaged zips (`build/chrome-mv3-prod.zip`, the `/extension` sideload zip)
-contain no 64-hex secret and no `fly.dev` host — see the acceptance greps in
-`docs/superpowers/sdd/2026-08-11-extension-foundation/task-8-report.md`.
+**Resolved, 2026-08-11 (Plan A Task 8).** The extension no longer holds a worker credential.
+`PLASMO_PUBLIC_WORKER_TOKEN` and `PLASMO_PUBLIC_WORKER_URL` are gone from `.env`,
+`.env.production` and `.env.example`. All seven former worker calls — `/clip-youtube`,
+`/clip-audio`, `/transcribe`, `/transcribe-youtube`, `/extract-article`,
+`/transcode-commentary`, `/youtube-chapters` — now run through auth-gated Convex actions that
+hold `WORKER_AUTH_TOKEN` server-side.
+
+Verified: the built bundle and all three packaged zips contain no worker token of either
+generation, no `fly.dev` host, and no `startThreadDev`. See
+`.superpowers/sdd/2026-08-11-extension-foundation/task-8-report.md`.
+
+### Why it mattered more than "someone can burn Fly compute"
+
+Kept here because the architecture that made this dangerous still exists.
+
+`WORKER_AUTH_TOKEN` is a **single symmetric secret in three places**: Fly validates inbound
+worker requests with it, the worker authenticates **to Convex** with it
+(`apps/worker/src/index.ts`), and Convex validates writes against it (`convex/files.ts`,
+`convex/transcripts.ts`). A leaked token therefore also granted `files:generateUploadUrl` —
+write access to Convex storage.
+
+That is also why rotation order matters: **Convex first, then Fly.** Setting Fly first leaves
+the worker writing to Convex with a token Convex no longer accepts.
+
+**And why the fix had to be structural.** `PLASMO_PUBLIC_*` vars inline at build time, so
+rotating faster never helps — every rebuild re-leaks whatever token it was built with. The
+only durable fix was removing the extension's need for a credential at all.
 
 ### Incident — 2026-08-11 (fixed same day)
 
@@ -135,8 +154,16 @@ bundled token returned 400 (auth passed), a bogus token returned 401.
 Rotated the same day on both the Convex deployment (`strong-eel-665`) and the Fly app
 (`annotated-worker-rm`) — Convex first, because the worker authenticates to Convex with the
 same value and setting Fly first would break writes. Verified afterwards: old token 401, new
-token 400. Rotation alone was a stopgap — every rebuild re-leaked whatever token it was built
-with, until Task 8 removed the credential from the extension entirely.
+token 400.
+
+Rotation broke clipping for every already-distributed build, so the extension was rebuilt
+from a gitignored `apps/extension/.env.production` carrying the real production values
+(`pk_live_…`, `PLASMO_PUBLIC_CLERK_SYNC_HOST=https://annotated.sh`) rather than the dev
+`.env`, which points Clerk at `http://localhost` and would have shipped an extension nobody
+could sign in to.
+
+That rebuild was a stopgap: it shipped the *new* token. Task 8 then removed the credential
+from the extension entirely, so no further rotation is needed on the extension's account.
 
 ## Building for distribution
 
@@ -158,8 +185,9 @@ Verify every package before distributing:
 ```bash
 unzip -p <zip> '*.js' | grep -c "pk_live_"          # must be 1 — a pk_test_ key means you built from .env
 cd /tmp && rm -rf zipcheck && mkdir zipcheck && unzip -q <zip> -d zipcheck
-grep -rlE '[0-9a-f]{64}' zipcheck --exclude='Web3Solana*'   # must print nothing — no 64-hex secrets
 grep -rl 'fly\.dev' zipcheck                                # must print nothing — no worker host
+grep -rl 'startThreadDev' zipcheck                          # must print nothing — no token-guarded mutation
+grep -rlE '[0-9a-f]{64}' zipcheck --exclude='Web3Solana*'   # must print nothing — no 64-hex secrets
 ```
 
 ---
