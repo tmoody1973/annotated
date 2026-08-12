@@ -14,33 +14,21 @@ reintroduces a review delay.
 ## 0. Prerequisites (do this before either route)
 
 The extension is built from `apps/extension` with `PLASMO_PUBLIC_*` env vars **baked in at
-build time**. Today `apps/extension/.env` points at localhost:
+build time**. `apps/extension/.env`:
 
 ```
 PLASMO_PUBLIC_CONVEX_URL=https://strong-eel-665.convex.cloud   # already prod (dev+prod share it) ✅
-PLASMO_PUBLIC_WORKER_URL=http://localhost:8080                  # ⚠️ judge's machine has nothing here
-PLASMO_PUBLIC_WEB_URL=http://localhost:3000                    # ⚠️ should be the live site
-PLASMO_PUBLIC_WORKER_TOKEN=<dev token>                          # ⚠️ bundled client-side (see Security)
+PLASMO_PUBLIC_WEB_URL=https://annotated-eight.vercel.app       # ⚠️ should be the live site
 ```
 
-Before packaging a build for someone else, fix these:
+Before packaging a build for someone else, fix:
 
 1. **`PLASMO_PUBLIC_WEB_URL`** → `https://annotated-eight.vercel.app`
    (so "View annotation" links open the live landing pages, not the judge's localhost).
-2. **`PLASMO_PUBLIC_WORKER_URL`** → the deployed worker's HTTPS URL.
-   **There is no deployed worker yet.** Until one exists, every clip path that touches the
-   worker fails for the judge:
-   - YouTube clip → worker `/clip-youtube`
-   - Podcast → worker `/transcribe` + `/clip-audio`
-   - Article → worker `/extract-article` (+ voice-commentary transcode)
-   - (Article *screenshot* upload goes straight to Convex, so that part works without a worker.)
 
-   → **Deploy the worker first** (Fly or similar), then set this URL. Also update
-   `apps/extension/package.json` → `manifest.host_permissions`: replace
-   `"http://localhost:8080/*"` with the worker's `https://…/*` origin, or the panel's
-   cross-origin `fetch` to it will be blocked.
-3. **`PLASMO_PUBLIC_WORKER_TOKEN`** — see [Security](#security--the-bundled-token) before
-   any *public/unlisted* distribution.
+There is no worker URL or token to configure. Every clip path (YouTube, podcast, article)
+routes through a Convex action that holds the worker credential server-side — see
+[Security](#security--the-bundled-token).
 
 Then build:
 
@@ -108,6 +96,14 @@ review wait (hours to a few days, and broad permissions slow it — see below).
      all-hosts permission is the one reviewers scrutinize most — justify it plainly
      ("the user can clip media from *any* site, so the panel reads the active tab's
      page across all https sites"). Expect this to add review time.
+
+     **This permission is for content-script page access only — it is not, and has
+     never been, how the extension reaches a backend.** The extension holds no
+     backend host or credential at all (see [Security](#security--the-bundled-token)):
+     every worker call runs server-side through Convex. `host_permissions` exists
+     solely so `contents/*.ts` can read `document`/DOM state (transcript text,
+     `<audio>`/`<video>` elements, RSS links, article markup) on whatever page the
+     user is clipping from, per the SPEC's "any website" requirement.
 5. Set **Visibility → Unlisted**.
 6. **Submit for review.** When approved, share the item's install link with judges.
 
@@ -115,36 +111,22 @@ review wait (hours to a few days, and broad permissions slow it — see below).
 
 **Pros:** one-click install, no Developer mode, auto-updates, looks legit.
 **Cons:** review wait (unpredictable near a deadline); broad `https://*/*` permission can
-trigger extra scrutiny; the bundled worker token is now publicly extractable (see below).
+trigger extra scrutiny (see the justification note above).
 
 ---
 
 ## Security — the bundled token
 
-> **This stopped being hypothetical on 2026-08-11.** The warning below was written as a
-> risk; it had already happened. See the incident note at the end of this section.
+**Resolved, 2026-08-11 (Plan A Task 8).** The extension no longer holds a worker credential —
+`PLASMO_PUBLIC_WORKER_TOKEN` and `PLASMO_PUBLIC_WORKER_URL` were deleted from `.env`,
+`.env.production`, and `.env.example`. Every former worker call (`/clip-youtube`,
+`/transcribe`, `/clip-audio`, `/extract-article`, transcode-commentary) now runs through a
+Convex action/mutation, which holds `WORKER_AUTH_TOKEN` server-side. Verified: the built
+bundle and both packaged zips (`build/chrome-mv3-prod.zip`, the `/extension` sideload zip)
+contain no 64-hex secret and no `fly.dev` host — see the acceptance greps in
+`docs/superpowers/sdd/2026-08-11-extension-foundation/task-8-report.md`.
 
-`PLASMO_PUBLIC_WORKER_TOKEN` is compiled **into the extension bundle** (all `PLASMO_PUBLIC_*`
-vars are client-visible). Anyone who installs the extension — or downloads the sideload zip
-from `/extension` — can extract it and call the worker directly.
-
-The exposure is wider than "someone can burn Fly compute". `WORKER_AUTH_TOKEN` is a single
-symmetric secret in three places: Fly validates inbound worker requests with it, the worker
-authenticates **to Convex** with it (`apps/worker/src/index.ts`), and Convex validates writes
-against it (`convex/files.ts`, `convex/transcripts.ts`). A leaked token therefore also grants
-`files:generateUploadUrl` — the ability to write into Convex storage.
-
-- **Route A (privately-shared zip):** lower exposure, not zero.
-- **Route B (store listing) and the public `/extension` download:** the bundle is
-  downloadable by anyone, so treat the token as public the moment you publish.
-
-**The fix is structural, not procedural.** Rotating faster does not help when every build
-re-leaks. Plan A (`docs/superpowers/plans/2026-08-11-extension-foundation.md`) moves every
-worker call into a Convex action so the extension holds no credential at all, and Task 8's
-acceptance criterion is a `grep` over the packaged zip proving no 64-hex secret and no
-`fly.dev` host remain.
-
-### Incident — 2026-08-11
+### Incident — 2026-08-11 (fixed same day)
 
 The packaged zip was found to contain a **live** worker token in plaintext
 (`chrome-mv3-prod/sidepanel.*.js`), verified by calling `POST /clip-youtube` with it: the
@@ -153,16 +135,8 @@ bundled token returned 400 (auth passed), a bogus token returned 401.
 Rotated the same day on both the Convex deployment (`strong-eel-665`) and the Fly app
 (`annotated-worker-rm`) — Convex first, because the worker authenticates to Convex with the
 same value and setting Fly first would break writes. Verified afterwards: old token 401, new
-token 400.
-
-Rotation broke clipping for every already-distributed build, so the extension was rebuilt
-from a gitignored `apps/extension/.env.production` carrying the real production values
-(`pk_live_…`, `PLASMO_PUBLIC_CLERK_SYNC_HOST=https://annotated.sh`) rather than the dev
-`.env`, which points Clerk at `http://localhost` and would have shipped an extension nobody
-could sign in to.
-
-**Until Plan A Task 8 lands, every rebuild still ships a token.** Rotate once more after it
-does.
+token 400. Rotation alone was a stopgap — every rebuild re-leaked whatever token it was built
+with, until Task 8 removed the credential from the extension entirely.
 
 ## Building for distribution
 
@@ -182,8 +156,10 @@ file**, so a stale one ships silently.
 Verify every package before distributing:
 
 ```bash
-unzip -p <zip> '*.js' | grep -c "<the old token>"   # must be 0
 unzip -p <zip> '*.js' | grep -c "pk_live_"          # must be 1 — a pk_test_ key means you built from .env
+cd /tmp && rm -rf zipcheck && mkdir zipcheck && unzip -q <zip> -d zipcheck
+grep -rlE '[0-9a-f]{64}' zipcheck --exclude='Web3Solana*'   # must print nothing — no 64-hex secrets
+grep -rl 'fly\.dev' zipcheck                                # must print nothing — no worker host
 ```
 
 ---
