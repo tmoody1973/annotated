@@ -16,6 +16,23 @@ export const generateUploadUrl = mutation({
   },
 });
 
+/**
+ * An upload URL for the signed-in user — used by the extension to put a
+ * recorded take into storage before asking the worker (server-side) to
+ * transcode it. Distinct from the token-guarded worker variant above.
+ */
+export const generateUploadUrlForUser = mutation({
+  args: {},
+  returns: v.string(),
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Sign in to upload");
+    }
+    return await ctx.storage.generateUploadUrl();
+  },
+});
+
 /** Returns a signed URL for a stored file, or null if it does not exist. */
 export const getUrl = query({
   args: { storageId: v.id("_storage") },

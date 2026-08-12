@@ -18,7 +18,7 @@ import type { Id } from "./_generated/dataModel";
 // the clip itself; ffmpeg range-seek copies run single-digit seconds even on
 // shared CPU, so 60s leaves generous headroom for the yt-dlp/download hop
 // without approving an effectively-unbounded wait.
-const WORKER_FETCH_TIMEOUT_MS = 60_000;
+export const WORKER_FETCH_TIMEOUT_MS = 60_000;
 
 /** Attaches a finished clip and flips the row to ready. */
 export const attachClip = internalMutation({
@@ -72,7 +72,7 @@ export const markFailed = internalMutation({
 });
 
 /** Reads the worker config, throwing a single clear error when unset. */
-function workerConfig(): { url: string; token: string } {
+export function workerConfig(): { url: string; token: string } {
   const url = process.env.WORKER_URL;
   const token = process.env.WORKER_AUTH_TOKEN;
   if (!url || !token) {

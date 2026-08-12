@@ -38,7 +38,21 @@ export function registerTranscodeCommentaryRoute(
         .send({ error: "Invalid request body", issues: parsed.error.issues });
     }
 
-    const audioBytes = Buffer.from(parsed.data.audioBase64, "base64");
+    let audioBytes: Buffer;
+    if (parsed.data.audioUrl) {
+      try {
+        const audioResponse = await fetch(parsed.data.audioUrl);
+        if (!audioResponse.ok) {
+          throw new Error(`fetch failed: ${audioResponse.status}`);
+        }
+        audioBytes = Buffer.from(await audioResponse.arrayBuffer());
+      } catch (err) {
+        request.log.error(err);
+        return reply.code(502).send({ error: "Couldn't fetch audio from audioUrl" });
+      }
+    } else {
+      audioBytes = Buffer.from(parsed.data.audioBase64 ?? "", "base64");
+    }
     if (audioBytes.length === 0) {
       return reply.code(400).send({ error: "Empty audio payload" });
     }
