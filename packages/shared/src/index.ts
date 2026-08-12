@@ -34,3 +34,5 @@ export { classifyBrowser, browserLabel } from "./detect-browser";
 export type { BrowserKind, DetectedBrowser } from "./detect-browser";
 export { wordsToVtt } from "./words-to-vtt";
 export type { CaptionWord } from "./words-to-vtt";
+export { BRUTALIST_LIGHT, BRUTALIST_DARK, tokenVar } from "./brutalist-tokens";
+export type { TokenName } from "./brutalist-tokens";
