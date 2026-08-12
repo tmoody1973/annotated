@@ -104,7 +104,10 @@ export function ClipArticle({ data }: { data: ClipArticleData }) {
             {byline.primary}
             {byline.secondary ? ` · ${byline.secondary}` : ""}
           </p>
-          <p className="mt-1 truncate text-[15px] font-semibold leading-snug text-[color:var(--b-ink)]">
+          <p
+            className="mt-1.5 min-w-0 font-display text-[30px] leading-[1.04] tracking-[-0.01em] not-italic text-[color:var(--b-ink)] sm:text-[36px]"
+            style={{ overflowWrap: "anywhere" }}
+          >
             {data.source.title}
           </p>
         </div>
