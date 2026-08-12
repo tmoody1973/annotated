@@ -886,7 +886,16 @@ leaves the page resolvable instead of broken."
 
 **Interfaces:**
 - Consumes: `workerConfig()` pattern from Task 3 (duplicate it locally or export it from `clips.ts` — prefer exporting).
-- Produces: `api.media.youtubeChapters({ videoId }) → Chapter[]`, `api.media.transcodeTake({ audioStorageId, mimeType }) → { storageId, transcript }`, `api.media.transcribeSource({ sourceId }) → null`, `api.files.generateUploadUrlForUser({}) → string`.
+- Produces: `api.media.youtubeChapters({ videoId }) → Chapter[]`, `api.media.transcodeTake({ audioStorageId, mimeType }) → { storageId, transcript }`, `api.media.transcribeSource({ videoId }) → null` (proxies `/transcribe-youtube`), `api.media.transcribePodcast({ sourceId }) → null` (proxies `/transcribe`; reads `mp3Url` from the source row — never from the client), `api.files.generateUploadUrlForUser({}) → string`.
+
+> **Corrected 2026-08-11 during execution.** This block originally said
+> `transcribeSource({ sourceId })` while the code sample below implemented
+> `{ videoId }` → `/transcribe-youtube`. Those are different endpoints, and the
+> conflation left `worker-client.ts`'s `transcribePodcast` → `/transcribe` with no
+> proxy — which would have made Task 8's "no token in the bundle" acceptance
+> criterion unreachable. **All seven** worker-calling functions in
+> `worker-client.ts` need a server-side counterpart; count them before declaring
+> this task done.
 
 - [ ] **Step 1: Add an identity-authed upload URL**
 
