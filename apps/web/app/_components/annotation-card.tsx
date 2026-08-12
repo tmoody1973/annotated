@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { slugId, formatRelativeTime } from "@annotated/shared";
 import { VoteButtons } from "./vote-buttons";
-import { WaveformPlayer } from "./waveform-player";
 import { AuthorAvatar, VerifiedBadge } from "./author-avatar";
 import { CardShareMenu } from "./card-share-menu";
 import { SourceByline } from "./source-byline";
+import { ClipMedia, type MediaState } from "../../components/clip-media";
 
 export interface FeedItem {
   _id: string;
@@ -15,6 +15,7 @@ export interface FeedItem {
   takeText?: string;
   takeAudioTranscript?: string;
   clipUrl: string | null;
+  mediaState?: MediaState;
   screenshotUrl?: string | null;
   commentCount: number;
   likeCount: number;
@@ -125,11 +126,12 @@ export function AnnotationCard({ item }: { item: FeedItem }) {
         </div>
       )}
 
-      {type === "youtube" && item.clipUrl && (
-        <video controls src={item.clipUrl} className="block w-full border-y-[3px] border-[color:var(--b-line)] bg-black" />
-      )}
-
-      {type === "podcast" && item.clipUrl && <WaveformPlayer src={item.clipUrl} />}
+      <ClipMedia
+        mediaState={item.mediaState}
+        clipUrl={item.clipUrl}
+        sourceType={type}
+        className="border-y-[3px] border-[color:var(--b-line)]"
+      />
 
       {type === "article" && (item.screenshotUrl ?? item.source?.imageUrl) && (
         <Link href={detailHref} className="block border-y-[3px] border-[color:var(--b-line)]">

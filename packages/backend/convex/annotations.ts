@@ -65,6 +65,8 @@ async function toFeedItem(ctx: QueryCtx, annotation: Doc<"annotations">) {
     clipStartMs: annotation.clipStartMs,
     clipEndMs: annotation.clipEndMs,
     clipUrl,
+    // Absent means "ready" (pre-optimistic-publish rows never set it).
+    mediaState: annotation.mediaState,
     screenshotUrl,
     commentCount: annotation.commentCount,
     likeCount: annotation.likeCount,

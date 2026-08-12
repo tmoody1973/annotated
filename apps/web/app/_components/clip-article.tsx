@@ -1,6 +1,6 @@
 import { formatClipTimestamp } from "@annotated/shared";
-import { WaveformPlayer } from "./waveform-player";
 import { SourceByline } from "./source-byline";
+import { ClipMedia, type MediaState } from "../../components/clip-media";
 
 /**
  * The source screenshot, capped in height and top-anchored so the head of the
@@ -43,6 +43,7 @@ export interface ClipArticleData {
   clipStartMs?: number;
   clipEndMs?: number;
   clipUrl: string | null;
+  mediaState?: MediaState;
   // A capture of the original article page (gap §4), shown as the citation
   // visual so the clip reads as "pointing at" the source, not replacing it.
   screenshotUrl?: string | null;
@@ -83,22 +84,13 @@ export function ClipArticle({ data }: { data: ClipArticleData }) {
 
   return (
     <article className="border-[3px] border-[color:var(--b-line)] bg-[color:var(--b-card)] text-[color:var(--b-ink)] shadow-[8px_8px_0_0_var(--b-shadow)]">
-      {!isArticle && !data.clipUrl && (
-        <div className="border-b-[3px] border-[color:var(--b-line)] bg-[color:var(--b-chrome)]">
-          <p className={`p-8 text-center ${label} text-[color:var(--b-acid)]`}>clip unavailable</p>
-        </div>
-      )}
-      {!isArticle && data.clipUrl && isPodcast && <WaveformPlayer src={data.clipUrl} />}
-      {!isArticle && data.clipUrl && !isPodcast && (
-        <div className="border-b-[3px] border-[color:var(--b-line)] bg-[color:var(--b-chrome)]">
-          <video controls className="block max-h-[60vh] w-full bg-black">
-            <source src={data.clipUrl} />
-            {data.captionsUrl && (
-              <track kind="captions" srcLang="en" label="English" src={data.captionsUrl} default />
-            )}
-          </video>
-        </div>
-      )}
+      <ClipMedia
+        mediaState={data.mediaState}
+        clipUrl={data.clipUrl}
+        sourceType={isArticle ? "article" : isPodcast ? "podcast" : "youtube"}
+        captionsUrl={data.captionsUrl}
+        className="border-b-[3px] border-[color:var(--b-line)]"
+      />
 
       {isArticle && articleVisual && (
         <figure className="border-b-[3px] border-[color:var(--b-line)]">

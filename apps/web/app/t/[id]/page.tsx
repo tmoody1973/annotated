@@ -12,6 +12,7 @@ import { SourceByline } from "../../_components/source-byline";
 import { AppShell } from "../../_components/app-shell";
 import { JsonLd } from "../../_components/json-ld";
 import { absoluteUrl, threadPath } from "../../_lib/urls";
+import type { MediaState } from "../../../components/clip-media";
 
 interface ThreadClip {
   _id: string;
@@ -22,6 +23,7 @@ interface ThreadClip {
   clipStartMs?: number;
   clipEndMs?: number;
   clipUrl: string | null;
+  mediaState?: MediaState;
   likeCount: number;
   downCount: number;
   threadOrder?: number;
@@ -191,6 +193,7 @@ export default async function ThreadPage({
                   clipStartMs: clip.clipStartMs,
                   clipEndMs: clip.clipEndMs,
                   clipUrl: clip.clipUrl,
+                  mediaState: clip.mediaState,
                   sourceType: thread.source?.type,
                 }}
               />

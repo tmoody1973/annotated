@@ -12,6 +12,7 @@ import { ClipArticle } from "../../_components/clip-article";
 import { AppShell } from "../../_components/app-shell";
 import { JsonLd } from "../../_components/json-ld";
 import { absoluteUrl, clipPath, threadPath } from "../../_lib/urls";
+import type { MediaState } from "../../../components/clip-media";
 
 interface AnnotationView {
   _id: string;
@@ -23,6 +24,7 @@ interface AnnotationView {
   clipStartMs?: number;
   clipEndMs?: number;
   clipUrl: string | null;
+  mediaState?: MediaState;
   screenshotUrl?: string | null;
   isAnonymous?: boolean;
   likeCount: number;
@@ -205,6 +207,7 @@ export default async function AnnotationPage({
             clipStartMs: annotation.clipStartMs,
             clipEndMs: annotation.clipEndMs,
             clipUrl: annotation.clipUrl,
+            mediaState: annotation.mediaState,
             screenshotUrl: annotation.screenshotUrl,
             sourceType: annotation.source?.type,
             authorName: annotation.isAnonymous
