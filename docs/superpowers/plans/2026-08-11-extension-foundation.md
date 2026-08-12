@@ -1568,11 +1568,23 @@ Run:
 
 ```bash
 cd apps/extension/build/chrome-mv3-prod
-grep -rlE '[0-9a-f]{64}' . || echo "no 64-hex secrets in bundle"
-grep -rl 'fly\.dev' . || echo "no worker host in bundle"
+# The literal token value from apps/extension/.env.production — the only check that matters.
+grep -rl "$WORKER_TOKEN_VALUE" . || echo "no worker token in bundle"
+grep -rl 'fly\.dev' .          || echo "no worker host in bundle"
+grep -rl 'startThreadDev' .    || echo "no token-guarded dev mutation in bundle"
+# Broad secret sweep, excluding the vendor chunk (see note).
+grep -rlE '[0-9a-f]{64}' . --exclude='Web3Solana*' || echo "no 64-hex secrets in our code"
 ```
 
-Expected: both lines print the "no …" message. If either matches, find the source and remove it before continuing — this is the acceptance criterion for the whole task.
+Expected: all four print the "no …" message.
+
+> **Do not use a bare `grep -rlE '[0-9a-f]{64}'`.** Clerk's `Web3SolanaWalletButtons.*.js`
+> chunk contains **39 distinct 64-hex strings** — ed25519 curve constants as `BigInt`
+> literals. They are vendor crypto parameters, not secrets, and they will match forever.
+> Verified 2026-08-11. Grep for the actual token value; use the broad sweep only as a
+> backstop, with that chunk excluded.
+
+If the token or host matches, find the source and remove it before continuing — this is the acceptance criterion for the whole task.
 
 - [ ] **Step 5: Verify the full flow against the deployed backend**
 
