@@ -92,6 +92,10 @@ describe("sourceHeading", () => {
     for (const heading of all) expect(heading).not.toMatch(/convex/i);
   });
 
+  it("says nothing conclusive until the auth relay has answered", () => {
+    expect(sourceHeading({ kind: "unsupported" }, "loading")).toBe("Looking at this page\u2026");
+  });
+
   it("welcomes a signed-out newcomer instead of reporting a dead end", () => {
     expect(sourceHeading({ kind: "unsupported" }, "signed-out")).toBe(
       "Clip it. Say why. Share the link.",

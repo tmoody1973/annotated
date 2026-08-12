@@ -130,7 +130,13 @@ export function SourceScreen({ detected, auth, onStartClip }: SourceScreenProps)
   // Signing in is only required to publish, so the gate lives on the take
   // screen. Here it doubles as the welcome — shown when there is nothing to
   // clip anyway, which is what a genuine first run looks like.
+  //
+  // Which of the two shows depends on an answer that arrives late: the auth
+  // relay can take seconds to open its hidden tab. Guessing while it is in
+  // flight greeted every newcomer with "Nothing to clip on this page", so we
+  // hold on the neutral copy until we actually know.
   if (detected.kind === "unsupported") {
+    if (auth.status === "loading") return <DeadEndBody state={DEAD_ENDS.detecting} />;
     return auth.status === "signed-out" ? (
       <>
         <DeadEndBody state={DEAD_ENDS.firstRun} />

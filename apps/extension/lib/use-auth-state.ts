@@ -24,6 +24,18 @@ export type AuthState =
   | { status: "signed-in"; name: string };
 
 /**
+ * How long the UI will wait for the relay before drawing as signed-out.
+ *
+ * `getConvexToken` is bounded at 40 seconds, which is right for a publish the
+ * user is waiting on and far too long for a screen to sit blank behind. On a
+ * cold profile the relay has to open its own annotated.sh tab, so "no answer
+ * yet" is the common case, not the exception. Signed-out is the safe guess: it
+ * renders a welcome with a way in. The real answer still lands when it lands
+ * and replaces this one.
+ */
+const PRESUME_SIGNED_OUT_MS = 2_500;
+
+/**
  * Mints a token via the same web-tab relay `background.ts` uses for publish
  * (see docs/plans/2026-06-01-extension-auth-prod-fix.md — a chrome-extension://
  * origin can't complete Clerk's production auth handshake directly), then reads
@@ -38,8 +50,14 @@ export function useAuthState(): AuthState {
   useEffect(() => {
     let cancelled = false;
 
+    let presume: ReturnType<typeof setTimeout> | undefined;
+
     async function load(): Promise<void> {
       setState({ status: "loading" });
+      clearTimeout(presume);
+      presume = setTimeout(() => {
+        if (!cancelled) setState((current) => (current.status === "loading" ? { status: "signed-out" } : current));
+      }, PRESUME_SIGNED_OUT_MS);
       try {
         const token = await getConvexToken();
         if (!token || !convexUrl) {
@@ -72,6 +90,7 @@ export function useAuthState(): AuthState {
     window.addEventListener("focus", refresh);
     return () => {
       cancelled = true;
+      clearTimeout(presume);
       document.removeEventListener("visibilitychange", refresh);
       window.removeEventListener("focus", refresh);
     };

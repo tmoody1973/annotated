@@ -76,6 +76,9 @@ export function sourceHeading(
     return "This episode can't be clipped";
   }
   if (detected.kind === "unsupported") {
+    // The auth relay answers late; until it does, neither the welcome nor the
+    // dead end is known to be the right thing to say.
+    if (auth === "loading") return "Looking at this page\u2026";
     return auth === "signed-out"
       ? "Clip it. Say why. Share the link."
       : "Nothing to clip on this page";
