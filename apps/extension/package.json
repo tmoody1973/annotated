@@ -10,7 +10,8 @@
     "build": "plasmo build",
     "package": "plasmo package",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "package:store": "node scripts/package-store.mjs"
   },
   "dependencies": {
     "@annotated/shared": "workspace:*",

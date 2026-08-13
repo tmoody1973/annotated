@@ -83,7 +83,14 @@ review wait (hours to a few days, and broad permissions slow it — see below).
    <https://chrome.google.com/webstore/devconsole>.
 
 **Each submission:**
-2. `pnpm --filter extension package` → `build/chrome-mv3-prod.zip`.
+2. `pnpm --filter extension package:store` → `build/chrome-mv3-store.zip`.
+
+   **Not `package`.** The ordinary build carries a `key` field, and the store
+   rejects the upload outright: *"key field is not allowed in manifest."* Google
+   assigns the extension id itself and refuses any package that pins one. The
+   sideload build, by contrast, *needs* `key` — it is what gives that build a
+   stable id, and that id is registered in Clerk's allowed origins. Same build,
+   two zips; `package:store` is the one with `key` stripped.
 3. Dev Console → **New item** → upload the zip.
 4. Fill the store listing (all required before submit):
    - Name, summary, description.

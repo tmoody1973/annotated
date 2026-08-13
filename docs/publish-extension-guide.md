@@ -14,20 +14,26 @@ control (usually hours, sometimes a few days).
 
 Two files are already on your Desktop. Check they're there:
 
-- [ ] `~/Desktop/annotated-extension-0.4.0.zip` — the package you upload
+- [ ] `~/Desktop/annotated-STORE-UPLOAD-0.4.0.zip` — the package you upload
 - [ ] `~/Desktop/annotated-store-screenshot-1280x800.png` — the store screenshot
 
 If either is missing, regenerate the zip with:
 
 ```bash
 cd ~/Documents/Projects/annotated/apps/extension
-pnpm build && pnpm package
-cp build/chrome-mv3-prod.zip ~/Desktop/annotated-extension-0.4.0.zip
+pnpm build && pnpm package:store
+cp build/chrome-mv3-store.zip ~/Desktop/annotated-STORE-UPLOAD-0.4.0.zip
 ```
 
+> ⚠️ **`package:store`, not `package`.** There are two zips and they are not
+> interchangeable. The store one has the `key` field stripped out; upload the
+> other and Google refuses it with *"key field is not allowed in manifest."*
+>
+> The reason: `key` pins a fixed extension id, which the sideload build needs
+> (that id is registered in Clerk) and which the store forbids, because Google
+> assigns the id itself.
+
 > **Don't unzip the file you upload.** The store wants the zip exactly as it is.
-> (The *other* zip — the one on annotated.sh — is a different shape, for people
-> loading it unpacked. Don't mix them up.)
 
 ---
 
