@@ -100,10 +100,16 @@ export function resolveDetection(
 }
 
 /**
- * Ask a tab a question, preferring the declarative content script and falling
- * back to on-demand injection for tabs that predate the extension being
- * enabled (mirrors lib/player-time.ts). Never throws — a page we cannot reach
- * is a page with no signal.
+ * Ask a tab a question by injecting the detector into it, on demand.
+ *
+ * There used to be declarative content scripts matching `https://*` that
+ * answered this by message instead. They were removed: they ran on every page
+ * the user visited whether or not they ever opened the panel, which is a lot of
+ * standing access for something only needed at the moment someone decides to
+ * clip. The message attempt is kept first because a tab may still have a
+ * narrower content script (YouTube does), and it costs one failed call.
+ *
+ * Never throws — a page we cannot reach is a page with no signal.
  */
 async function askTab<T>(
   tabId: number,

@@ -147,13 +147,28 @@ there are no spare permissions in this build.
 | `scripting` | Reads the page you chose to clip: the player's position for video, the transcript for a podcast, the article text for a page. |
 
 **Host permission justification** (`https://*/*`) — the one reviewers look at
-hardest. Paste this whole thing:
+hardest, and the one that triggers the "Publishing will be delayed" notice.
+Paste this whole thing:
 
 ```
-The extension lets the user clip media from any website, so it must be able to read the page the user is currently on regardless of domain. This permission is used solely for content-script page access: reading the video player's current position, an episode's audio element or RSS link, and an article's text, on whatever page the user has chosen to clip.
+The extension lets a user clip an excerpt from whatever they are currently watching, listening to or reading, so it cannot know in advance which sites it will need to read. The SPEC requirement is that it works on any website.
 
-It is not used to reach any backend. The extension contains no server address and no credential; all server-side work runs through authenticated Convex functions. Nothing is read from any page until the user opens the panel and asks to clip that page.
+activeTab is not sufficient. The interface is a persistent side panel that stays open while the user moves between tabs and navigates within a site, and it must recognise what is on each new page as they go. activeTab grants access only to the tab that was active when the toolbar icon was clicked, and that grant is revoked on navigation — so with activeTab alone the user would have to re-click the toolbar icon on every video, episode and article before the panel could see anything.
+
+The extension registers no content scripts against this pattern. Its only declarative content script is scoped to YouTube watch pages. On every other site, nothing runs until the user opens the side panel and it injects a detector into the tab they are looking at; if the panel is never opened, the extension never reads the page.
+
+What is read is limited to what a clip needs: the video player's current position, an audio element or podcast feed link, or the article's text. No page content is read from tabs the user has not asked to clip, and nothing is transmitted anywhere until the user chooses to publish.
 ```
+
+> **The delay notice is a warning, not a rejection.** You can submit with it. It
+> means a human reads the submission rather than an automated pass, which takes
+> longer. The permission is genuinely required for the product to work as
+> designed, so the honest move is to justify it rather than cripple the panel.
+>
+> **If you need people using it before review finishes**, the sideload zip at
+> annotated.sh/extension needs no review at all and is the same build. That is
+> what `docs/extension-distribution.md` calls Route A, and it exists for exactly
+> this situation.
 
 **Are you using remote code?**
 
