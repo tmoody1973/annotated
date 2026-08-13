@@ -205,4 +205,69 @@ For the bounty deadline: **Route A.** Ship a hosted zip + the five-step "Load un
 instructions. It's instant and fully in your control. But the real gating work is the
 [Prerequisites](#0-prerequisites-do-this-before-either-route) — **deploy the worker and
 repoint the env at prod**, or the judge installs a polished panel that can't actually cut a
-clip. Do that first; the install method is the last 5 minutes.		 
+clip. Do that first; the install method is the last 5 minutes.
+
+---
+
+## Store listing — paste-ready copy
+
+Everything the Dev Console asks for, written out. Last checked against the
+manifest on 2026-08-12 (v0.4.0).
+
+**Summary** (132 char limit)
+
+> Clip up to 90 seconds from any video, podcast or article, add your take, and get a shareable page that links back to the source.
+
+**Description**
+
+> Annotated turns anything you're watching, listening to or reading into a
+> short, quotable clip with your commentary attached.
+>
+> Open the side panel on a YouTube video, a podcast episode page or an article.
+> Choose your moment — drag a scrubber for video, drag across the transcript for
+> a podcast, highlight the text for an article. Add your take, in writing or in
+> your own voice. Publish, and you get a page you can paste anywhere, with the
+> clip, your take, and a visible link back to where it came from.
+>
+> Clips are capped at 90 seconds and every one credits and links its source.
+> Anyone who believes a clip oversteps can file a claim directly from its page.
+
+**Privacy policy URL:** https://annotated.sh/privacy
+
+**Data use disclosures** — tick these and use the wording:
+
+| Data | Collected? | Why |
+|---|---|---|
+| Personally identifiable information | Yes — name, email | Sign-in, via Clerk. Used to attribute your clips to your profile. |
+| Authentication information | Yes | A sign-in token, so the extension can publish as you. |
+| Website content | Yes | The page you choose to clip: its address, title, and the text or media you select. Sent only when you act. |
+| User activity | No | |
+| Location, health, financial, personal communications | No | |
+
+Also declare: audio is sent to **Deepgram** for transcription; clips, takes and
+transcripts are stored in **Convex**; sign-in is handled by **Clerk**; claim
+notifications are sent via **Resend**. All four are named on the privacy page.
+
+Tick: not sold to third parties · not used for unrelated purposes · not used
+for creditworthiness.
+
+**Permission justifications** — one line each, all four are used:
+
+- **sidePanel** — the whole interface is a side panel.
+- **storage** — keeps a clip in progress while you switch tabs, so you don't lose your take.
+- **activeTab** — reads which page you are on, so the panel can offer to clip it.
+- **scripting** — reads the page you chose to clip: the player position, the transcript, the article text.
+- **host_permissions `https://*/*`** — see the justification wording above. This
+  is the one reviewers scrutinise; lead with "the user can clip from *any*
+  site" and be explicit that it is page access only, never a backend route.
+
+**`cookies` was removed in v0.4.0.** It was needed by the old Clerk syncHost
+sign-in and nothing has called `chrome.cookies` since Plan A replaced that with
+the web-tab relay. Do not add it back without a caller — an unused permission is
+free review scrutiny.
+
+**Screenshot:** 1280×800, generated from a real loaded panel rather than mocked.
+Regenerate by screenshotting the panel at 380px wide and compositing; the last
+one lives on Tarik's Desktop as `annotated-store-screenshot-1280x800.png`.
+
+**Visibility:** Unlisted.
