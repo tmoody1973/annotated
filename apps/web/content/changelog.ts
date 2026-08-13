@@ -29,6 +29,28 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: "v0.4.0",
+    date: "2026-08-12",
+    title: "The side panel became four screens",
+    lead:
+      "The panel used to be one long scroll that asked for everything at once. It's now four steps — pick the source, choose the clip, write your take, share the link — with a real scrubber you can drag, and a back button that never throws away what you typed.",
+    changes: [
+      "There's a proper scrubber for video now. Drag the middle of the yellow bar to move your clip, drag either end to make it longer or shorter, or type the times in by hand — all three stay in step with each other.",
+      "The scrubber zooms to your clip instead of drawing the whole video. On an hour-long talk a 90-second clip used to be about eight pixels wide, with the drag handles sitting on top of it, so there was nothing to grab.",
+      "Dragging past the end of the visible strip now scrolls along the video instead of jumping.",
+      "The clip length can't go over 90 seconds, but the handles simply stop there rather than letting you overshoot and then telling you off.",
+      "Podcast clips are made by dragging across the transcript, and that drag now gets the whole panel. Tapping the first and last word still works, and so does the keyboard.",
+      "You can start clipping without signing in. You're only asked to sign in when you publish, and your clip and take are kept while you do.",
+      "Publish is never greyed out because you haven't picked a topic — a likely topic is filled in for you and you can change or remove it.",
+      "The panel has a dark mode. It follows whatever your computer is set to.",
+      "Every step announces itself to screen readers, the scrubber handles work with arrow keys, and moving between steps puts your cursor in the right place.",
+      "Going back a step keeps what you wrote. Switching browser tabs and coming back returns you to the step you were on, not just the text.",
+      "When there's nothing to clip on a page, the panel says why and offers somewhere to go, instead of showing an empty box.",
+      "Clips still take a minute or two to finish processing after you publish — the page and link work immediately, and the video fills in when it's ready.",
+      "Clipping an article needs you signed in, because the page text is read on our side. Video and podcast clips don't.",
+    ],
+  },
+  {
     version: "v0.3.0",
     date: "2026-08-12",
     title: "Clip pages update themselves",
