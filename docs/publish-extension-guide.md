@@ -155,6 +155,34 @@ The extension lets the user clip media from any website, so it must be able to r
 It is not used to reach any backend. The extension contains no server address and no credential; all server-side work runs through authenticated Convex functions. Nothing is read from any page until the user opens the panel and asks to clip that page.
 ```
 
+**Are you using remote code?**
+
+- [ ] **No, I am not using remote code**
+
+Verified against the actual upload package, not the source: no external
+`<script src>`, no remote `.js`/`.mjs`/`.wasm` referenced anywhere, and zero
+uses of `eval(`, `new Function` or `importScripts`. All nine
+`chrome.scripting.executeScript` calls pass `func:` — a function compiled into
+the extension — never a string or file fetched at runtime.
+
+The two things that make people answer "yes" by mistake, and why neither counts:
+
+- **The extension injects scripts into pages.** Those functions ship inside the
+  package. Running packaged code in a page is what every content script does; it
+  is not remote code.
+- **It talks to a server.** It fetches JSON. Data is not code.
+
+Answering "yes" moves the submission into a slower review lane and asks you to
+justify something that isn't happening.
+
+If a justification box appears anyway, paste this:
+
+```
+All executable code is contained in the package. The extension loads no scripts from any remote host: there are no external script tags, no remotely fetched JavaScript or WebAssembly, and no use of eval, new Function, or importScripts.
+
+Scripts injected into pages are functions compiled into the extension bundle and passed to chrome.scripting.executeScript directly; nothing is fetched at runtime and executed. Network requests carry JSON data to and from the extension's own backend, and that data is never evaluated as code.
+```
+
 **Data usage** — tick these and nothing else:
 
 | Data type | Collect? | If asked why |
