@@ -90,10 +90,33 @@ Clips are capped at 90 seconds and every one credits and links its source. Anyon
 
 - [ ] English
 
-**Screenshot**
+**Screenshots** — all four are in `~/Desktop/annotated-store-assets/`
+(and kept in the repo at `docs/store-assets/`):
 
-- [ ] Upload `~/Desktop/annotated-store-screenshot-1280x800.png`
-- [ ] One is enough to submit. More helps the listing, not the review.
+- [ ] `screenshot-1-scrubber.png` — the scrubber
+- [ ] `screenshot-2-transcript.png` — clipping a podcast from the transcript
+- [ ] `screenshot-3-take.png` — writing the take
+- [ ] `screenshot-4-page.png` — the published page
+
+Upload them in that order; it reads as the actual sequence of using the thing.
+One is enough to submit — the other three are for the person who clicks your
+link, not the reviewer.
+
+**Promo tiles — optional, and skippable here**
+
+The console asks for a **small promo tile (440×280)** and a **marquee promo tile
+(1400×560)**. Both are optional. They exist so the store can feature you in
+browsing and category pages — which an **Unlisted** item never appears in. So
+for this submission they change nothing a judge will see.
+
+They're made anyway, in the same folder, if you'd rather the listing look
+finished:
+
+- [ ] `promo-small-440x280.png`
+- [ ] `promo-marquee-1400x560.png`
+
+All six are 24-bit PNG with no alpha channel, which is what the console
+requires — a normal screenshot usually has alpha and gets rejected.
 
 **Store icon**
 
