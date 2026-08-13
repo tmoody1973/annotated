@@ -29,8 +29,8 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
-    version: "v0.4.0",
-    date: "2026-08-12",
+    version: "v0.4.1",
+    date: "2026-08-13",
     title: "The side panel became four screens",
     lead:
       "The panel used to be one long scroll that asked for everything at once. It's now four steps — pick the source, choose the clip, write your take, share the link — with a real scrubber you can drag, and a back button that never throws away what you typed.",
@@ -46,6 +46,8 @@ export const CHANGELOG: Release[] = [
       "Every step announces itself to screen readers, the scrubber handles work with arrow keys, and moving between steps puts your cursor in the right place.",
       "Going back a step keeps what you wrote. Switching browser tabs and coming back returns you to the step you were on, not just the text.",
       "When there's nothing to clip on a page, the panel says why and offers somewhere to go, instead of showing an empty box.",
+      "The extension no longer runs on pages you haven't asked it to. It used to load a small piece of itself into every website you visited, whether or not you ever opened the panel. Now nothing runs until you open it and pick something to clip.",
+      "Some YouTube clips were failing to process and there was no useful reason given — the page would say the clip couldn't be made and suggest trying again, which would fail the same way. Two separate causes, both fixed: the tool we use to fetch video had gone stale, and clips that were downloading perfectly well were being cut off after 60 seconds.",
       "Clips still take a minute or two to finish processing after you publish — the page and link work immediately, and the video fills in when it's ready.",
       "Clipping an article needs you signed in, because the page text is read on our side. Video and podcast clips don't.",
     ],
