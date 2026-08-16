@@ -4,10 +4,12 @@ import { useState } from "react";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { SignInButton } from "@clerk/nextjs";
 import type { FunctionReturnType } from "convex/server";
-import { formatRelativeTime } from "@annotated/shared";
+import { formatRelativeTime, parseAnnotatedClipUrl } from "@annotated/shared";
 import { api } from "@annotated/backend/convex/_generated/api";
 import type { Id } from "@annotated/backend/convex/_generated/dataModel";
 import { AuthorAvatar } from "./author-avatar";
+import { EvidenceCard, type Evidence } from "./evidence-card";
+import { REPLY_INTENTS, CLAIMS_A_SOURCE, IntentTag, type ReplyIntent } from "./reply-intent";
 
 type Thread = FunctionReturnType<typeof api.comments.listByAnnotation>;
 type ThreadComment = Thread[number];
@@ -136,7 +138,19 @@ function CommentRow({
             · {formatRelativeTime(comment.createdAt)}
           </span>
         </p>
-        <p className="mt-1 text-[15px] leading-relaxed">{comment.text}</p>
+        {comment.removed ? (
+          // The row keeps its place so replies hanging off it still read in
+          // order; only the words are gone, and they are gone server-side.
+          <p className="mt-1 text-[15px] italic leading-relaxed text-[color:var(--b-dim)]">
+            This note was deleted.
+          </p>
+        ) : (
+          <>
+            <IntentTag intent={comment.intent} unsourced={comment.unsourced} />
+            <p className="mt-1 text-[15px] leading-relaxed">{comment.text}</p>
+            <EvidenceCard evidence={comment.evidence as Evidence} />
+          </>
+        )}
         <div className="mt-1.5 flex items-center gap-4">
           <CommentLikeButton
             commentId={comment._id}
@@ -145,9 +159,58 @@ function CommentRow({
             canInteract={canInteract}
           />
           {extraAction}
+          {comment.isOwn && !comment.removed && (
+            <DeleteNoteButton commentId={comment._id} />
+          )}
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * Deletes your own note. Confirmed in place rather than instantly, because it
+ * is the one action here another reader can notice from the outside.
+ *
+ * The mutation has existed since the clip-management work; this is the control
+ * that reaches it, which was missing.
+ */
+function DeleteNoteButton({ commentId }: { commentId: Id<"comments"> }) {
+  const remove = useMutation(api.comments.remove);
+  const [confirming, setConfirming] = useState(false);
+  const [pending, setPending] = useState(false);
+
+  const action =
+    "font-mono text-[11px] font-bold uppercase tracking-wide text-[color:var(--b-dim)] hover:text-[color:var(--b-ink)] disabled:opacity-50";
+
+  if (!confirming) {
+    return (
+      <button className={action} onClick={() => setConfirming(true)}>
+        Delete
+      </button>
+    );
+  }
+
+  return (
+    <span className="flex items-center gap-3">
+      <button
+        className={action}
+        disabled={pending}
+        onClick={async () => {
+          setPending(true);
+          try {
+            await remove({ commentId });
+          } finally {
+            setPending(false);
+          }
+        }}
+      >
+        {pending ? "Deleting…" : "Delete it"}
+      </button>
+      <button className={action} onClick={() => setConfirming(false)}>
+        Keep
+      </button>
+    </span>
   );
 }
 
@@ -224,24 +287,81 @@ function CommentComposer({
 }) {
   const add = useMutation(api.comments.add);
   const [text, setText] = useState("");
+  const [intent, setIntent] = useState<ReplyIntent>("context");
+  const [receipt, setReceipt] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const [posting, setPosting] = useState(false);
   const disabled = text.trim().length === 0 || posting;
+
+  // Choosing Challenge or Support promotes the receipt field, because those are
+  // the two intents that assert a source. It never blocks posting without one —
+  // people should not be stopped from disagreeing for want of a link to hand.
+  const wantsSource = CLAIMS_A_SOURCE.includes(intent);
 
   const onPost = async (): Promise<void> => {
     const value = text.trim();
     if (value.length === 0 || posting) return;
     setPosting(true);
+    setError(null);
     try {
-      await add({ annotationId, text: value, ...(parentId ? { parentId } : {}) });
+      // One input, two outcomes: a link to a clip on Annotated becomes a
+      // playable receipt, anything else stays an ordinary outside source. The
+      // person attaching it never has to say which kind they meant.
+      const link = receipt.trim();
+      const clipId = link ? parseAnnotatedClipUrl(link) : null;
+      await add({
+        annotationId,
+        text: value,
+        intent,
+        ...(parentId ? { parentId } : {}),
+        ...(clipId
+          ? { evidenceAnnotationId: clipId as Id<"annotations"> }
+          : link
+            ? { evidenceUrl: link }
+            : {}),
+      });
       setText("");
+      setReceipt("");
+      setIntent("context");
       onPosted?.();
+    } catch (cause: unknown) {
+      // The draft is never thrown away on a failure.
+      setError(cause instanceof Error ? cause.message : "That didn't post.");
     } finally {
       setPosting(false);
     }
   };
 
   return (
-    <div className="mt-4 flex flex-col items-start gap-3">
+    <div className="mt-4 flex w-full flex-col items-start gap-3">
+      <fieldset className="w-full">
+        <legend className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-[color:var(--b-dim)]">
+          What is this reply doing?
+        </legend>
+        <div className="mt-1.5 flex flex-wrap gap-2">
+          {REPLY_INTENTS.map((option) => (
+            <label
+              key={option.value}
+              title={option.hint}
+              className={`cursor-pointer border-2 px-2.5 py-1 font-mono text-[11px] font-bold uppercase tracking-wide ${
+                intent === option.value
+                  ? "border-[color:var(--b-line)] bg-[color:var(--b-acid)] text-[color:var(--b-acid-ink)]"
+                  : "border-[color:var(--b-line)] text-[color:var(--b-dim)] hover:text-[color:var(--b-ink)]"
+              }`}
+            >
+              <input
+                type="radio"
+                name={`intent-${parentId ?? annotationId}`}
+                className="sr-only"
+                checked={intent === option.value}
+                onChange={() => setIntent(option.value)}
+              />
+              {option.label}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
       <textarea
         className="min-h-20 w-full border-2 border-[color:var(--b-line)] bg-[color:var(--b-card)] p-3 text-[color:var(--b-ink)] shadow-[4px_4px_0_0_var(--b-shadow)] outline-none placeholder:text-[color:var(--b-dim)] focus:border-[color:var(--b-acid)]"
         placeholder={placeholder}
@@ -249,6 +369,31 @@ function CommentComposer({
         onChange={(e) => setText(e.target.value)}
         aria-label={placeholder}
       />
+
+      <div className="w-full">
+        <label
+          htmlFor={`receipt-${parentId ?? annotationId}`}
+          className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-[color:var(--b-dim)]"
+        >
+          {wantsSource ? "Receipt — paste a link" : "Receipt — optional"}
+        </label>
+        <input
+          id={`receipt-${parentId ?? annotationId}`}
+          type="url"
+          value={receipt}
+          onChange={(e) => setReceipt(e.target.value)}
+          placeholder="An Annotated clip, or any link"
+          className={`mt-1 w-full border-2 bg-[color:var(--b-card)] px-3 py-2 text-[14px] text-[color:var(--b-ink)] outline-none placeholder:text-[color:var(--b-dim)] focus:border-[color:var(--b-acid)] ${
+            wantsSource ? "border-[color:var(--b-acid)]" : "border-[color:var(--b-line)]"
+          }`}
+        />
+        {wantsSource && receipt.trim().length === 0 && (
+          <p className="mt-1 font-mono text-[11px] text-[color:var(--b-dim)]">
+            You can post without one — it will be marked Unsourced.
+          </p>
+        )}
+      </div>
+
       <button
         type="button"
         disabled={disabled}
@@ -257,6 +402,12 @@ function CommentComposer({
       >
         {posting ? "Posting…" : submitLabel}
       </button>
+
+      {error && (
+        <p role="alert" className="text-[13px] text-[color:var(--b-dim-onbg)]">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

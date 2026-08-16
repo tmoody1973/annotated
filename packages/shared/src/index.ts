@@ -15,6 +15,7 @@ export type { EpisodeCriteria } from "./episode-match";
 export { selectClipSpan } from "./transcript-selection";
 export type { TranscriptWord, TranscriptSelection } from "./transcript-selection";
 export { encodeWords, decodeWords } from "./transcript-encoding";
+export { parseAnnotatedClipUrl } from "./parse-clip-url";
 export {
   selectArticleHighlight,
   countWords,

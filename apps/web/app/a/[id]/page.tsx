@@ -8,6 +8,7 @@ import { SaveImageDialog } from "./save-image-dialog";
 import { VoteButtons } from "../../_components/vote-buttons";
 import { FollowButton } from "../../_components/follow-button";
 import { Comments } from "../../_components/comments";
+import { RightOfReply } from "../../_components/right-of-reply";
 import { ClipArticle } from "../../_components/clip-article";
 import { AppShell } from "../../_components/app-shell";
 import { JsonLd } from "../../_components/json-ld";
@@ -298,6 +299,10 @@ export default async function AnnotationPage({
           )}
           <SaveImageDialog slug={canonicalParam} />
         </div>
+
+        {/* Above the thread on purpose: the source owner's seat outranks the
+            challenge in position, and nothing else. */}
+        <RightOfReply annotationId={annotation._id} />
 
         <Comments annotationId={annotation._id} />
 
