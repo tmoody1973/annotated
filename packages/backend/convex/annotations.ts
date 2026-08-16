@@ -44,7 +44,7 @@ async function toFeedItem(ctx: QueryCtx, annotation: Doc<"annotations">) {
           .query("annotations")
           .withIndex("by_thread", (q) => q.eq("threadId", annotation.threadId))
           .collect()
-      ).length
+      ).filter(isVisible).length
     : 1;
   const topicRows = await ctx.db
     .query("annotationTopics")
@@ -109,6 +109,19 @@ async function toFeedItem(ctx: QueryCtx, annotation: Doc<"annotations">) {
 
 /** SPEC: clips are capped at 90 seconds. */
 export const MAX_CLIP_MS = 90_000;
+
+/**
+ * A removed annotation is invisible everywhere it would otherwise be listed.
+ *
+ * Removal is soft — the row stays so its URL keeps resolving to a tombstone
+ * rather than a 404, because the link may already be pasted somewhere. That
+ * makes filtering the *listing* queries load-bearing: miss one and a removed
+ * clip quietly comes back. Every place that lists annotations calls this.
+ */
+export function isVisible(annotation: { removedAt?: number }): boolean {
+  return annotation.removedAt === undefined;
+}
+
 
 /**
  * Validates the publish-time invariants shared by the authed `create` mutation
@@ -534,7 +547,7 @@ export const listFeed = query({
     // Collapse threads: show only the head (order 0); follow-on clips are
     // represented by the head's "N clips" badge, not their own card.
     const heads = result.page.filter(
-      (a) => a.threadId === undefined || a.threadOrder === 0
+      (a) => isVisible(a) && (a.threadId === undefined || a.threadOrder === 0)
     );
     return {
       ...result,
@@ -557,7 +570,7 @@ export const listCurated = query({
       .order("desc")
       .paginate(args.paginationOpts);
     const heads = result.page.filter(
-      (a) => a.isPublic && (a.threadId === undefined || a.threadOrder === 0)
+      (a) => isVisible(a) && a.isPublic && (a.threadId === undefined || a.threadOrder === 0)
     );
     return {
       ...result,
@@ -591,7 +604,7 @@ export const listByAuthor = query({
       .collect();
     // Anonymous annotations are masked everywhere — they never surface on the
     // author's own public profile either.
-    const published = rows.filter((a) => a.isPublic && !a.isAnonymous);
+    const published = rows.filter((a) => isVisible(a) && a.isPublic && !a.isAnonymous);
     return await Promise.all(published.map((a) => toFeedItem(ctx, a)));
   },
 });
@@ -628,6 +641,7 @@ export const listByTopic = query({
     ).filter(
       (a): a is Doc<"annotations"> =>
         a !== null &&
+        isVisible(a) &&
         a.isPublic &&
         (a.threadId === undefined || a.threadOrder === 0)
     );
@@ -670,6 +684,10 @@ export async function toLandingView(
     annotation.takeAudioTranscript ?? annotation.commentaryAudioTranscript;
 
   return {
+    // The page must resolve even after removal — the link may be pasted
+    // somewhere — so it renders a tombstone rather than 404ing.
+    removed: annotation.removedAt !== undefined,
+    canEditTake: canEditTake(annotation),
     ...annotation,
     // Mask the author's row id from the public payload when anonymous (kept on
     // the stored row for claims/moderation, never projected). Convex drops
@@ -729,5 +747,121 @@ export const getById = query({
     const annotation = await ctx.db.get(args.annotationId);
     if (!annotation) return null;
     return await toLandingView(ctx, annotation);
+  },
+});
+
+/**
+ * The author removes their own annotation.
+ *
+ * Soft, deliberately. The whole product premise is that a clip page is a
+ * receipt someone else can cite, so the URL has to keep resolving — a hard
+ * delete turns every pasted link into a 404 and quietly rewrites what other
+ * people saw. The row stays, every listing hides it, and the page renders a
+ * tombstone.
+ *
+ * The clip blob is dropped, because that is the expensive part and nothing
+ * renders it again.
+ */
+export const remove = mutation({
+  args: { annotationId: v.id("annotations") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const user = await requireCurrentUser(ctx);
+    const annotation = await ctx.db.get(args.annotationId);
+    if (!annotation) throw new Error("That clip no longer exists");
+    if (annotation.authorId !== user._id) {
+      throw new Error("Only the person who published this can remove it");
+    }
+    if (annotation.removedAt !== undefined) return null;
+
+    if (annotation.clipStorageId) {
+      await ctx.storage.delete(annotation.clipStorageId);
+    }
+    await ctx.db.patch(args.annotationId, {
+      removedAt: Date.now(),
+      clipStorageId: undefined,
+    });
+    return null;
+  },
+});
+
+/** How long a take stays editable once someone has engaged with it: not at all. */
+export function canEditTake(annotation: {
+  commentCount: number;
+  likeCount: number;
+  removedAt?: number;
+}): boolean {
+  return (
+    annotation.removedAt === undefined &&
+    annotation.commentCount === 0 &&
+    annotation.likeCount === 0
+  );
+}
+
+/**
+ * Fix a take that nobody has engaged with yet.
+ *
+ * Not a general edit. A published take is what other people voted on and
+ * replied to, and rewriting it afterwards changes what they endorsed — that is
+ * the opposite of publishing a receipt. But a typo you spot ten seconds after
+ * publishing is a real thing, so the take stays editable right up until the
+ * first vote or comment, and then never again.
+ */
+export const updateTake = mutation({
+  args: { annotationId: v.id("annotations"), takeText: v.string() },
+  returns: v.object({ updated: v.boolean(), reason: v.optional(v.string()) }),
+  handler: async (ctx, args) => {
+    const user = await requireCurrentUser(ctx);
+    const annotation = await ctx.db.get(args.annotationId);
+    if (!annotation) throw new Error("That clip no longer exists");
+    if (annotation.authorId !== user._id) {
+      throw new Error("Only the person who published this can edit it");
+    }
+
+    const text = args.takeText.trim();
+    if (text.length === 0) {
+      return { updated: false, reason: "A take can't be empty" };
+    }
+    if (text.length > 5_000) {
+      return { updated: false, reason: "That take is too long" };
+    }
+    if (!canEditTake(annotation)) {
+      return {
+        updated: false,
+        reason:
+          annotation.removedAt !== undefined
+            ? "This clip was removed"
+            : "People have already replied or voted — takes are fixed once that happens",
+      };
+    }
+
+    await ctx.db.patch(args.annotationId, { takeText: text });
+    return { updated: true };
+  },
+});
+
+/**
+ * What the signed-in viewer may do to this annotation.
+ *
+ * A single query rather than exposing the author id so the client can compare:
+ * an annotation may be published anonymously, and shipping its author to every
+ * reader in order to render an Edit button would undo that.
+ */
+export const ownerActions = query({
+  args: { annotationId: v.id("annotations") },
+  returns: v.object({ isOwner: v.boolean(), canEditTake: v.boolean() }),
+  handler: async (ctx, args) => {
+    const nothing = { isOwner: false, canEditTake: false };
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return nothing;
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+      .unique();
+    if (!user) return nothing;
+    const annotation = await ctx.db.get(args.annotationId);
+    if (!annotation || annotation.authorId !== user._id) return nothing;
+    if (annotation.removedAt !== undefined) return nothing;
+    return { isOwner: true, canEditTake: canEditTake(annotation) };
   },
 });

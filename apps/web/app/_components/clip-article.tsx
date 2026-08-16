@@ -2,6 +2,7 @@ import { formatClipTimestamp } from "@annotated/shared";
 import { SourceByline, resolveSourceByline } from "./source-byline";
 import type { MediaState } from "../../components/clip-media";
 import { ClipMediaLive } from "../../components/clip-media-live";
+import { OwnerActions } from "./owner-actions";
 
 /**
  * The source screenshot, capped in height and top-anchored so the head of the
@@ -157,6 +158,11 @@ export function ClipArticle({ data }: { data: ClipArticleData }) {
         {data.takeText && (
           <p className="mt-5 text-[17px] leading-relaxed">{data.takeText}</p>
         )}
+
+        <OwnerActions
+          annotationId={data.annotationId}
+          currentTake={data.takeText ?? ""}
+        />
 
         {data.takeAudioUrl && (
           <div className="mt-5 border-l-[6px] border-[color:var(--b-acid)] pl-4">

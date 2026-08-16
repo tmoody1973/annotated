@@ -125,6 +125,10 @@ export const listByAnnotation = query({
 
     const enriched = await Promise.all(
       comments.map(async (comment) => {
+        // A removed note keeps its place so replies hanging off it still make
+        // sense, but its words are gone — including from the API, not merely
+        // hidden in the UI.
+        const removed = comment.removedAt !== undefined;
         const author = await ctx.db.get(comment.authorId);
         const likes = await ctx.db
           .query("commentLikes")
@@ -133,7 +137,9 @@ export const listByAnnotation = query({
         return {
           _id: comment._id,
           parentId: comment.parentId ?? null,
-          text: comment.text,
+          text: removed ? "" : comment.text,
+          removed,
+          isOwn: viewerId !== null && comment.authorId === viewerId,
           createdAt: comment.createdAt,
           likeCount: likes.length,
           viewerHasLiked: viewerId
@@ -162,5 +168,40 @@ export const listByAnnotation = query({
         .filter((c) => c.parentId === top._id)
         .sort(byCreatedAt),
     }));
+  },
+});
+
+/**
+ * The author deletes their own note.
+ *
+ * Soft, like an annotation, and for the same reason plus one: a note can have
+ * replies hanging off it, and hard-deleting the parent would orphan them. The
+ * row stays, `listByAnnotation` renders it as removed, and the thread holds
+ * its shape.
+ *
+ * `commentCount` is decremented so the card's "N notes" matches what a reader
+ * can actually see.
+ */
+export const remove = mutation({
+  args: { commentId: v.id("comments") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const user = await requireCurrentUser(ctx);
+    const comment = await ctx.db.get(args.commentId);
+    if (!comment) throw new Error("That note no longer exists");
+    if (comment.authorId !== user._id) {
+      throw new Error("Only the person who wrote this can delete it");
+    }
+    if (comment.removedAt !== undefined) return null;
+
+    await ctx.db.patch(args.commentId, { removedAt: Date.now() });
+
+    const annotation = await ctx.db.get(comment.annotationId);
+    if (annotation) {
+      await ctx.db.patch(comment.annotationId, {
+        commentCount: Math.max(0, annotation.commentCount - 1),
+      });
+    }
+    return null;
   },
 });

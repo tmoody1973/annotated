@@ -3,6 +3,7 @@ import { mutation, query } from "./_generated/server";
 import { requireCurrentUser } from "./users";
 import { toLandingView } from "./annotations";
 import { youtubeThumbnailFor } from "./sources";
+import { isVisible } from "./annotations";
 
 /**
  * Starts a thread on a source as the signed-in user (gap §1). A thread is an
@@ -79,7 +80,7 @@ export const getWithClips = query({
       .query("annotations")
       .withIndex("by_thread", (q) => q.eq("threadId", args.threadId))
       .collect();
-    const ordered = annotations.sort(
+    const ordered = annotations.filter(isVisible).sort(
       (a, b) => (a.threadOrder ?? 0) - (b.threadOrder ?? 0)
     );
     const clips = await Promise.all(

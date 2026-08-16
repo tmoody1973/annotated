@@ -157,6 +157,11 @@ export default defineSchema({
     isEditorPick: v.optional(v.boolean()),
     // Publishing
     isPublic: v.boolean(),
+    // Set when the author removes their own annotation. A soft delete, not a
+    // hard one: the URL may already be pasted somewhere, so the page has to
+    // keep resolving — it renders a tombstone instead of a 404. Absent means
+    // visible; every listing filters on it.
+    removedAt: v.optional(v.number()),
     publishedAt: v.optional(v.number()),
     // Denormalized counts for feed rendering without extra queries.
     commentCount: v.number(),
@@ -196,6 +201,8 @@ export default defineSchema({
     text: v.string(),
     createdAt: v.number(),
     parentId: v.optional(v.id("comments")),
+    /** Set when the author deletes their own note. Replies keep their thread. */
+    removedAt: v.optional(v.number()),
   })
     .index("by_annotation", ["annotationId"])
     .index("by_author", ["authorId"])
