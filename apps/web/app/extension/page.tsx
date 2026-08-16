@@ -9,6 +9,38 @@ export const metadata: Metadata = {
     "Clip any page without leaving it. Highlight text on any site, add your take, and publish the receipt — straight from a dock beside the page. Free for Chrome.",
 };
 
+/**
+ * Whether the Chrome Web Store listing is live, read the same way the client
+ * CTAs read it (`NEXT_PUBLIC_EXTENSION_URL` is inlined at build time, so a
+ * server component can check it too). Drives the copy: before the listing
+ * existed this page's whole job was talking someone through a sideload.
+ */
+const storeIsLive = /^https?:\/\//.test(process.env.NEXT_PUBLIC_EXTENSION_URL ?? "");
+
+/**
+ * Holds the five hand-install steps. They are the only route before the store
+ * listing is live, so they stay open; afterwards they are the fallback for
+ * someone who can't use the store, and collapse behind a summary rather than
+ * being deleted — the .zip still works and some people still need it.
+ */
+function ManualInstall({
+  open,
+  children,
+}: {
+  open: boolean;
+  children: React.ReactNode;
+}) {
+  if (open) return <>{children}</>;
+  return (
+    <details className="mt-8 border-[3px] border-[color:var(--b-line)] bg-[color:var(--b-card)]">
+      <summary className="cursor-pointer select-none bg-[color:var(--b-chrome)] px-5 py-3 font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-[color:var(--b-acid)]">
+        Install by hand instead (5 steps)
+      </summary>
+      <div className="px-5 pb-5">{children}</div>
+    </details>
+  );
+}
+
 const STEPS = [
   {
     no: "01",
@@ -133,17 +165,30 @@ export default function ExtensionPage() {
         </div>
       </section>
 
-      {/* INSTALL — manual sideload until Chrome Web Store approval */}
+      {/* INSTALL — one click from the store once live, hand-install kept as a fallback */}
       <section id="install" className="border-b-[3px] border-[color:var(--b-line)] scroll-mt-20">
         <div className="mx-auto max-w-[1080px] px-6 py-14">
-          <p className={sectionLabel}>Install in Chrome · about a minute</p>
-          <h2 className="mt-3 font-display text-[30px] tracking-tight">Add it to Chrome yourself</h2>
+          <p className={sectionLabel}>
+            {storeIsLive ? "Install in Chrome · one click" : "Install in Chrome · about a minute"}
+          </p>
+          <h2 className="mt-3 font-display text-[30px] tracking-tight">
+            {storeIsLive ? "Add it to Chrome" : "Add it to Chrome yourself"}
+          </h2>
           <p className="mt-3 max-w-[62ch] text-[15px] leading-relaxed text-[color:var(--b-onbg)]">
-            Annotated is in Chrome Web Store review. Until it&apos;s approved you can add it directly
-            — same extension, about a minute. Works in Chrome and other Chromium browsers (Edge,
-            Brave).
+            {storeIsLive
+              ? "Annotated is on the Chrome Web Store — one click, and it keeps itself up to date. Works in Chrome and other Chromium browsers (Edge, Brave)."
+              : "Annotated is in Chrome Web Store review. Until it's approved you can add it directly — same extension, about a minute. Works in Chrome and other Chromium browsers (Edge, Brave)."}
           </p>
 
+          {storeIsLive && (
+            <p className="mt-6 border-l-4 border-[color:var(--b-acid)] pl-3 text-[14px] leading-relaxed text-[color:var(--b-onbg)]">
+              You can also install it by hand from the .zip — it is the{" "}
+              <strong>same build</strong>, not an earlier or separate version. The only differences
+              are that it takes about a minute and never updates itself.
+            </p>
+          )}
+
+          <ManualInstall open={!storeIsLive}>
           <ol className="mt-8 grid grid-cols-1 gap-4">
             {[
               {
@@ -222,11 +267,14 @@ export default function ExtensionPage() {
               </li>
             ))}
           </ol>
+          </ManualInstall>
 
-          <p className="mt-6 border-l-4 border-[color:var(--b-acid)] pl-3 font-mono text-[12px] leading-relaxed text-[color:var(--b-dim-onbg)]">
-            Once it clears Chrome Web Store review, this becomes a one-click install — no download,
-            no Developer mode.
-          </p>
+          {!storeIsLive && (
+            <p className="mt-6 border-l-4 border-[color:var(--b-acid)] pl-3 font-mono text-[12px] leading-relaxed text-[color:var(--b-dim-onbg)]">
+              Once it clears Chrome Web Store review, this becomes a one-click install — no download,
+              no Developer mode.
+            </p>
+          )}
         </div>
       </section>
 

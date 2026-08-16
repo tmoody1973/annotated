@@ -67,17 +67,12 @@ export function ExtensionHeroCta() {
   );
 }
 
-/** The download button reused inside the install-instructions section. Mirrors
- *  the hero: real store link once published, otherwise the sideload package. */
+/** The download button inside the install-by-hand steps.
+ *
+ *  Always the .zip, never the store link — these steps *are* the manual path,
+ *  so a "Add to Chrome" button sitting inside a step titled "Download & unzip"
+ *  would contradict the step it lives in. The store link belongs in the hero. */
 export function InstallDownloadButton() {
-  const { storeUrl } = useBrowserInfo();
-  if (hasRealStore(storeUrl)) {
-    return (
-      <ExtensionCta href={storeUrl} ariaLabel="Add to Chrome" className={ctaClass}>
-        ⊕ Add to Chrome — Free
-      </ExtensionCta>
-    );
-  }
   return (
     <a href={DOWNLOAD_URL} download className={ctaClass} aria-label="Download Annotated for Chrome">
       ⬇ Download the extension (.zip)
