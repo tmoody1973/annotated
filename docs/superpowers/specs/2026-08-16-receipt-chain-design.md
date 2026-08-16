@@ -202,10 +202,45 @@ Two threads. The mechanic is worthless without something in it, and the source
 documents say so themselves: *"Exemplary R1 threads exist before default
 redesign."*
 
-**Thread 1 — the flagship.** A clip of Jason Calacanis on All-In making a
-specific, checkable prediction, with a second clip from a later episode showing
-**he called it first**. Both clips real, both timestamps verified against the
-transcript, both linking to the real episodes.
+**Thread 1 — the flagship. Selected and confirmed 2026-08-16.**
+
+| | |
+|---|---|
+| Episode | All-In **E58**, published **11 December 2021** |
+| Title | *November's CPI, preparing for a downturn, macro outlook, Better.com's botched layoffs* |
+| Feed | `https://rss.libsyn.com/shows/254861/destinations/1928300.xml` |
+| Audio | `dts.podtrac.com/redirect.mp3/traffic.libsyn.com/secure/allinchamathjason/ALLIN-E58.mp3` |
+| Span | **3,056,805 ms → 3,063,710 ms** (50:56.8 → 51:03.7, 6.9s) |
+| Speaker | Jason Calacanis — **confirmed by Tarik listening to the cut audio**, not by diarization alone |
+
+> "So obviously the market corrects, everybody always asks us as a group, what
+> happens when the market corrects? Well, here you're about to see it."
+
+He then plays the Better.com CEO firing 900 people over Zoom, three weeks before
+Christmas.
+
+**Why it qualifies as a receipt.** The episode published 11 December 2021, three
+weeks after the NASDAQ peak of 19 November 2021 and months before the 2022
+drawdown. The prevailing read at the time was that the wobble was temporary; he
+called it the start of a correction and pointed at its first visible symptom.
+What followed was roughly 400,000 tech layoffs across 2022–2023.
+
+**It also demonstrates the product on its own.** The clip *contains* a clip —
+Jason playing someone else's audio to make a point about it, source named, four
+years before Annotated existed. That is the thesis, on tape.
+
+**Provenance of the timestamps.** Word boundaries come from Deepgram `nova-3`
+with `diarize` and `smart_format` — the same model and options
+`deepgram-client.ts` sends — so the published clip will land on exactly this
+span. Diarization split four hosts into nine clusters and could not be trusted
+for attribution on its own; the speaker identification was made from the
+transcript (he gives the episode intro and addresses the others by name) and
+then **verified by ear** before selection.
+
+**The confirming half is still open.** A second clip from a later episode where
+the call is borne out has not been chosen, and needs the same treatment. The
+thread works with the single clip plus a written take; the second clip makes it
+stronger.
 
 The polarity matters and is a deliberate reversal of the first draft. A thread
 whose punchline is *"here is where he contradicted himself"* makes the judge
@@ -228,7 +263,7 @@ against the transcript and every timestamp is played back before publishing.
 
 | Risk | Mitigation |
 |---|---|
-| **Long-episode transcription.** All-In runs ~90 minutes. Roughly 13,500 words, roughly 600KB of `wordsJson`; two hours approaches 800KB against a 1MB Convex string limit — on a synchronous worker call already flagged as slow (debt j). | **Spike this before building.** Transcribe one real All-In episode end to end and measure wall time and stored size. Cheap outs if it fails: choose a shorter episode, or store only the clip window. |
+| ~~**Long-episode transcription.**~~ **RESOLVED 2026-08-16 — the spike found a live bug and it is fixed.** A real 99-minute All-In episode transcribed to 17,637 words and **1,501,754 bytes, 143% of Convex's 1MB document limit** — it would not have stored. At ~15KB per minute the break-even was near 70 minutes, so every podcast episode longer than that was silently unstorable; nothing had hit it because the platform's podcasts are 15–30 minute NPR and Marketplace segments. Fixed in `83ce343` by storing words as columns instead of one object per word: the same episode is now **409,831 bytes, 39%**. Speed was never the problem — Deepgram returned 99 minutes in **20 seconds**. | **Dependency: the worker deploy is held** until the updated extension is live on the Chrome Web Store, because the published build parses `wordsJson` by hand and would render an empty transcript against a columnar row. Deploy order: web (done) → extension → worker. **The flagship cannot be produced until the worker ships.** |
 | The counter-clip is an efficient context-collapse tool. Two clips years apart, side by side, both looking official. | The right-of-reply slot exists precisely to answer this, and appears automatically on challenge. Longer term: source verification, and a published standard that an excerpt must not misrepresent its source. |
 | Evidence pointing at a clip that later fails or is removed. | Covered by 5.2 validation and 5.3 degradation. Both paths get a test. |
 | The rest of the site has no typed replies, so the exemplars look inconsistent. | Intents are available everywhere from day one; legacy replies render unchanged. The exemplars are seeded, not special-cased. |
@@ -263,7 +298,8 @@ against the transcript and every timestamp is played back before publishing.
 
 | Decision | Proposed default | Owner |
 |---|---|---|
-| Which All-In prediction to use | To be researched; must be specific, checkable, and genuinely early | Tarik |
+| ~~Which All-In prediction to use~~ | **Closed 2026-08-16** — E58 @ 50:56.8, see §6 | Tarik (confirmed by ear) |
+| Which later episode confirms the call | Unresolved. 408 episodes back to Mar 2020 are in the feed; two were searched | Tarik + Claude |
 | Thread 2's subject | Non-tech, Tarik's choice | Tarik |
 | Whether the intent picker appears on feed cards or only landing pages | Landing pages only in v1 | Claude |
 | Wording of the Unsourced label | "Unsourced" | Tarik |
@@ -277,3 +313,21 @@ against the transcript and every timestamp is played back before publishing.
   does not implement in full
 - Next spec: the midterm curation probe (an agent plus a themed landing page,
   time-boxed, not a permanent feature)
+
+### A finding that belongs to the next spec
+
+Selecting the flagship clip meant doing by hand what the curation agent is meant
+to automate: pull the feed, choose a likely episode from its title, transcribe
+it, search the text for prediction language, map speaker clusters to people,
+read the passage. Two episodes in, it produced a usable receipt.
+
+**The entire All-In archive — 408 episodes back to March 2020 — is in a public
+RSS feed, and the existing pipeline can already clip every one of them** (the
+podtrac redirect chain resolves to `206 audio/mpeg`, which `resolveFinalUrl`
+already handles). At Deepgram's rate the whole archive transcribes for roughly
+$150.
+
+That makes "point the curation agent at podcast archives" not a different
+project from the civic one but the same machinery aimed at a corpus that (a)
+already exists, (b) needs no editorial judgement about political balance, and
+(c) feeds the audio wedge directly. Worth weighing when the agent is specced.
