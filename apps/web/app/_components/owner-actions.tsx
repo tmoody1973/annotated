@@ -11,6 +11,7 @@
  * reader can notice from the outside, so it gets a beat.
  */
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@annotated/backend/convex/_generated/api";
 import type { Id } from "@annotated/backend/convex/_generated/dataModel";
@@ -29,6 +30,12 @@ export function OwnerActions({
   const actions = useQuery(api.annotations.ownerActions, { annotationId: id });
   const remove = useMutation(api.annotations.remove);
   const updateTake = useMutation(api.annotations.updateTake);
+  // Both mutations change something the *server* rendered — the take text, and
+  // whether the page is a clip at all. Only `ownerActions` is a live Convex
+  // query, so without an explicit refresh the controls correctly disappear
+  // while the take they just edited or deleted stays on screen until a manual
+  // reload. Refreshing is what makes the tombstone and the edit actually show.
+  const router = useRouter();
 
   const [mode, setMode] = useState<"idle" | "confirming" | "editing" | "working">("idle");
   const [draft, setDraft] = useState(currentTake);
@@ -42,6 +49,7 @@ export function OwnerActions({
     try {
       await remove({ annotationId: id });
       onRemoved?.();
+      router.refresh();
     } catch (cause: unknown) {
       setMode("confirming");
       setError(cause instanceof Error ? cause.message : "That didn't work.");
@@ -59,6 +67,7 @@ export function OwnerActions({
         return;
       }
       setMode("idle");
+      router.refresh();
     } catch (cause: unknown) {
       setError(cause instanceof Error ? cause.message : "That didn't work.");
       setMode("editing");
