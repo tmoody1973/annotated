@@ -308,7 +308,10 @@ export function ArticleClipModal({
               </div>
               <div
                 onMouseUp={(e) => onSelect(e.currentTarget)}
-                className="max-h-[40vh] overflow-y-auto border-[3px] border-[color:var(--b-line)] bg-[color:var(--b-bg)] p-3 text-[14px] leading-relaxed"
+                // --b-bg pairs with --b-onbg, never the card's --b-ink. Without
+                // the pair the extracted passage renders black-on-black in dark
+                // mode — present, selectable, and invisible.
+                className="max-h-[40vh] overflow-y-auto border-[3px] border-[color:var(--b-line)] bg-[color:var(--b-bg)] p-3 text-[14px] leading-relaxed text-[color:var(--b-onbg)]"
                 style={{ whiteSpace: "pre-wrap" }}
               >
                 {article.textContent}
