@@ -4,6 +4,7 @@ import { ConvexHttpClient } from "convex/browser";
 import { makeFunctionReference } from "convex/server";
 import { slugId, splitSlugId, sliceTranscriptToSpan, decodeWords } from "@annotated/shared";
 import { ClaimButton } from "./claim-button";
+import { ReportButton } from "./report-button";
 import { SaveImageDialog } from "./save-image-dialog";
 import { VoteButtons } from "../../_components/vote-buttons";
 import { FollowButton } from "../../_components/follow-button";
@@ -306,7 +307,8 @@ export default async function AnnotationPage({
 
         <Comments annotationId={annotation._id} />
 
-        <div className="mt-6">
+        <div className="mt-6 flex flex-col items-start gap-3">
+          <ReportButton annotationId={annotation._id} />
           <ClaimButton annotationId={annotation._id} />
         </div>
 

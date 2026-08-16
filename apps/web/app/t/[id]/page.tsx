@@ -4,6 +4,7 @@ import { ConvexHttpClient } from "convex/browser";
 import { makeFunctionReference } from "convex/server";
 import { slugId, splitSlugId } from "@annotated/shared";
 import { ClaimButton } from "../../a/[id]/claim-button";
+import { ReportButton } from "../../a/[id]/report-button";
 import { VoteButtons } from "../../_components/vote-buttons";
 import { FollowButton } from "../../_components/follow-button";
 import { Comments } from "../../_components/comments";
@@ -206,7 +207,8 @@ export default async function ThreadPage({
                 />
               </div>
               <Comments annotationId={clip._id} />
-              <div className="mt-4">
+              <div className="mt-4 flex flex-col items-start gap-3">
+                <ReportButton annotationId={clip._id} />
                 <ClaimButton annotationId={clip._id} />
               </div>
             </li>

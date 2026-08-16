@@ -279,6 +279,30 @@ export default defineSchema({
     .index("by_annotation", ["annotationId"])
     .index("by_status", ["status"]),
 
+  // Conduct/context reports. Deliberately separate from `claims`: a claim is a
+  // rights assertion (needs a named claimant who can be replied to in law), a
+  // report is "this clip misrepresents something" and must stay reportable
+  // anonymously. Same manual-review handling as claims — no moderation queue.
+  reports: defineTable({
+    annotationId: v.id("annotations"),
+    category: v.union(
+      v.literal("misleading_excerpt"),
+      v.literal("missing_context"),
+      v.literal("wrong_attribution"),
+      v.literal("harassment"),
+      v.literal("spam"),
+      v.literal("other")
+    ),
+    details: v.string(),
+    // Optional: a reporter alleging harassment should not have to identify
+    // themselves to be heard. Used only as the reply-to on the notification.
+    reporterEmail: v.optional(v.string()),
+    submittedAt: v.number(),
+    status: v.union(v.literal("open"), v.literal("resolved")),
+  })
+    .index("by_annotation", ["annotationId"])
+    .index("by_status", ["status"]),
+
   // Canonical, curated topics. Addressable rooms (/topics/[slug]).
   topics: defineTable({
     slug: v.string(),

@@ -5,6 +5,7 @@ import {
   internalQuery,
 } from "./_generated/server";
 import { internal } from "./_generated/api";
+import { sendOwnerEmail, siteBaseUrl } from "./ownerEmail";
 
 // Fair-use claims are the app's only public (unauthenticated) write surface — a
 // party disputing a clip is not necessarily a signed-in user — so inputs are
@@ -22,10 +23,6 @@ function hasControlCharacters(value: string): boolean {
   }
   return false;
 }
-
-const CLAIM_RECIPIENT_FALLBACK = "tarik@radiomilwaukee.org";
-const CLAIM_SENDER = "Annotated Claims <onboarding@resend.dev>";
-const SITE_BASE_URL_FALLBACK = "http://localhost:3000";
 
 /**
  * Persists a fair-use dispute and schedules the owner notification. Public and
@@ -118,11 +115,6 @@ export const notify = internalAction({
   args: { claimId: v.id("claims") },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const apiKey = process.env.RESEND_API_KEY;
-    if (!apiKey) {
-      throw new Error("RESEND_API_KEY is not configured on Convex.");
-    }
-
     const claim = await ctx.runQuery(internal.claims.getClaim, {
       claimId: args.claimId,
     });
@@ -130,9 +122,7 @@ export const notify = internalAction({
       return null; // Claim was deleted before the notification fired.
     }
 
-    const recipient = process.env.CLAIM_NOTIFY_TO ?? CLAIM_RECIPIENT_FALLBACK;
-    const baseUrl = process.env.SITE_BASE_URL ?? SITE_BASE_URL_FALLBACK;
-    const annotationLink = `${baseUrl}/a/${claim.annotationId}`;
+    const annotationLink = `${siteBaseUrl()}/a/${claim.annotationId}`;
 
     const lines = [
       "A new fair-use claim was filed on Annotated.",
@@ -146,25 +136,11 @@ export const notify = internalAction({
       `Annotation: ${annotationLink}`,
     ];
 
-    const response = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: CLAIM_SENDER,
-        to: [recipient],
-        reply_to: claim.claimantEmail,
-        subject: `Fair-use claim from ${claim.claimantName}`,
-        text: lines.join("\n"),
-      }),
+    await sendOwnerEmail({
+      subject: `Fair-use claim from ${claim.claimantName}`,
+      text: lines.join("\n"),
+      replyTo: claim.claimantEmail,
     });
-
-    if (!response.ok) {
-      const detail = await response.text();
-      throw new Error(`Resend rejected the claim email (${response.status}): ${detail}`);
-    }
 
     return null;
   },
