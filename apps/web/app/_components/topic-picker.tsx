@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { makeFunctionReference } from "convex/server";
 import { useQuery } from "convex/react";
 
@@ -20,11 +21,26 @@ const listTopics = makeFunctionReference<"query", Record<string, never>, TopicLi
 export function TopicPicker({
   selected,
   onChange,
+  pinnedSlug,
 }: {
   selected: string[];
   onChange: (ids: string[]) => void;
+  /** Pre-selects this topic once, when the list first loads — a take written
+   *  from a campaign surface belongs to that campaign's room by default. Applied
+   *  a single time, so the writer can still deselect it. */
+  pinnedSlug?: string;
 }) {
   const topics = useQuery(listTopics);
+
+  const didPin = useRef(false);
+  useEffect(() => {
+    if (didPin.current || !pinnedSlug || !topics) return;
+    const pinned = topics.find((t) => t.slug === pinnedSlug);
+    if (!pinned) return;
+    didPin.current = true;
+    if (!selected.includes(pinned._id)) onChange([...selected, pinned._id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [topics, pinnedSlug]);
 
   function toggle(id: string) {
     if (selected.includes(id)) onChange(selected.filter((x) => x !== id));

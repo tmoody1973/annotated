@@ -5,6 +5,9 @@ import { useConvexAuth } from "convex/react";
 import { SignInButton } from "@clerk/nextjs";
 import { ArticleClipModal } from "../_components/article-clip-modal";
 
+/** Takes written from The Record belong to the campaign room by default. */
+export const CAMPAIGN_TOPIC_SLUG = "wisconsin-2026";
+
 const className =
   "border-2 border-[color:var(--b-line)] bg-[color:var(--b-acid)] px-3 py-1.5 text-[12px] font-black uppercase tracking-wide text-[color:var(--b-acid-ink)] shadow-[3px_3px_0_0_var(--b-shadow)] transition-transform hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_0_var(--b-shadow)]";
 
@@ -31,7 +34,11 @@ export function AddTakeButton({ sourceUrl }: { sourceUrl: string }) {
         Add yours
       </button>
       {open && (
-        <ArticleClipModal initialUrl={sourceUrl} onClose={() => setOpen(false)} />
+        <ArticleClipModal
+          initialUrl={sourceUrl}
+          pinnedTopicSlug={CAMPAIGN_TOPIC_SLUG}
+          onClose={() => setOpen(false)}
+        />
       )}
     </>
   );

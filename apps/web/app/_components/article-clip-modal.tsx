@@ -112,11 +112,15 @@ function readSelectionOffsets(container: HTMLElement): { a: number; b: number } 
 export function ArticleClipModal({
   onClose,
   initialUrl,
+  pinnedTopicSlug,
 }: {
   onClose: () => void;
   /** Prefills and immediately extracts — used by The Record's "Add yours", so
    *  the contributor's first action is the valuable one, not pasting a URL. */
   initialUrl?: string;
+  /** Pre-selects a topic, so a take written from a campaign surface lands in
+   *  that campaign's room without the writer having to know it exists. */
+  pinnedTopicSlug?: string;
 }) {
   const router = useRouter();
   const extract = useAction(extractArticleRef);
@@ -331,7 +335,7 @@ export function ArticleClipModal({
                 rows={3}
                 className="border-[3px] border-[color:var(--b-line)] px-3 py-2 text-sm"
               />
-              <TopicPicker selected={topicIds} onChange={setTopicIds} />
+              <TopicPicker selected={topicIds} onChange={setTopicIds} pinnedSlug={pinnedTopicSlug} />
               <button
                 onClick={handlePublish}
                 disabled={!canPublish || status === "publishing"}

@@ -23,6 +23,9 @@ function useEnsureUser(): void {
  *  Extension carries the ⊕ glyph to read as the install destination (§2). */
 const NAV_LINKS = [
   { label: "Home", href: "/", active: true },
+  // The Record sits second: it is the one page that gives a first-time visitor
+  // something to react to, which is the site's actual cold-start problem.
+  { label: "2026 Record", href: "/2026" },
   { label: "Publishers", href: "/publishers" },
   { label: "⊕ Extension", href: "/extension" },
   { label: "About", href: "/about" },

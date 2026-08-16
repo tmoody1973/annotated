@@ -18,6 +18,10 @@ const SEED_TOPICS: { slug: string; name: string; sortOrder: number }[] = [
   { slug: "society", name: "Society", sortOrder: 12 },
   { slug: "climate", name: "Climate", sortOrder: 13 },
   { slug: "ideas-philosophy", name: "Ideas & Philosophy", sortOrder: 14 },
+  // The campaign room. Takes written from The Record land here by default, so
+  // the record's evidence and the arguments about it stay reachable from one
+  // address. Archives with the campaign rather than becoming a standing section.
+  { slug: "wisconsin-2026", name: "Wisconsin 2026", sortOrder: 15 },
 ];
 
 /** Idempotently insert the canonical topics. Internal — run via `convex run topics:seedTopics`. */
