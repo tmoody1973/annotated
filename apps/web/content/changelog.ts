@@ -29,6 +29,22 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: "v0.4.2",
+    date: "2026-08-16",
+    title: "What you publish is yours to manage",
+    lead:
+      "Publishing used to be one-way. A clip that failed stayed broken, a typo in your take stayed there, and there was no way to take anything down. All three are yours now.",
+    changes: [
+      "A clip that failed to process has a Try again button, and it rebuilds in place — same link, same votes, same replies. Before, the only way forward was publishing a second clip at a new address and leaving the broken one up for anyone holding the old link.",
+      "Fewer clips fail in the first place. When the fast way of cutting a video doesn't work, we now fall back to a slower, more careful way instead of giving up, and a one-off hiccup is retried rather than treated as final.",
+      "You can remove a clip you published. The link keeps working and says it was taken down, instead of becoming a dead page for anyone who saved or shared it — but the clip, your take, and the preview that shows up when the link is pasted into a chat are all gone.",
+      "Removing can't be undone. The video file is deleted, so bringing a clip back means clipping it again.",
+      "You can fix your take right up until the first vote or reply, and then it's fixed for good. Rewriting it later would change what people had already agreed with.",
+      "You can delete a note you left on someone's clip. The reply keeps its place so the conversation still reads in order, but the text is gone and the note count matches what you can actually see.",
+      "Only you can remove your own work. There is no way to remove someone else's and no moderation queue yet.",
+    ],
+  },
+  {
     version: "v0.4.1",
     date: "2026-08-13",
     title: "The side panel became four screens",

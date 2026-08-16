@@ -9,6 +9,7 @@ export const contentType = "image/png";
 export const alt = "An annotated clip";
 
 interface OgAnnotation {
+  removed?: boolean;
   selectedText?: string;
   takeText?: string;
   takeAudioTranscript?: string;
@@ -40,7 +41,10 @@ export default async function Image({
       const annotation = await new ConvexHttpClient(convexUrl).query(getById, {
         annotationId: id,
       });
-      if (annotation) {
+      // A removed clip unfurls as the generic card. Otherwise the quote and
+      // take would keep showing up in every chat window the link was pasted
+      // into — the opposite of taking it down.
+      if (annotation && !annotation.removed) {
         data = {
           quote:
             annotation.selectedText ??

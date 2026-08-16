@@ -732,6 +732,25 @@ export async function toLandingView(
           isVerified: author.isVerified ?? false,
         }
       : null,
+    // A removed annotation keeps its row and its URL — the link must not 404 —
+    // but stops serving what was taken down. Blanked here, last, rather than in
+    // each page: `toLandingView` feeds the landing page, the OG unfurl, the
+    // share card and the thread page, and every one of those would otherwise
+    // keep showing a take its author deleted. The source stays, because the
+    // citation is what the tombstone still has to offer.
+    ...(annotation.removedAt !== undefined
+      ? {
+          selectedText: undefined,
+          takeText: undefined,
+          takeAudioTranscript: undefined,
+          takeAudioUrl: null,
+          commentaryText: undefined,
+          commentaryAudioUrl: null,
+          commentaryAudioTranscript: undefined,
+          clipUrl: null,
+          screenshotUrl: null,
+        }
+      : {}),
   };
 }
 

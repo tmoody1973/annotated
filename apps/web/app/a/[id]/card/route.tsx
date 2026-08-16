@@ -6,6 +6,7 @@ import { ShareCard, type ShareFormat, type ShareCardData } from "../../../_compo
 
 interface CardAnnotation {
   _id: string;
+  removed?: boolean;
   selectedText?: string;
   takeText?: string;
   takeAudioTranscript?: string;
@@ -45,7 +46,9 @@ export async function GET(
       const annotation = await new ConvexHttpClient(convexUrl).query(getById, {
         annotationId: id,
       });
-      if (annotation) {
+      // A removed clip renders the generic card, so a saved-image link can't be
+      // used to keep re-minting a take its author took down.
+      if (annotation && !annotation.removed) {
         const anonymous = annotation.isAnonymous === true;
         data = {
           quote:

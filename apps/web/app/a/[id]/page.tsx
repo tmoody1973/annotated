@@ -17,6 +17,7 @@ import type { MediaState } from "../../../components/clip-media";
 interface AnnotationView {
   _id: string;
   sourceId: string;
+  removed?: boolean;
   takeText?: string;
   takeAudioUrl?: string | null;
   takeAudioTranscript?: string;
@@ -112,6 +113,15 @@ export async function generateMetadata({
   const { id } = splitSlugId(param);
   const annotation = await fetchAnnotation(id);
   if (!annotation) return { title: "Not found — Annotated" };
+  // A removed clip keeps its URL but stops being a page worth indexing or
+  // unfurling: the take it described is gone.
+  if (annotation.removed) {
+    return {
+      title: "Removed clip — Annotated",
+      description: "This clip was removed by the person who published it.",
+      robots: { index: false, follow: false },
+    };
+  }
   const title = `${annotation.source?.title ?? "Clip"} — Annotated`;
   const description =
     annotation.takeText ??
@@ -127,6 +137,61 @@ export async function generateMetadata({
     openGraph: { title, description, url: canonical, type: "article" },
     twitter: { card: "summary_large_image", title, description },
   };
+}
+
+const tombstoneLabel =
+  "font-mono text-[11px] font-bold uppercase tracking-[0.14em]";
+
+/**
+ * What a removed clip resolves to.
+ *
+ * Removal is soft precisely so a pasted link doesn't become a 404, which would
+ * quietly rewrite what other people saw. So the page still answers — it just
+ * says what happened, and keeps the one thing that outlives the take: the link
+ * to the original source, so whoever followed the link still gets somewhere.
+ */
+function RemovedClip({
+  source,
+}: {
+  source: AnnotationView["source"];
+}) {
+  return (
+    <AppShell narrow>
+      <article className="border-[3px] border-[color:var(--b-line)] bg-[color:var(--b-card)] text-[color:var(--b-ink)] shadow-[8px_8px_0_0_var(--b-shadow)]">
+        <div className="border-b-[3px] border-[color:var(--b-line)] bg-[color:var(--b-chrome)] px-5 py-3 sm:px-6">
+          <p className={`${tombstoneLabel} text-[color:var(--b-acid)]`}>Removed</p>
+        </div>
+        <div className="p-5 sm:p-6">
+          <p className="font-display text-[28px] leading-[1.06] tracking-[-0.01em] sm:text-[34px]">
+            The person who published this took it down.
+          </p>
+          <p className="mt-3 text-[17px] leading-relaxed text-[color:var(--b-dim)]">
+            The clip and the take are gone. This link still resolves so it
+            doesn&rsquo;t turn into a dead end for anyone who saved it.
+          </p>
+          {source && (
+            <div className="mt-6 border-t-[3px] border-[color:var(--b-line)] pt-4">
+              <p className={`${tombstoneLabel} text-[color:var(--b-dim)]`}>
+                It was clipped from
+              </p>
+              <a
+                href={source.canonicalUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 inline-block text-[17px] font-extrabold underline decoration-[color:var(--b-acid)] decoration-[3px] underline-offset-4"
+              >
+                {source.title}
+              </a>
+            </div>
+          )}
+        </div>
+      </article>
+
+      <footer className="mt-8 text-center font-mono text-xs text-[color:var(--b-dim-onbg)]">
+        annotated.com
+      </footer>
+    </AppShell>
+  );
 }
 
 export default async function AnnotationPage({
@@ -151,6 +216,11 @@ export default async function AnnotationPage({
   if (param !== canonicalParam) {
     permanentRedirect(clipPath(annotation.source?.title ?? "clip", annotation._id));
   }
+
+  // Checked after canonicalization so a removed clip's link still normalizes to
+  // one URL, and before any of the clip machinery: its media is deleted, so the
+  // player would otherwise sit on "processing" forever.
+  if (annotation.removed) return <RemovedClip source={annotation.source} />;
 
   // YouTube clips show the spoken transcript for the clip window: the clip is
   // selected by playback time, so the VTT (video-relative, no ad-insertion

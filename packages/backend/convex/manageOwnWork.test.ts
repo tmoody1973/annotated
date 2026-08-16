@@ -251,6 +251,27 @@ describe("comments.remove", () => {
   });
 });
 
+describe("annotations.getById after removal", () => {
+  test("resolves to a tombstone: the page answers, the take does not", async () => {
+    const t = convexTest(schema, modules);
+    const owner = t.withIdentity({ subject: "clerk_owner", name: "Owner" });
+    const ownerId = await owner.mutation(api.users.ensureCurrentUser, {});
+    const annotationId = await seed(t, ownerId, { selectedText: "a quote" });
+
+    await owner.mutation(api.annotations.remove, { annotationId });
+
+    const view = await t.query(api.annotations.getById, { annotationId });
+    expect(view?.removed).toBe(true);
+    // The source survives — it is the one thing a tombstone can still offer.
+    expect(view?.source?.canonicalUrl).toBe("https://www.youtube.com/watch?v=abc");
+    // Everything the author took down is gone from the payload, not merely
+    // hidden by the page: the same query feeds the OG unfurl and share card.
+    expect(view?.takeText).toBeUndefined();
+    expect(view?.selectedText).toBeUndefined();
+    expect(view?.clipUrl).toBeNull();
+  });
+});
+
 describe("annotations.ownerActions", () => {
   test("tells the author they can edit and remove", async () => {
     const t = convexTest(schema, modules);

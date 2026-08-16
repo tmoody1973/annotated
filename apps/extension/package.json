@@ -1,7 +1,7 @@
 {
   "name": "extension",
   "displayName": "Annotated",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Clip and annotate media from any web page \u2014 YouTube, podcasts, articles.",
   "author": "Tarik Moody <tarik@radiomilwaukee.org>",
   "private": true,
