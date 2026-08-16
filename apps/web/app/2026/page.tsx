@@ -21,8 +21,9 @@ interface RecordRow {
   jurisdiction: string;
   body: string;
   question: string;
-  status: string;
-  statusLabel: string;
+  track: string;
+  status: string | null;
+  statusLabel: string | null;
   retrievedAt: number;
   selectionNote: string;
   nextDateAt?: number;
@@ -49,6 +50,17 @@ async function fetchRecord(): Promise<RecordRow[]> {
     return [];
   }
 }
+
+/** The filter rail. Wisconsin leads: it is the beat nobody else is covering
+ *  this way, and the Senate is what decides control. */
+const TRACKS: { value: string; label: string }[] = [
+  { value: "all", label: "Everything" },
+  { value: "wisconsin", label: "Wisconsin" },
+  { value: "senate", label: "US Senate" },
+  { value: "governor", label: "Governors" },
+  { value: "house", label: "US House" },
+  { value: "money", label: "Money" },
+];
 
 /** Published on the page so selection can be argued with rather than guessed at. */
 const RULES = [
@@ -87,11 +99,21 @@ export const metadata = {
 
 export const revalidate = 60;
 
-export default async function RecordPage() {
-  const rows = await fetchRecord();
+export default async function RecordPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ track?: string }>;
+}) {
+  const all = await fetchRecord();
+  const { track } = await searchParams;
+  const active = TRACKS.some((t) => t.value === track) ? track! : "all";
+  const rows = active === "all" ? all : all.filter((row) => row.track === active);
+
   const days = daysUntilElection();
   const takeTotal = rows.reduce((sum, row) => sum + row.takeCount, 0);
   const openRows = rows.filter((row) => row.takeCount === 0).length;
+  const countFor = (value: string) =>
+    value === "all" ? all.length : all.filter((row) => row.track === value).length;
 
   return (
     <AppShell>
@@ -142,12 +164,37 @@ export default async function RecordPage() {
           </dl>
         </header>
 
+        {/* Tracks. Real links, not client state: a filtered record is a thing
+            you can send someone. Empty tracks stay visible and say so, because
+            a missing chip reads as "we don't cover that". */}
+        <nav aria-label="Filter the record" className="mt-5 flex flex-wrap gap-2">
+          {TRACKS.map((t) => {
+            const isActive = t.value === active;
+            const count = countFor(t.value);
+            return (
+              <Link
+                key={t.value}
+                href={t.value === "all" ? "/2026" : `/2026?track=${t.value}`}
+                aria-current={isActive ? "page" : undefined}
+                className={`border-2 border-[color:var(--b-line)] px-2.5 py-1 font-mono text-[11px] font-bold uppercase tracking-[0.12em] ${
+                  isActive
+                    ? "bg-[color:var(--b-acid)] text-[color:var(--b-acid-ink)]"
+                    : "bg-[color:var(--b-card)] text-[color:var(--b-ink)] hover:bg-[color:var(--b-acid)]"
+                } ${count === 0 && !isActive ? "opacity-50" : ""}`}
+              >
+                {t.label}{" "}
+                <span className="tabular-nums font-normal">{count}</span>
+              </Link>
+            );
+          })}
+        </nav>
+
         {/* The record holds the evidence; the room holds the arguments. Both
             addresses matter, so the page names the other one. */}
-        <div className="mt-5 flex flex-wrap items-center gap-2">
+        <div className="mt-3 flex flex-wrap items-center gap-2">
           <Link
             href={`/topics/${CAMPAIGN_TOPIC_SLUG}`}
-            className="border-2 border-[color:var(--b-line)] bg-[color:var(--b-card)] px-2.5 py-1 font-mono text-[11px] font-bold uppercase tracking-[0.12em] text-[color:var(--b-ink)] hover:bg-[color:var(--b-acid)]"
+            className="font-mono text-[11px] font-bold uppercase tracking-[0.12em] text-[color:var(--b-onbg)] underline decoration-2 underline-offset-4 hover:bg-[color:var(--b-acid)] hover:text-[color:var(--b-acid-ink)]"
           >
             #Wisconsin 2026
           </Link>
@@ -158,8 +205,9 @@ export default async function RecordPage() {
 
         {rows.length === 0 ? (
           <p className="mt-8 border-[3px] border-dashed border-[color:var(--b-line)] p-6 text-[15px] font-semibold text-[color:var(--b-dim-onbg)]">
-            Nothing has been published to the record yet. Entries appear here
-            only after a person has reviewed them.
+            {all.length === 0
+              ? "Nothing has been published to the record yet. Entries appear here only after a person has reviewed them."
+              : "Nothing on this track yet. The record follows the races that decide something, and this one hasn't produced a document worth arguing with."}
           </p>
         ) : (
           <ol className="mt-8 border-[3px] border-[color:var(--b-line)] bg-[color:var(--b-card)] text-[color:var(--b-ink)] shadow-[10px_10px_0_0_var(--b-shadow)]">
@@ -172,9 +220,11 @@ export default async function RecordPage() {
                 <div className="flex flex-col gap-5 p-5 sm:p-7 md:flex-row md:gap-8">
                   {/* Left rail: who decides, and where it stands. */}
                   <div className="flex shrink-0 flex-row flex-wrap items-center gap-3 md:w-[168px] md:flex-col md:items-start md:gap-3">
-                    <span className="bg-[color:var(--b-line)] px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-[color:var(--b-card)]">
-                      {row.statusLabel}
-                    </span>
+                    {row.statusLabel && (
+                      <span className="bg-[color:var(--b-line)] px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-[color:var(--b-card)]">
+                        {row.statusLabel}
+                      </span>
+                    )}
                     <p className="font-mono text-[11px] font-bold uppercase leading-tight tracking-[0.12em] text-[color:var(--b-dim)]">
                       {row.jurisdiction}
                       <span className="block font-normal normal-case tracking-normal">

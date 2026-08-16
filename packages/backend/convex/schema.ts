@@ -317,19 +317,41 @@ export default defineSchema({
     campaign: v.string(), // "2026"
     sourceId: v.id("sources"),
 
+    /**
+     * Which part of the map this belongs to. Wisconsin leads — it is the only
+     * beat with an audience nobody else has — but the Senate decides control,
+     * so the record follows the races that decide something. Optional: the
+     * first entries predate tracks and read as "wisconsin".
+     */
+    track: v.optional(
+      v.union(
+        v.literal("wisconsin"),
+        v.literal("senate"),
+        v.literal("governor"),
+        v.literal("house"),
+        v.literal("money")
+      )
+    ),
     jurisdiction: v.string(), // "Racine County"
     body: v.string(), // "Mount Pleasant Village Board"
     /** The bounded question this record answers a piece of. */
     question: v.string(),
-    status: v.union(
-      v.literal("proposed"),
-      v.literal("under_review"),
-      v.literal("hearing_scheduled"),
-      v.literal("decided"),
-      v.literal("withdrawn"),
-      v.literal("preliminary"),
-      v.literal("certified"),
-      v.literal("archived")
+    /**
+     * Where a decision stands. Optional because not every entry is a decision:
+     * a story where someone said something contestable has no status, and
+     * forcing one on it was making the column lie.
+     */
+    status: v.optional(
+      v.union(
+        v.literal("proposed"),
+        v.literal("under_review"),
+        v.literal("hearing_scheduled"),
+        v.literal("decided"),
+        v.literal("withdrawn"),
+        v.literal("preliminary"),
+        v.literal("certified"),
+        v.literal("archived")
+      )
     ),
     retrievedAt: v.number(),
     /** Why it is on the record, and one honest limitation of it. Factual. */

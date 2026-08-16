@@ -125,6 +125,39 @@ test("a published entry reports its takes, and zero takes is a state not an abse
   expect(bare.takes).toEqual([]);
 });
 
+test("an entry can be a claim with no status, and defaults to the Wisconsin track", async () => {
+  const t = convexTest(schema, modules);
+  const sourceId = await seedSource(t, "https://example.com/quote", "Someone said a thing");
+
+  // A story where a person said something contestable has no decision to
+  // report — forcing a status on it made the column lie.
+  const claimId = await t.mutation(internal.recordEntries.draft, {
+    ...draftFields,
+    status: undefined,
+    sourceId,
+    curatedBy: "editor",
+  });
+  await t.mutation(internal.recordEntries.publish, { entryId: claimId });
+
+  const [row] = await t.query(api.recordEntries.listPublished, { campaign: "2026" });
+  expect(row.status).toBeNull();
+  expect(row.statusLabel).toBeNull();
+  // Entries written before tracks existed read as Wisconsin, not as untracked.
+  expect(row.track).toBe("wisconsin");
+
+  // A track is kept when given.
+  const senate = await seedSource(t, "https://example.com/senate", "Senate story");
+  const senateId = await t.mutation(internal.recordEntries.draft, {
+    ...draftFields,
+    sourceId: senate,
+    track: "senate",
+    curatedBy: "editor",
+  });
+  await t.mutation(internal.recordEntries.publish, { entryId: senateId });
+  const rows = await t.query(api.recordEntries.listPublished, { campaign: "2026" });
+  expect(rows.find((r) => r._id === senateId)?.track).toBe("senate");
+});
+
 test("drafting rejects empty required text and an unknown source", async () => {
   const t = convexTest(schema, modules);
   const sourceId = await seedSource(t, "https://example.com/c", "Doc");

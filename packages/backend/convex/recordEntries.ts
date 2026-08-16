@@ -25,6 +25,23 @@ const MAX_QUESTION_LENGTH = 300;
 const MAX_SELECTION_NOTE_LENGTH = 800;
 const MAX_TAKE_PREVIEWS = 3;
 
+const trackValidator = v.union(
+  v.literal("wisconsin"),
+  v.literal("senate"),
+  v.literal("governor"),
+  v.literal("house"),
+  v.literal("money")
+);
+
+/** Ordered for the filter rail. Wisconsin leads on purpose. */
+export const TRACK_LABELS: { value: string; label: string }[] = [
+  { value: "wisconsin", label: "Wisconsin" },
+  { value: "senate", label: "US Senate" },
+  { value: "governor", label: "Governors" },
+  { value: "house", label: "US House" },
+  { value: "money", label: "Money" },
+];
+
 const statusValidator = v.union(
   v.literal("proposed"),
   v.literal("under_review"),
@@ -94,8 +111,9 @@ async function toRecordRow(ctx: QueryCtx, entry: Doc<"recordEntries">) {
     jurisdiction: entry.jurisdiction,
     body: entry.body,
     question: entry.question,
-    status: entry.status,
-    statusLabel: STATUS_LABELS[entry.status] ?? entry.status,
+    track: entry.track ?? "wisconsin",
+    status: entry.status ?? null,
+    statusLabel: entry.status ? (STATUS_LABELS[entry.status] ?? entry.status) : null,
     retrievedAt: entry.retrievedAt,
     selectionNote: entry.selectionNote,
     nextDateAt: entry.nextDateAt,
@@ -161,7 +179,8 @@ export const draft = internalMutation({
     jurisdiction: v.string(),
     body: v.string(),
     question: v.string(),
-    status: statusValidator,
+    status: v.optional(statusValidator),
+    track: v.optional(trackValidator),
     retrievedAt: v.number(),
     selectionNote: v.string(),
     nextDateAt: v.optional(v.number()),
@@ -181,7 +200,8 @@ export const draft = internalMutation({
       jurisdiction: requireText(args.jurisdiction, "Jurisdiction", 120),
       body: requireText(args.body, "Body", 200),
       question: requireText(args.question, "Question", MAX_QUESTION_LENGTH),
-      status: args.status,
+      ...(args.status ? { status: args.status } : {}),
+      track: args.track ?? "wisconsin",
       retrievedAt: args.retrievedAt,
       selectionNote: requireText(
         args.selectionNote,
@@ -226,6 +246,7 @@ export const update = internalMutation({
   args: {
     entryId: v.id("recordEntries"),
     status: v.optional(statusValidator),
+    track: v.optional(trackValidator),
     selectionNote: v.optional(v.string()),
     retrievedAt: v.optional(v.number()),
     nextDateAt: v.optional(v.number()),
@@ -264,7 +285,8 @@ export const draftFromUrl = internalMutation({
     jurisdiction: v.string(),
     body: v.string(),
     question: v.string(),
-    status: statusValidator,
+    status: v.optional(statusValidator),
+    track: v.optional(trackValidator),
     retrievedAt: v.number(),
     selectionNote: v.string(),
     nextDateAt: v.optional(v.number()),
@@ -287,7 +309,8 @@ export const draftFromUrl = internalMutation({
       jurisdiction: args.jurisdiction,
       body: args.body,
       question: args.question,
-      status: args.status,
+      ...(args.status ? { status: args.status } : {}),
+      ...(args.track ? { track: args.track } : {}),
       retrievedAt: args.retrievedAt,
       selectionNote: args.selectionNote,
       ...(args.nextDateAt !== undefined ? { nextDateAt: args.nextDateAt } : {}),
