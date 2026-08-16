@@ -170,7 +170,20 @@ searched.
 
 ## Next, in order
 
-### 1. A typed report path — BLOCKING
+### 1. A typed report path — DONE (`e7380f8`, live on annotated.sh)
+
+Shipped as a separate `reports` table, not a field on `claims`: a claim needs a
+named claimant who can be answered in law, a report must be fileable
+anonymously. Six categories, details required, email optional. Public
+unauthenticated mutation → scheduled internal action → Resend, same shape as
+`claims.submit`, and both now share one `sendOwnerEmail`. `reports:listOpen` is
+internal-only. Verified live: real submit on a thread page → row in
+`strong-eel-665` → Resend accepted. Changelog v0.4.3.
+
+**Carried debt:** no rate limit on `reports.submit`, same as claims debt (s).
+One test row (`TEST REPORT — ignore`) is still open in the table.
+
+<details><summary>Original brief</summary>
 
 The only report path on the platform is **File a Claim, which is copyright.**
 There is no way to report a misleading excerpt, missing context, wrong
@@ -180,6 +193,7 @@ was skipped.
 This ships **before the 2026 feed is promoted anywhere.** A public election feed
 open to contributions with nowhere to report anything is the one combination not
 to ship. It is small — the same shape as `claims.submit`.
+</details>
 
 ### 2. The 2026 Record
 
