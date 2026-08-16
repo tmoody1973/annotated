@@ -31,10 +31,11 @@ export const CHANGELOG: Release[] = [
   {
     version: "v0.4.3",
     date: "2026-08-16",
-    title: "You can report a clip, not just claim it",
+    title: "The things that quietly didn't work",
     lead:
-      "Until now the only way to flag a clip was File a Claim, which is a copyright process. If a clip cut a quote short, credited the wrong person, or was just abuse, there was nowhere to say so.",
+      "Two gaps that never announced themselves. There was no way to report a clip unless you were claiming copyright on it, and any podcast episode longer than about an hour couldn't be clipped at all.",
     changes: [
+      "Long episodes work now. Anything past roughly 70 minutes used to fail without saying why — the transcript was too big to store. It now takes about a quarter of the room it did, so a three-hour show fits with space to spare. Every podcast on the site so far has been a 15–30 minute segment, which is why nobody had hit this.",
       "Every clip page has a Report a problem button. You pick what's wrong — misleading, missing context, wrong person credited, harassment, spam, or something else — and say what we should know.",
       "You don't have to say who you are. An email address is optional, and it's only used if you want a reply.",
       "File a Claim is still there and unchanged. It's for copyright and rights matters; reports are for everything else.",
