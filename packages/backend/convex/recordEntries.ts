@@ -159,12 +159,35 @@ export const listPublished = query({
 export const listDrafts = internalQuery({
   args: { campaign: v.string() },
   handler: async (ctx, args) => {
-    return await ctx.db
+    const drafts = await ctx.db
       .query("recordEntries")
       .withIndex("by_campaign_and_published", (q) =>
         q.eq("campaign", args.campaign).eq("publishedAt", undefined)
       )
       .collect();
+    // A rejected entry is not waiting for review — it has had one.
+    return drafts.filter((entry) => entry.rejectedAt === undefined);
+  },
+});
+
+/**
+ * Turns an entry down. Clears any publish stamp and marks it reviewed-and-
+ * declined, so a later bulk publish cannot bring it back. The row survives:
+ * what the record declined is part of how it can be argued with.
+ */
+export const reject = internalMutation({
+  args: { entryId: v.id("recordEntries") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const entry = await ctx.db.get(args.entryId);
+    if (!entry) {
+      throw new Error("That record entry no longer exists.");
+    }
+    await ctx.db.patch(args.entryId, {
+      publishedAt: undefined,
+      rejectedAt: Date.now(),
+    });
+    return null;
   },
 });
 
@@ -225,7 +248,10 @@ export const publish = internalMutation({
     if (!entry) {
       throw new Error("That record entry no longer exists.");
     }
-    await ctx.db.patch(args.entryId, { publishedAt: Date.now() });
+    await ctx.db.patch(args.entryId, {
+      publishedAt: Date.now(),
+      rejectedAt: undefined,
+    });
     return null;
   },
 });
@@ -326,12 +352,14 @@ export const publishAllDrafts = internalMutation({
   args: { campaign: v.string() },
   returns: v.number(),
   handler: async (ctx, args) => {
-    const drafts = await ctx.db
-      .query("recordEntries")
-      .withIndex("by_campaign_and_published", (q) =>
-        q.eq("campaign", args.campaign).eq("publishedAt", undefined)
-      )
-      .collect();
+    const drafts = (
+      await ctx.db
+        .query("recordEntries")
+        .withIndex("by_campaign_and_published", (q) =>
+          q.eq("campaign", args.campaign).eq("publishedAt", undefined)
+        )
+        .collect()
+    ).filter((entry) => entry.rejectedAt === undefined);
     const now = Date.now();
     for (const draftRow of drafts) {
       await ctx.db.patch(draftRow._id, { publishedAt: now });

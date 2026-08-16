@@ -94,7 +94,7 @@ function daysUntilElection(): number {
 export const metadata = {
   title: "The 2026 Record — Annotated",
   description:
-    "A running record of verified public sources for the 2026 Wisconsin election. The record is kept by machine; the meaning is supplied by people.",
+    "A running record of verified public sources for the 2026 midterms — Wisconsin first, plus the Senate, governor and House races that decide control. The record is the evidence; the take is yours.",
 };
 
 export const revalidate = 60;
@@ -143,7 +143,7 @@ export default async function RecordPage({
                 {days === 1 ? "day to the vote" : "days to the vote"}
               </p>
               <p className="mt-2 font-mono text-[11px] tracking-[0.08em] opacity-80">
-                Wisconsin · 3 Nov 2026
+                Election Day · 3 Nov 2026
               </p>
             </div>
           </div>

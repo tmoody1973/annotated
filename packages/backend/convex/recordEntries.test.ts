@@ -158,6 +158,41 @@ test("an entry can be a claim with no status, and defaults to the Wisconsin trac
   expect(rows.find((r) => r._id === senateId)?.track).toBe("senate");
 });
 
+test("a rejected entry stays rejected through a bulk publish", async () => {
+  const t = convexTest(schema, modules);
+  const keep = await seedSource(t, "https://example.com/keep", "Worth arguing with");
+  const cut = await seedSource(t, "https://example.com/cut", "Reference material");
+
+  const keepId = await t.mutation(internal.recordEntries.draft, {
+    ...draftFields,
+    sourceId: keep,
+    curatedBy: "agent",
+  });
+  const cutId = await t.mutation(internal.recordEntries.draft, {
+    ...draftFields,
+    sourceId: cut,
+    curatedBy: "agent",
+  });
+
+  // A reviewer turns one down. It leaves the queue without being deleted.
+  await t.mutation(internal.recordEntries.reject, { entryId: cutId });
+  const queue = await t.query(internal.recordEntries.listDrafts, { campaign: "2026" });
+  expect(queue.map((d) => d._id)).toEqual([keepId]);
+
+  // Bulk publish must not resurrect it — the whole reason rejection exists.
+  expect(
+    await t.mutation(internal.recordEntries.publishAllDrafts, { campaign: "2026" })
+  ).toBe(1);
+  const published = await t.query(api.recordEntries.listPublished, { campaign: "2026" });
+  expect(published.map((r) => r._id)).toEqual([keepId]);
+
+  // An explicit publish still overrides a rejection — a reviewer can change
+  // their mind; only the bulk action is prevented from doing it for them.
+  await t.mutation(internal.recordEntries.publish, { entryId: cutId });
+  const after = await t.query(api.recordEntries.listPublished, { campaign: "2026" });
+  expect(after).toHaveLength(2);
+});
+
 test("drafting rejects empty required text and an unknown source", async () => {
   const t = convexTest(schema, modules);
   const sourceId = await seedSource(t, "https://example.com/c", "Doc");

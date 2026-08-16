@@ -366,6 +366,13 @@ export default defineSchema({
      * remembering: every public query filters on this being set.
      */
     publishedAt: v.optional(v.number()),
+    /**
+     * Set when a reviewer looks at an entry and decides it does not belong.
+     * Distinct from "not yet reviewed": without it, a bulk publish resurrects
+     * everything a person already turned down. Kept rather than deleted so the
+     * record can show what it declined.
+     */
+    rejectedAt: v.optional(v.number()),
   })
     .index("by_campaign_and_published", ["campaign", "publishedAt"])
     .index("by_source", ["sourceId"]),
