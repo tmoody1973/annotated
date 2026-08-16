@@ -13,6 +13,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@annotated/shared": "workspace:*",
     "@deepgram/sdk": "^3.9.0",
     "@mozilla/readability": "^0.6.0",
     "convex": "^1.39.1",

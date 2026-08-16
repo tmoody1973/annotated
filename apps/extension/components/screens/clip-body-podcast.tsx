@@ -11,7 +11,12 @@
 import { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { useAction, useQuery } from "convex/react";
 import { makeFunctionReference } from "convex/server";
-import { formatClipTimestamp, selectClipSpan, type TranscriptWord } from "@annotated/shared";
+import {
+  formatClipTimestamp,
+  selectClipSpan,
+  decodeWords,
+  type TranscriptWord,
+} from "@annotated/shared";
 import {
   EMPTY_SELECTION,
   isWordSelected,
@@ -46,13 +51,7 @@ const getTranscriptBySource = makeFunctionReference<
 
 /** Words arrive as JSON (Convex caps arrays at 8192); older rows are inline. */
 function parseWords(row: TranscriptRow): TranscriptWord[] {
-  if (row.wordsJson) {
-    try {
-      return JSON.parse(row.wordsJson) as TranscriptWord[];
-    } catch {
-      return [];
-    }
-  }
+  if (row.wordsJson) return decodeWords(row.wordsJson);
   return row.words ?? [];
 }
 

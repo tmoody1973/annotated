@@ -1,6 +1,12 @@
 import { ConvexHttpClient } from "convex/browser";
 import { makeFunctionReference } from "convex/server";
-import { splitSlugId, sliceTranscriptToSpan, wordsToVtt, type CaptionWord } from "@annotated/shared";
+import {
+  splitSlugId,
+  sliceTranscriptToSpan,
+  wordsToVtt,
+  decodeWords,
+  type CaptionWord,
+} from "@annotated/shared";
 
 // Served same-origin so the cross-origin clip <video> can attach it as a
 // captions <track> without CORS friction. Only YouTube (video) clips get a
@@ -49,7 +55,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 
     const row = await client.query(getTranscriptBySource, { sourceId: annotation.sourceId });
     const words: CaptionWord[] = row?.wordsJson
-      ? (JSON.parse(row.wordsJson) as CaptionWord[])
+      ? decodeWords(row.wordsJson)
       : (row?.words ?? []);
     if (words.length === 0) return emptyTrack();
 

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import { ConvexHttpClient } from "convex/browser";
 import { makeFunctionReference } from "convex/server";
-import { slugId, splitSlugId, sliceTranscriptToSpan } from "@annotated/shared";
+import { slugId, splitSlugId, sliceTranscriptToSpan, decodeWords } from "@annotated/shared";
 import { ClaimButton } from "./claim-button";
 import { SaveImageDialog } from "./save-image-dialog";
 import { VoteButtons } from "../../_components/vote-buttons";
@@ -74,12 +74,11 @@ async function fetchClipTranscript(
     const client = new ConvexHttpClient(convexUrl);
     const row = await client.query(getTranscriptBySource, { sourceId });
     if (!row) return undefined;
-    // New transcripts store wordsJson (bypasses Convex's 8192-array cap); older
-    // rows used the `words` array. Support both so podcast + legacy clips work.
-    type TranscriptWord = { word: string; startMs: number; endMs: number };
-    const words: TranscriptWord[] = row.wordsJson
-      ? (JSON.parse(row.wordsJson) as TranscriptWord[])
-      : (row.words ?? []);
+    // Transcripts live in `wordsJson` (bypasses Convex's 8192-array cap);
+    // `decodeWords` reads both the columnar format and the older
+    // array-of-objects one. Oldest rows predate wordsJson entirely and still
+    // carry a `words` array.
+    const words = row.wordsJson ? decodeWords(row.wordsJson) : (row.words ?? []);
     if (words.length === 0) return undefined;
     const text = sliceTranscriptToSpan(words, startMs, endMs)
       .map((w) => w.word)

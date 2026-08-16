@@ -6,7 +6,6 @@ export interface TranscriptWord {
   startMs: number;
   endMs: number;
   speaker?: string;
-  confidence?: number;
 }
 
 const SECONDS_TO_MS = 1000;
@@ -29,6 +28,5 @@ export function mapDeepgramResult(
     startMs: Math.round(word.start * SECONDS_TO_MS),
     endMs: Math.round(word.end * SECONDS_TO_MS),
     ...(word.speaker !== undefined ? { speaker: String(word.speaker) } : {}),
-    confidence: word.confidence,
   }));
 }

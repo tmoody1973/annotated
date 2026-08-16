@@ -69,11 +69,15 @@ describe("mapDeepgramResult", () => {
     expect(words[0]?.speaker).toBeUndefined();
   });
 
-  it("carries per-word confidence through", () => {
+  // Deliberately dropped. Nothing in the product renders confidence, and it was
+  // a quarter of the stored payload — enough to push a 99-minute episode past
+  // Convex's 1MB document limit. Add it back only alongside something that
+  // reads it.
+  it("drops per-word confidence", () => {
     const words = mapDeepgramResult(
       responseWithWords([{ word: "hi", start: 0, end: 0.3, confidence: 0.42 }])
     );
-    expect(words[0]?.confidence).toBe(0.42);
+    expect(words[0]).toEqual({ word: "hi", startMs: 0, endMs: 300 });
   });
 
   it("returns an empty array when the response has no words", () => {

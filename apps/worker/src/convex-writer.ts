@@ -1,5 +1,6 @@
 import { ConvexHttpClient } from "convex/browser";
 import { makeFunctionReference } from "convex/server";
+import { encodeWords } from "@annotated/shared";
 import type { TranscriptWord } from "./transcript-mapper.js";
 
 type Provider = "deepgram" | "youtube-vtt";
@@ -96,10 +97,13 @@ export function createTranscriptWriter(
       episodeStorageId?: string
     ): Promise<void> {
       // Send the words as a JSON string — Convex caps array args at 8192
-      // elements, which a full episode exceeds. The client parses it back.
+      // elements, which a full episode exceeds. `encodeWords` packs them as
+      // columns rather than one object per word: a 99-minute episode is 1.5MB
+      // as objects, which blows the 1MB document limit, and ~480KB as columns.
+      // `decodeWords` reads it back on every surface.
       await client.mutation(setReadyRef, {
         transcriptId,
-        wordsJson: JSON.stringify(words),
+        wordsJson: encodeWords(words),
         ...(episodeStorageId ? { episodeStorageId } : {}),
         workerToken,
       });
