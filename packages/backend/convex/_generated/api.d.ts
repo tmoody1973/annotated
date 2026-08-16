@@ -21,6 +21,7 @@ import type * as media from "../media.js";
 import type * as ownerEmail from "../ownerEmail.js";
 import type * as podcasts from "../podcasts.js";
 import type * as publishers from "../publishers.js";
+import type * as recordEntries from "../recordEntries.js";
 import type * as reports from "../reports.js";
 import type * as sources from "../sources.js";
 import type * as testing from "../testing.js";
@@ -51,6 +52,7 @@ declare const fullApi: ApiFromModules<{
   ownerEmail: typeof ownerEmail;
   podcasts: typeof podcasts;
   publishers: typeof publishers;
+  recordEntries: typeof recordEntries;
   reports: typeof reports;
   sources: typeof sources;
   testing: typeof testing;

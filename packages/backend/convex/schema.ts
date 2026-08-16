@@ -303,6 +303,51 @@ export default defineSchema({
     .index("by_annotation", ["annotationId"])
     .index("by_status", ["status"]),
 
+  // The Record (`/2026`): a curated editorial layer over an existing `source`.
+  //
+  // A separate table rather than fields on `sources` on purpose — `sources` is
+  // joined by every clip on the platform, and hanging civic status and
+  // curatorial notes off it would make a general-purpose row carry campaign
+  // concerns forever. The record must be removable without touching sources.
+  //
+  // The take on a record entry is an ordinary annotation with the same
+  // `sourceId`. No new concept: the Receipt Chain already carries the argument.
+  recordEntries: defineTable({
+    /** Which campaign this belongs to, so a later one reuses the machinery. */
+    campaign: v.string(), // "2026"
+    sourceId: v.id("sources"),
+
+    jurisdiction: v.string(), // "Racine County"
+    body: v.string(), // "Mount Pleasant Village Board"
+    /** The bounded question this record answers a piece of. */
+    question: v.string(),
+    status: v.union(
+      v.literal("proposed"),
+      v.literal("under_review"),
+      v.literal("hearing_scheduled"),
+      v.literal("decided"),
+      v.literal("withdrawn"),
+      v.literal("preliminary"),
+      v.literal("certified"),
+      v.literal("archived")
+    ),
+    retrievedAt: v.number(),
+    /** Why it is on the record, and one honest limitation of it. Factual. */
+    selectionNote: v.string(),
+    nextDateAt: v.optional(v.number()),
+    nextDateLabel: v.optional(v.string()),
+
+    curatedBy: v.union(v.literal("agent"), v.literal("editor")),
+    /**
+     * Undefined means drafted and awaiting review — the publish gate. A machine
+     * may propose; a person publishes. Enforced here rather than by anyone
+     * remembering: every public query filters on this being set.
+     */
+    publishedAt: v.optional(v.number()),
+  })
+    .index("by_campaign_and_published", ["campaign", "publishedAt"])
+    .index("by_source", ["sourceId"]),
+
   // Canonical, curated topics. Addressable rooms (/topics/[slug]).
   topics: defineTable({
     slug: v.string(),

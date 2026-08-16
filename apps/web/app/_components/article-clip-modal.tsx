@@ -109,12 +109,20 @@ function readSelectionOffsets(container: HTMLElement): { a: number; b: number } 
   return { a, b };
 }
 
-export function ArticleClipModal({ onClose }: { onClose: () => void }) {
+export function ArticleClipModal({
+  onClose,
+  initialUrl,
+}: {
+  onClose: () => void;
+  /** Prefills and immediately extracts — used by The Record's "Add yours", so
+   *  the contributor's first action is the valuable one, not pasting a URL. */
+  initialUrl?: string;
+}) {
   const router = useRouter();
   const extract = useAction(extractArticleRef);
   const publish = useMutation(createArticleRef);
 
-  const [url, setUrl] = useState("");
+  const [url, setUrl] = useState(initialUrl ?? "");
   const [article, setArticle] = useState<(Extracted & { url: string }) | null>(null);
   const [highlight, setHighlight] = useState<ArticleHighlight | null>(null);
   const [take, setTake] = useState("");
@@ -136,6 +144,16 @@ export function ArticleClipModal({ onClose }: { onClose: () => void }) {
 
   // Upsell only where the extension is actually installable and not already on.
   const showUpsell = browser.supported && !extensionInstalled;
+
+  // Prefilled from The Record: skip the paste step. Ref-locked because React
+  // strict mode runs mount effects twice and extraction is a worker call.
+  const didAutoExtract = useRef(false);
+  useEffect(() => {
+    if (!initialUrl || didAutoExtract.current) return;
+    didAutoExtract.current = true;
+    void handleExtract();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialUrl]);
 
   async function handleExtract() {
     setError(null);
