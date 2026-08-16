@@ -203,6 +203,29 @@ export default defineSchema({
     parentId: v.optional(v.id("comments")),
     /** Set when the author deletes their own note. Replies keep their thread. */
     removedAt: v.optional(v.number()),
+
+    // --- The Receipt Chain. All optional: every reply written before this
+    // existed stays valid and renders exactly as it always did, with no label
+    // and no retroactive claim that it was sourced. No migration.
+
+    /**
+     * What this reply is doing, stated rather than inferred. `source_response`
+     * is never offered in the composer — it is placed only through the
+     * right-of-reply slot, which is why it is not a user-selectable intent.
+     */
+    intent: v.optional(
+      v.union(
+        v.literal("context"),
+        v.literal("challenge"),
+        v.literal("support"),
+        v.literal("question"),
+        v.literal("source_response"),
+      ),
+    ),
+    /** A receipt: another clip on Annotated. Mutually exclusive with evidenceUrl. */
+    evidenceAnnotationId: v.optional(v.id("annotations")),
+    /** A receipt: an external http(s) link. Mutually exclusive with the above. */
+    evidenceUrl: v.optional(v.string()),
   })
     .index("by_annotation", ["annotationId"])
     .index("by_author", ["authorId"])
