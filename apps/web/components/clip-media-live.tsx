@@ -33,7 +33,12 @@ export function ClipMediaLive({
   className?: string;
   bare?: boolean;
 }) {
-  const isProcessing = initialMediaState === "processing";
+  // Subscribe while processing *and* while failed: the author can retry a
+  // failed clip in place, which flips the row back to processing. Keying only
+  // off the initial state left a retried clip stuck showing the failure until a
+  // manual reload — the exact reload this whole live path exists to avoid.
+  const isProcessing =
+    initialMediaState === "processing" || initialMediaState === "failed";
   const live: Annotation | undefined = useQuery(
     api.annotations.getById,
     isProcessing ? { annotationId: annotationId as Id<"annotations"> } : "skip"
@@ -41,6 +46,7 @@ export function ClipMediaLive({
 
   return (
     <ClipMedia
+      annotationId={annotationId}
       mediaState={live ? live.mediaState : initialMediaState}
       clipUrl={live ? live.clipUrl : initialClipUrl}
       sourceType={sourceType}

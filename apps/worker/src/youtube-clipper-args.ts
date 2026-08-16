@@ -32,11 +32,24 @@ export function leadingPadMs(startMs: number): number {
   return Math.min(PAD_MS, Math.max(0, startMs));
 }
 
+/**
+ * `--download-sections` hands the cut to yt-dlp's own ffmpeg pass, and on some
+ * videos that pass fails with a bare "ffmpeg exited with code 1" depending on
+ * *where* in the video the section starts. Measured 2026-08-16 on
+ * kX1Sd17KbLY: 2:00-3:00 failed three times in a row while 10:37-11:37, the
+ * same length in the same video, succeeded.
+ *
+ * `--force-keyframes-at-cuts` makes yt-dlp re-encode around the cut instead.
+ * It is the flag that was removed for speed (it was ~85% of a slice's time),
+ * so it must never be the default — but as a second attempt after the fast
+ * path fails, it costs nothing on the videos that already work.
+ */
 export function buildYtDlpArgs(
   videoId: string,
   startMs: number,
   endMs: number,
-  outputTemplate: string
+  outputTemplate: string,
+  { forceKeyframes = false }: { forceKeyframes?: boolean } = {}
 ): string[] {
   const sectionStartMs = startMs - leadingPadMs(startMs);
   const sectionEndMs = endMs + PAD_MS;
@@ -44,6 +57,7 @@ export function buildYtDlpArgs(
     "--no-playlist",
     "--quiet",
     "--no-warnings",
+    ...(forceKeyframes ? ["--force-keyframes-at-cuts"] : []),
     "--download-sections",
     `*${toTimestamp(sectionStartMs)}-${toTimestamp(sectionEndMs)}`,
     "-f",

@@ -1,4 +1,5 @@
 import { WaveformPlayer } from "../app/_components/waveform-player";
+import { RetryClipButton } from "./retry-clip-button";
 
 export type MediaState = "processing" | "ready" | "failed" | undefined;
 
@@ -21,6 +22,7 @@ export function ClipMedia({
   captionsUrl,
   className = "",
   bare = false,
+  annotationId,
 }: {
   mediaState: MediaState;
   clipUrl: string | null;
@@ -31,6 +33,8 @@ export function ClipMedia({
   className?: string;
   /** Feed card's pre-existing youtube render: no chrome wrapper, no height cap. */
   bare?: boolean;
+  /** Lets the author retry a failed slice in place. */
+  annotationId?: string;
 }) {
   if (sourceType === "article") return null;
 
@@ -39,8 +43,11 @@ export function ClipMedia({
       <div className={`bg-[color:var(--b-chrome)] p-6 text-center ${className}`}>
         <p className={noticeText}>This clip couldn&apos;t be made</p>
         <p className="mt-1 text-[13px] text-[color:var(--b-dim-onbg)]">
-          The take and source link below are still here — try clipping it again.
+          The take and source link below are still here.
         </p>
+        {annotationId ? (
+          <RetryClipButton annotationId={annotationId} />
+        ) : null}
       </div>
     );
   }

@@ -127,6 +127,7 @@ export function AnnotationCard({ item }: { item: FeedItem }) {
       )}
 
       <ClipMedia
+        annotationId={item._id}
         mediaState={item.mediaState}
         clipUrl={item.clipUrl}
         sourceType={type}

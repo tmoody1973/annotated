@@ -34,17 +34,30 @@ export async function clipYoutubeVideo(
     rm(workDir, { recursive: true, force: true });
 
   try {
-    await execFileAsync(
-      "yt-dlp",
-      buildYtDlpArgs(videoId, startMs, endMs, join(workDir, "section.%(ext)s")),
-      { maxBuffer: BIG_BUFFER }
-    );
-
-    const downloaded = (await readdir(workDir)).find((f) =>
-      /\.(mp4|mkv|webm)$/i.test(f)
-    );
+    // Fast path first, then the slow-but-reliable one. See buildYtDlpArgs:
+    // yt-dlp's section cut fails on some videos depending where the span
+    // starts, and re-encoding around the keyframes gets those through.
+    let downloaded: string | undefined;
+    let firstError: unknown;
+    for (const forceKeyframes of [false, true]) {
+      try {
+        await execFileAsync(
+          "yt-dlp",
+          buildYtDlpArgs(videoId, startMs, endMs, join(workDir, "section.%(ext)s"), {
+            forceKeyframes,
+          }),
+          { maxBuffer: BIG_BUFFER }
+        );
+      } catch (err) {
+        firstError ??= err;
+        continue;
+      }
+      downloaded = (await readdir(workDir)).find((f) => /\.(mp4|mkv|webm)$/i.test(f));
+      if (downloaded) break;
+      firstError ??= new Error("yt-dlp produced no output file");
+    }
     if (!downloaded) {
-      throw new Error("yt-dlp produced no output file");
+      throw firstError ?? new Error("yt-dlp produced no output file");
     }
 
     const output = join(workDir, "clip.mp4");

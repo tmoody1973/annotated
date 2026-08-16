@@ -50,3 +50,25 @@ describe("buildFfmpegArgs", () => {
     expect(args).toContain("+faststart");
   });
 });
+
+describe("the keyframe fallback", () => {
+  it("omits --force-keyframes-at-cuts on the fast path", () => {
+    const args = buildYtDlpArgs("abc", 120_000, 180_000, "/tmp/s.%(ext)s");
+    expect(args).not.toContain("--force-keyframes-at-cuts");
+  });
+
+  it("adds it only when the fast path is being retried", () => {
+    const args = buildYtDlpArgs("abc", 120_000, 180_000, "/tmp/s.%(ext)s", {
+      forceKeyframes: true,
+    });
+    expect(args).toContain("--force-keyframes-at-cuts");
+  });
+
+  it("changes nothing else about the command", () => {
+    const fast = buildYtDlpArgs("abc", 120_000, 180_000, "/tmp/s.%(ext)s");
+    const slow = buildYtDlpArgs("abc", 120_000, 180_000, "/tmp/s.%(ext)s", {
+      forceKeyframes: true,
+    });
+    expect(slow.filter((a) => a !== "--force-keyframes-at-cuts")).toEqual(fast);
+  });
+});
