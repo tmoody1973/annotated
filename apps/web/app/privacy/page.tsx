@@ -75,8 +75,8 @@ export default function PrivacyPage() {
           <h2>Contact</h2>
           <p>
             Questions or requests:{" "}
-            <a className="font-bold underline" href="mailto:tarik@radiomilwaukee.org">
-              tarik@radiomilwaukee.org
+            <a className="font-bold underline" href="mailto:annotated@tarikos.app">
+              annotated@tarikos.app
             </a>
             .
           </p>
