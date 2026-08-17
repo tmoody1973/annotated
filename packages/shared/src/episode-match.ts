@@ -1,4 +1,5 @@
 import type { RssEpisode } from "./rss-feed";
+import { decodeHtmlEntities } from "./html-entities";
 
 /** What we know about the episode the user is viewing, from page or iTunes. */
 export interface EpisodeCriteria {
@@ -7,9 +8,26 @@ export interface EpisodeCriteria {
   pubDate?: string | null;
 }
 
-/** Collapses whitespace and lowercases so cosmetic title differences still match. */
+/** Folds typographic punctuation to ASCII so ’ and ' compare equal. */
+function foldPunctuation(value: string): string {
+  return value
+    .replace(/[‘’‚‛′]/g, "'")
+    .replace(/[“”„‟″]/g, '"')
+    .replace(/[‐-―−]/g, "-")
+    .replace(/…/g, "...");
+}
+
+/**
+ * Collapses whitespace and lowercases so cosmetic title differences still match.
+ * Entities and smart punctuation are folded first: a feed that writes
+ * "Wisconsin&#8217;s" and a page that writes "Wisconsin’s" are the same episode,
+ * and without this every apostrophe-bearing show fell through to "latest".
+ */
 function normalizeTitle(title: string): string {
-  return title.trim().replace(/\s+/g, " ").toLowerCase();
+  return foldPunctuation(decodeHtmlEntities(title))
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLowerCase();
 }
 
 /** Compares two RFC-822/ISO date strings at day resolution, ignoring format. */

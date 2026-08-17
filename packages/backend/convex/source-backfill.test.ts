@@ -110,3 +110,45 @@ test("podcast backfill never overwrites a good mp3Url", async () => {
   expect(row?.mp3Url).toBe("https://cdn.example/real.mp3");
   expect(row?.podcastName).toBe("Show");
 });
+
+test("a podcast title stored with HTML entities is repaired on the next resolve", async () => {
+  const t = convexTest(schema, modules);
+  const sourceId = await t.run((ctx) =>
+    ctx.db.insert("sources", {
+      type: "podcast",
+      canonicalUrl: "https://example.com/show",
+      title: "How Crowley won Wisconsin&#8217;s Democratic primary",
+      podcastName: "Inside Wisconsin Politics",
+      podcastEpisodeGuid: "guid-1",
+      mp3Url: "https://example.com/a.mp3",
+    })
+  );
+
+  await t.run((ctx) =>
+    upsertPodcastSource(ctx, {
+      canonicalUrl: "https://example.com/show",
+      title: "How Crowley won Wisconsin’s Democratic primary",
+      podcastName: "Inside Wisconsin Politics",
+      episodeGuid: "guid-1",
+      mp3Url: "https://example.com/a.mp3",
+    })
+  );
+
+  expect((await t.run((ctx) => ctx.db.get(sourceId)))?.title).toBe(
+    "How Crowley won Wisconsin’s Democratic primary"
+  );
+
+  // A real later title still does not overwrite a good one — first writer wins.
+  await t.run((ctx) =>
+    upsertPodcastSource(ctx, {
+      canonicalUrl: "https://example.com/show",
+      title: "Some other title",
+      podcastName: "Inside Wisconsin Politics",
+      episodeGuid: "guid-1",
+      mp3Url: "https://example.com/a.mp3",
+    })
+  );
+  expect((await t.run((ctx) => ctx.db.get(sourceId)))?.title).toBe(
+    "How Crowley won Wisconsin’s Democratic primary"
+  );
+});

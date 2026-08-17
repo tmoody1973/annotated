@@ -199,6 +199,13 @@ interface PodcastSourceInput {
  * without GUIDs fall back to the canonical page URL.
  */
 /** Fills only blank podcast fields from a later resolve (first real writer wins). */
+/** A title stored before feed titles were decoded still reads "Wisconsin&#8217;s"
+ *  on the page. Repairing that is a correction, not an overwrite of someone's
+ *  better data, so it is the one case that beats first-writer-wins. */
+function looksEntityEncoded(value: string | undefined): boolean {
+  return value !== undefined && /&(#x?[0-9a-f]+|[a-z]+);/i.test(value);
+}
+
 async function backfillPodcastSource(
   ctx: MutationCtx,
   existing: { _id: Id<"sources">; title?: string; podcastName?: string; mp3Url?: string },
@@ -206,6 +213,13 @@ async function backfillPodcastSource(
 ): Promise<void> {
   const patch: Partial<{ title: string; podcastName: string; mp3Url: string }> = {};
   if (!isBlank(input.title) && isBlank(existing.title)) patch.title = input.title.trim();
+  else if (
+    !isBlank(input.title) &&
+    looksEntityEncoded(existing.title) &&
+    !looksEntityEncoded(input.title)
+  ) {
+    patch.title = input.title.trim();
+  }
   if (!isBlank(input.podcastName) && isBlank(existing.podcastName)) {
     patch.podcastName = input.podcastName.trim();
   }
@@ -273,6 +287,13 @@ async function backfillArticleSource(
 ): Promise<void> {
   const patch: Partial<{ title: string; siteName: string; author: string; imageUrl: string }> = {};
   if (!isBlank(input.title) && isBlank(existing.title)) patch.title = input.title.trim();
+  else if (
+    !isBlank(input.title) &&
+    looksEntityEncoded(existing.title) &&
+    !looksEntityEncoded(input.title)
+  ) {
+    patch.title = input.title.trim();
+  }
   if (!isBlank(input.siteName) && isBlank(existing.siteName)) {
     patch.siteName = input.siteName!.trim();
   }

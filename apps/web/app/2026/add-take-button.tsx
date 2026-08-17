@@ -12,13 +12,35 @@ const className =
   "border-2 border-[color:var(--b-line)] bg-[color:var(--b-acid)] px-3 py-1.5 text-[12px] font-black uppercase tracking-wide text-[color:var(--b-acid-ink)] shadow-[3px_3px_0_0_var(--b-shadow)] transition-transform hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_0_var(--b-shadow)]";
 
 /**
- * The one action that fixes a record entry nobody has annotated. Opens the
- * ordinary composer with the source already loaded — nothing about the flow is
- * campaign-specific beyond the prefill.
+ * The one action that fixes a record entry nobody has annotated.
+ *
+ * Which composer opens depends on the source. An article is highlighted on the
+ * web; audio and video are dragged out in the side panel, and the web app has
+ * no way to do that — so an audio row sends you to the episode with the panel,
+ * rather than opening a composer that cannot read it.
  */
-export function AddTakeButton({ sourceUrl }: { sourceUrl: string }) {
+export function AddTakeButton({
+  sourceUrl,
+  sourceType = "article",
+}: {
+  sourceUrl: string;
+  sourceType?: string;
+}) {
   const { isAuthenticated } = useConvexAuth();
   const [open, setOpen] = useState(false);
+
+  if (sourceType !== "article") {
+    return (
+      <a
+        href={sourceUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={className}
+      >
+        Clip it ↗
+      </a>
+    );
+  }
 
   if (!isAuthenticated) {
     return (

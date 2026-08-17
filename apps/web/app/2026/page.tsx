@@ -30,7 +30,13 @@ interface RecordRow {
   nextDateLabel?: string;
   curatedBy: "agent" | "editor";
   byline: string;
-  source: { _id: string; title: string; url: string | null; siteName: string | null };
+  source: {
+    _id: string;
+    type: string;
+    title: string;
+    url: string | null;
+    siteName: string | null;
+  };
   takeCount: number;
   takes: TakePreview[];
 }
@@ -220,6 +226,11 @@ export default async function RecordPage({
                 <div className="flex flex-col gap-5 p-5 sm:p-7 md:flex-row md:gap-8">
                   {/* Left rail: who decides, and where it stands. */}
                   <div className="flex shrink-0 flex-row flex-wrap items-center gap-3 md:w-[168px] md:flex-col md:items-start md:gap-3">
+                    {row.source.type !== "article" && (
+                      <span className="bg-[color:var(--b-acid)] px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-[color:var(--b-acid-ink)]">
+                        {row.source.type === "podcast" ? "Audio" : "Video"}
+                      </span>
+                    )}
                     {row.statusLabel && (
                       <span className="bg-[color:var(--b-line)] px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-[color:var(--b-card)]">
                         {row.statusLabel}
@@ -322,11 +333,16 @@ export default async function RecordPage({
                     }
                   >
                     <p className="font-mono text-[11px] font-bold uppercase tracking-[0.16em]">
-                      {row.takeCount === 0
-                        ? "No one has answered this yet"
-                        : `${row.takeCount} ${row.takeCount === 1 ? "take" : "takes"}`}
+                      {row.takeCount > 0
+                        ? `${row.takeCount} ${row.takeCount === 1 ? "take" : "takes"}`
+                        : row.source.type === "article"
+                          ? "Open for a take"
+                          : "Open for a take — drag one out of the audio"}
                     </p>
-                    <AddTakeButton sourceUrl={row.source.url} />
+                    <AddTakeButton
+                      sourceUrl={row.source.url}
+                      sourceType={row.source.type}
+                    />
                   </div>
                 )}
               </li>

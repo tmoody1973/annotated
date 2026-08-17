@@ -56,4 +56,38 @@ describe("matchEpisode", () => {
     ];
     expect(matchEpisode(dupes, { title: "Daily" })).toBeNull();
   });
+
+  it("matches an entity-encoded feed title against the page's real apostrophe", () => {
+    // Real case: WPR's feed carries "Wisconsin&#8217;s"; the page title carries
+    // the typographic character. Without decoding, every episode of a show that
+    // uses apostrophes falls through to "latest episode" — the wrong one.
+    const feed = [
+      {
+        guid: "a",
+        title: "How Crowley won Wisconsin&#8217;s Democratic primary for governor",
+        pubDate: "Thu, 13 Aug 2026 22:00:00 +0000",
+        enclosureUrl: "a.mp3",
+      },
+      {
+        guid: "b",
+        title: "National attention turns to Wisconsin&#8217;s 2026 governor&#8217;s race",
+        pubDate: "Thu, 06 Aug 2026 22:00:00 +0000",
+        enclosureUrl: "b.mp3",
+      },
+    ];
+    expect(
+      matchEpisode(feed, {
+        title: "National attention turns to Wisconsin\u2019s 2026 governor\u2019s race",
+      })?.guid
+    ).toBe("b");
+
+    // Straight quotes, named entities and &amp; all fold to the same key.
+    expect(matchEpisode(feed, { title: "How Crowley won Wisconsin's Democratic primary for governor" })?.guid).toBe("a");
+    expect(
+      matchEpisode(
+        [{ guid: "c", title: "Fear &amp; loathing \u2014 the finale", pubDate: "", enclosureUrl: "c" }],
+        { title: "Fear & loathing - the finale" }
+      )?.guid
+    ).toBe("c");
+  });
 });

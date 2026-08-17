@@ -123,6 +123,9 @@ async function toRecordRow(ctx: QueryCtx, entry: Doc<"recordEntries">) {
     byline: EDITORIAL_BYLINE,
     source: {
       _id: entry.sourceId,
+      // The composer that opens from "Add yours" depends on this: an article
+      // is highlighted on the web, audio and video are clipped in the extension.
+      type: source?.type ?? "article",
       title: source?.title ?? "Source unavailable",
       url: source?.canonicalUrl ?? null,
       siteName: source?.siteName ?? null,
@@ -273,6 +276,7 @@ export const update = internalMutation({
     entryId: v.id("recordEntries"),
     status: v.optional(statusValidator),
     track: v.optional(trackValidator),
+    question: v.optional(v.string()),
     selectionNote: v.optional(v.string()),
     retrievedAt: v.optional(v.number()),
     nextDateAt: v.optional(v.number()),
@@ -291,6 +295,9 @@ export const update = internalMutation({
         "Selection note",
         MAX_SELECTION_NOTE_LENGTH
       );
+    }
+    if (patch.question !== undefined) {
+      patch.question = requireText(patch.question, "Question", MAX_QUESTION_LENGTH);
     }
     await ctx.db.patch(entryId, patch);
     return null;

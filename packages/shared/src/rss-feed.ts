@@ -1,3 +1,4 @@
+import { decodeHtmlEntities } from "./html-entities";
 import { XMLParser } from "fast-xml-parser";
 
 /** A single clippable episode extracted from an RSS feed. */
@@ -64,13 +65,13 @@ export function parseRssFeed(xml: string): ParsedFeed {
   const channel = rss?.channel as Record<string, unknown> | undefined;
   if (!channel) return EMPTY;
 
-  const podcastName = textOf(channel.title);
+  const podcastName = decodeHtmlEntities(textOf(channel.title));
   const episodes = asArray(channel.item as unknown)
     .map((raw): RssEpisode => {
       const item = raw as Record<string, unknown>;
       return {
         guid: textOf(item.guid) || null,
-        title: textOf(item.title),
+        title: decodeHtmlEntities(textOf(item.title)),
         pubDate: textOf(item.pubDate),
         enclosureUrl: enclosureUrlOf(item),
       };
