@@ -1,0 +1,37 @@
+<!doctype html>
+<meta charset="utf-8" />
+<style>
+  @font-face {
+    font-family: "Archivo Black";
+    src: url("file:///Users/tarikmoody/Documents/Projects/annotated/apps/web/.next/static/media/316b6682b406c2db-s.0m_cefwpdo931.woff2") format("woff2"), url("file:///Users/tarikmoody/Documents/Projects/annotated/apps/web/.next/static/media/5e4d537aaa9e154b-s.p.0g9-.3zp53cup.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+  }
+  html, body { margin: 0; padding: 0; background: transparent; }
+  /* The mark is the wordmark's first letter: the acid highlight block that sits
+     over the A in [A]NNOTATED. A highlighter is the product, so the logo is
+     already the metaphor — the icon is that block on its own. */
+  .mark {
+    width: 1024px;
+    height: 1024px;
+    background: #e1ff00;
+    /* The system's hard keyline, scaled. Without it the acid square dissolves
+       into a light browser tab strip. */
+    box-sizing: border-box;
+    border: 64px solid #0a0a0a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .a {
+    font-family: "Archivo Black", sans-serif;
+    color: #0a0a0a;
+    font-size: 720px;
+    line-height: 1;
+    /* Archivo Black's A sits slightly high in its em box; nudge it optically. */
+    transform: translateY(18px);
+    letter-spacing: 0;
+  }
+</style>
+<div class="mark"><span class="a">A</span></div>
