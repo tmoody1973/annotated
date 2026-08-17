@@ -57,20 +57,14 @@ const CHAPTERS_FIXTURE = [
   { title: "Questions", startMs: 274_000, endMs: 402_000 },
 ];
 
-// Chapters are behind the same sign-in as every other server call, so the panel
-// has to believe it has a token. Only the token message is answered here;
-// everything else still goes to the real background worker.
+// Deliberately no auth shim: chapters must work signed out, because clipping
+// does and chapters are how you decide what to clip.
 const PIN_TAB_SHIM = (tab) => {
   const install = () => {
     const c = window.chrome;
-    if (!c || !c.tabs || !c.runtime) return false;
+    if (!c || !c.tabs) return false;
     c.tabs.query = async () => [{ id: tab.id, url: tab.url, active: true }];
     c.tabs.sendMessage = async () => ({});
-    const realSend = c.runtime.sendMessage.bind(c.runtime);
-    c.runtime.sendMessage = (message, ...rest) =>
-      message?.type === "GET_CONVEX_TOKEN"
-        ? Promise.resolve({ token: "e2e-fake-token" })
-        : realSend(message, ...rest);
     const noop = { addListener() {}, removeListener() {} };
     c.tabs.onActivated = noop;
     c.tabs.onUpdated = noop;
@@ -107,17 +101,6 @@ async function main() {
     await panel.setViewportSize({ width: 380, height: 780 });
     await panel.addInitScript(PIN_TAB_SHIM, { id: tabId, url: WATCH_URL });
 
-    // ensureCurrentUser runs before any authed call; it has nothing to prove here.
-    await panel.route("**/api/mutation", async (route) => {
-      const body = route.request().postData() ?? "";
-      if (!body.includes("users:ensureCurrentUser")) return route.continue();
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({ status: "success", value: "e2e-user" }),
-      });
-    });
-
     // Answer only the chapters action; let every other Convex call through.
     await panel.route("**/api/action", async (route) => {
       const body = route.request().postData() ?? "";
@@ -140,6 +123,10 @@ async function main() {
     await panel
       .getByRole("heading", { name: /Choose the evidence/i })
       .waitFor({ timeout: 15000 });
+
+    // Signed out — the "Sign in" affordance is still showing — and the list is
+    // there anyway.
+    await panel.getByText(/Sign in/i).first().waitFor({ timeout: 10000 });
 
     // The list is back.
     await panel.getByText(/Chapters · tap to set the clip/i).waitFor({ timeout: 15000 });

@@ -26,15 +26,27 @@ const chapterValidator = v.object({
   endMs: v.number(),
 });
 
+/**
+ * A video's chapter marks. The one call here that is NOT auth-gated.
+ *
+ * Clipping does not require an account, and chapters are how you decide what to
+ * clip — gating them behind sign-in withheld the help exactly when a first-time
+ * visitor needs it, to protect data that is already public on the video's own
+ * page. The worker token still never leaves the server, the response carries
+ * nothing user-specific, and a failure returns [] rather than an error.
+ *
+ * The cost of a yt-dlp call is the real exposure; if that becomes a problem the
+ * answer is a cache or a rate limit here, not a sign-in wall.
+ */
 export const youtubeChapters = action({
   args: { videoId: v.string() },
   returns: v.array(chapterValidator),
   handler: async (ctx, args) => {
-    await requireIdentity(ctx);
-    const { url, token } = workerConfig();
-    // Chapters are an enhancement: a failure — including a timeout — must
-    // never block clipping.
+    // Chapters are an enhancement: a failure — including a timeout, or a
+    // worker that isn't configured in this environment — must never block
+    // clipping, so even reading the config happens inside the guard.
     try {
+      const { url, token } = workerConfig();
       const response = await fetch(`${url}/youtube-chapters`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },

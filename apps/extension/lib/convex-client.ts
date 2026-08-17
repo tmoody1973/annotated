@@ -36,6 +36,17 @@ export class NotSignedInError extends Error {
 }
 
 /**
+ * A client with no identity, for the calls that genuinely need none. Used by
+ * the chapter lookup so a signed-out user still gets help choosing a clip.
+ */
+export function buildPublicClient(): ConvexHttpClient {
+  if (!convexUrl) {
+    throw new Error("Missing PLASMO_PUBLIC_CONVEX_URL");
+  }
+  return new ConvexHttpClient(convexUrl);
+}
+
+/**
  * Creates an authed one-shot ConvexHttpClient for the signed-in Clerk user.
  * Throws NotSignedInError when no token is available. Guarantees the users
  * row exists before the caller uses the client to derive the author.

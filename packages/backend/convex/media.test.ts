@@ -59,3 +59,13 @@ describe("transcribePodcast guards", () => {
     );
   });
 });
+
+test("chapters are readable without signing in", async () => {
+  const t = convexTest(schema, modules);
+  // Clipping does not require an account, and chapters are how you choose what
+  // to clip — so this one action must not raise "Sign in to continue". The
+  // worker is unreachable in the test, and the enhancement degrades to [].
+  await expect(
+    t.action(api.media.youtubeChapters, { videoId: "dQw4w9WgXcQ" })
+  ).resolves.toEqual([]);
+});

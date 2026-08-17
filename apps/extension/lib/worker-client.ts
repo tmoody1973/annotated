@@ -1,6 +1,6 @@
 import { makeFunctionReference } from "convex/server";
 import type { Chapter } from "@annotated/shared";
-import { buildAuthedClient } from "./convex-client";
+import { buildAuthedClient, buildPublicClient } from "./convex-client";
 
 // The extension no longer talks to the Fly worker directly — every former
 // worker call now routes through a Convex action/mutation, which holds the
@@ -77,11 +77,14 @@ export async function extractArticle(
   return await client.action(extractArticleAction, { url, htmlStorageId });
 }
 
-/** Chapters are an enhancement — a failure must never block clipping. */
+/**
+ * Chapters are an enhancement — a failure must never block clipping — and they
+ * are fetched without an identity on purpose: you can clip signed out, and
+ * chapters are how you decide what to clip.
+ */
 export async function fetchYoutubeChapters(videoId: string): Promise<Chapter[]> {
   try {
-    const client = await buildAuthedClient();
-    return await client.action(youtubeChapters, { videoId });
+    return await buildPublicClient().action(youtubeChapters, { videoId });
   } catch {
     return [];
   }
