@@ -1,5 +1,5 @@
 import { convexTest } from "convex-test";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import { api } from "./_generated/api";
 import schema from "./schema";
 
@@ -68,4 +68,38 @@ test("chapters are readable without signing in", async () => {
   await expect(
     t.action(api.media.youtubeChapters, { videoId: "dQw4w9WgXcQ" })
   ).resolves.toEqual([]);
+});
+
+test("chapters are mapped out of yt-dlp's raw shape, not passed through", async () => {
+  const t = convexTest(schema, modules);
+  // The worker returns yt-dlp verbatim — seconds, snake_case — and the shared
+  // parser is what turns that into Chapters. The action stopped calling it when
+  // the worker call moved server-side, so every video that actually HAS chapters
+  // failed its own returns validator and the client swallowed the error as [].
+  vi.stubEnv("WORKER_URL", "https://worker.test");
+  vi.stubEnv("WORKER_AUTH_TOKEN", "test-token");
+  vi.stubGlobal("fetch", async () =>
+    new Response(
+      JSON.stringify({
+        chapters: [
+          { start_time: 0.0, end_time: 156.0, title: "Gavin Baker joins the show!" },
+          { start_time: 156.0, end_time: 900.5, title: "Market check" },
+          // Malformed entries must be dropped, not crash the lookup.
+          { start_time: 900.5, end_time: 900.5, title: "Zero length" },
+          { title: "No times" },
+        ],
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } }
+    )
+  );
+
+  try {
+    expect(await t.action(api.media.youtubeChapters, { videoId: "kVzYGVJ8zUk" })).toEqual([
+      { startMs: 0, endMs: 156_000, title: "Gavin Baker joins the show!" },
+      { startMs: 156_000, endMs: 900_500, title: "Market check" },
+    ]);
+  } finally {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  }
 });

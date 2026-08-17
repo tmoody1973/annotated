@@ -16,7 +16,7 @@ made once. When the store shows 0.4.3, paste this at the top of
     "Chapters are back. A video with chapters shows them on the clip screen — tap one and your clip becomes that chapter, trimmed to 90 seconds if it runs longer.",
     "Tapping a chapter also titles your take, so you start writing from a labelled point instead of an empty box. Change your mind and pick another one and the title follows; once you've written anything of your own, it stays put.",
     "Chapters work before you sign in. Clipping never needed an account, and chapters are how you decide what to clip — asking you to log in first was withholding help at the moment you needed it.",
-    "Honest note: this went missing in the four-screen redesign and shipped broken in 0.4.1 and 0.4.2. Nobody reported it; it was found by being asked where it went.",
+    "Honest note: chapters went missing in the four-screen redesign, and were broken underneath it too — the server had stopped converting YouTube's timings into the shape the app expects, so even a video that had chapters came back empty. Both are fixed. Nobody reported either one; they were found by being asked where the feature went.",
   ],
 },
 ```

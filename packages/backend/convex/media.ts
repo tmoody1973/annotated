@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { action } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { workerConfig, WORKER_FETCH_TIMEOUT_MS } from "./clips";
+import { parseYoutubeChapters } from "@annotated/shared";
 import type { Id } from "./_generated/dataModel";
 
 // /transcribe downloads the whole episode then runs Deepgram sync (debt j:
@@ -55,8 +56,11 @@ export const youtubeChapters = action({
       });
       if (!response.ok) return [];
       const body = (await response.json()) as { chapters?: unknown };
-      if (!Array.isArray(body.chapters)) return [];
-      return body.chapters as { title: string; startMs: number; endMs: number }[];
+      // The worker returns yt-dlp verbatim — seconds, snake_case, sometimes the
+      // string "NA". parseYoutubeChapters is the trust boundary that turns that
+      // into Chapters; casting instead of calling it made every video that had
+      // chapters fail this action's own returns validator.
+      return parseYoutubeChapters(body.chapters);
     } catch {
       return [];
     }
