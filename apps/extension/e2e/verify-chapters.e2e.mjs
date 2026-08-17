@@ -1,12 +1,14 @@
-// Verifies ISC-18/19/20/26 for the YouTube chapters feature in a REAL loaded
-// extension: the sidepanel's ClipComposer fetches chapters, renders a tappable
-// brutalist list, and a tap sets In/Out (90s-capped) + seeds editable commentary.
+// Chapters, in a REAL loaded extension, on the four-screen panel.
 //
-// The worker -> YouTube (yt-dlp) data path is verified separately (live yt-dlp
-// returns the exact {start_time,end_time,title} shape; the route returns 401
-// without auth). Here we intercept /youtube-chapters with a real-shaped fixture
-// so the RENDER + interaction are tested deterministically, independent of
-// YouTube rate-limiting.
+// The feature was lost when the single-scroll composer was deleted; this is the
+// test that says it is back. It asserts the three things that make it worth
+// having: the list renders on the Clip screen, tapping a chapter sets the clip
+// to that chapter capped at 90 seconds, and the take arrives on screen 3
+// already titled with the chapter.
+//
+// The chapter lookup now runs through the Convex action `media:youtubeChapters`
+// rather than a direct worker call, so the intercept sits on Convex's /api/action
+// and only answers for that one function — every other action still goes through.
 //
 // Run:
 //   pnpm --filter extension build
@@ -28,41 +30,47 @@ function resolveChromium() {
   bases.push(join(process.cwd(), "node_modules"), resolve(__dirname, "..", "node_modules"));
   const npxCache = join(homedir(), ".npm", "_npx");
   if (existsSync(npxCache)) {
-    for (const entry of readdirSync(npxCache)) bases.push(join(npxCache, entry, "node_modules"));
+    for (const entry of readdirSync(npxCache)) {
+      bases.push(join(npxCache, entry, "node_modules"));
+    }
   }
   for (const base of bases) {
     try {
       return createRequire(join(base, "noop.js"))("playwright").chromium;
     } catch {
-      // next
+      /* try the next candidate */
     }
   }
-  throw new Error("playwright not found — run `npx playwright install chromium` or set PLAYWRIGHT_DIR.");
+  throw new Error("playwright not found — set PLAYWRIGHT_DIR to its node_modules");
 }
 
 const chromium = resolveChromium();
 const EXTENSION_PATH = resolve(__dirname, "..", "build", "chrome-mv3-prod");
 const SHOT_DIR = resolve(__dirname, "..", "..", "..", ".playwright-mcp");
+const WATCH_URL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
 
-// Real yt-dlp chapter shape (captured live from a freecodecamp JS course).
+/** Real yt-dlp shape, already parsed into the Chapter type the action returns. */
 const CHAPTERS_FIXTURE = [
-  { start_time: 0.0, end_time: 84.0, title: "Introduction" },
-  { start_time: 84.0, end_time: 263.0, title: "Running JavaScript" },
-  { start_time: 263.0, end_time: 356.0, title: "Comment Your Code" },
-  { start_time: 356.0, end_time: 375.0, title: "Declare Variables" },
-  { start_time: 375.0, end_time: 691.0, title: "Storing Values with the Assignment Operator" },
+  { title: "Cold open", startMs: 0, endMs: 84_000 },
+  // Deliberately 3m10s long, so the 90s cap has something to bite on.
+  { title: "Running JavaScript", startMs: 84_000, endMs: 274_000 },
+  { title: "Questions", startMs: 274_000, endMs: 402_000 },
 ];
 
-const WATCH_URL = "https://www.youtube.com/watch?v=PkZNo7MFNFg";
-
-// Make the active tab look like a YouTube watch page so useActiveTabYoutubeId
-// extracts the videoId and ClipComposer mounts.
-const YOUTUBE_TAB_SHIM = (url) => {
+// Chapters are behind the same sign-in as every other server call, so the panel
+// has to believe it has a token. Only the token message is answered here;
+// everything else still goes to the real background worker.
+const PIN_TAB_SHIM = (tab) => {
   const install = () => {
     const c = window.chrome;
-    if (!c || !c.tabs) return false;
-    c.tabs.query = async () => [{ id: 1, url, active: true }];
+    if (!c || !c.tabs || !c.runtime) return false;
+    c.tabs.query = async () => [{ id: tab.id, url: tab.url, active: true }];
     c.tabs.sendMessage = async () => ({});
+    const realSend = c.runtime.sendMessage.bind(c.runtime);
+    c.runtime.sendMessage = (message, ...rest) =>
+      message?.type === "GET_CONVEX_TOKEN"
+        ? Promise.resolve({ token: "e2e-fake-token" })
+        : realSend(message, ...rest);
     const noop = { addListener() {}, removeListener() {} };
     c.tabs.onActivated = noop;
     c.tabs.onUpdated = noop;
@@ -88,49 +96,91 @@ async function main() {
       context.serviceWorkers()[0] ?? (await context.waitForEvent("serviceworker"));
     const extensionId = new URL(sw.url()).host;
 
+    const page = await context.newPage();
+    await page.goto(WATCH_URL, { waitUntil: "domcontentloaded" });
+    const tabId = await sw.evaluate(async () => {
+      const [t] = await chrome.tabs.query({ active: true, currentWindow: true });
+      return t?.id ?? null;
+    });
+
     const panel = await context.newPage();
-    await panel.addInitScript(YOUTUBE_TAB_SHIM, WATCH_URL);
-    // Intercept the worker call with a real-shaped fixture (deterministic render).
-    await panel.route("**/youtube-chapters", (route) =>
-      route.fulfill({
+    await panel.setViewportSize({ width: 380, height: 780 });
+    await panel.addInitScript(PIN_TAB_SHIM, { id: tabId, url: WATCH_URL });
+
+    // ensureCurrentUser runs before any authed call; it has nothing to prove here.
+    await panel.route("**/api/mutation", async (route) => {
+      const body = route.request().postData() ?? "";
+      if (!body.includes("users:ensureCurrentUser")) return route.continue();
+      await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ chapters: CHAPTERS_FIXTURE }),
-      })
-    );
+        body: JSON.stringify({ status: "success", value: "e2e-user" }),
+      });
+    });
+
+    // Answer only the chapters action; let every other Convex call through.
+    await panel.route("**/api/action", async (route) => {
+      const body = route.request().postData() ?? "";
+      if (!body.includes("media:youtubeChapters")) return route.continue();
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ status: "success", value: CHAPTERS_FIXTURE }),
+      });
+    });
 
     await panel.goto(`chrome-extension://${extensionId}/sidepanel.html`, {
       waitUntil: "domcontentloaded",
     });
 
-    // ISC-18: chapter list renders.
-    await panel.getByText("Running JavaScript").waitFor({ timeout: 15000 });
-    await panel.getByText(/Chapters/i).first().waitFor({ timeout: 5000 });
+    // Screen 1 → 2.
+    const start = panel.getByRole("button", { name: /^Clip / });
+    await start.waitFor({ timeout: 25000 });
+    await start.click();
+    await panel
+      .getByRole("heading", { name: /Choose the evidence/i })
+      .waitFor({ timeout: 15000 });
+
+    // The list is back.
+    await panel.getByText(/Chapters · tap to set the clip/i).waitFor({ timeout: 15000 });
+    const chapter = panel.getByRole("button", { name: /Running JavaScript/ });
+    await chapter.waitFor({ timeout: 10000 });
     await panel.screenshot({ path: join(SHOT_DIR, "chapters-list.png"), fullPage: true });
 
-    // ISC-19/20/26: tap a chapter -> In/Out set (90s cap) + commentary seeded.
-    await panel.getByText("Running JavaScript").click();
-
-    const fields = panel.locator(".ann-field");
-    const inValue = await fields.nth(0).inputValue();
-    const outValue = await fields.nth(1).inputValue();
-    const commentary = await panel.locator(".ann-textarea").inputValue();
-
+    // Tapping sets the clip: start at the chapter, end capped at start + 90s.
+    await chapter.click();
+    const startSlider = panel.getByRole("slider", { name: "Clip start" });
+    const endSlider = panel.getByRole("slider", { name: "Clip end" });
+    await startSlider.waitFor({ timeout: 10000 });
+    // The sliders report seconds (aria-valuenow), with mm:ss in aria-valuetext.
+    const startSec = Number(await startSlider.getAttribute("aria-valuenow"));
+    const endSec = Number(await endSlider.getAttribute("aria-valuenow"));
     await panel.screenshot({ path: join(SHOT_DIR, "chapters-tapped.png"), fullPage: true });
 
-    assert.equal(inValue, "1:24", `In should be the chapter start 1:24, got "${inValue}"`);
+    assert.equal(startSec, 84, `clip should start at the chapter (1:24), got ${startSec}s`);
     assert.equal(
-      outValue,
-      "2:54",
-      `Out should be capped at start+90s (2:54), got "${outValue}"`
+      endSec,
+      174,
+      `clip should end at start + 90s (2:54), not the chapter's own end, got ${endSec}s`
     );
+
+    // The take arrives on screen 3 already titled, and is editable.
+    await panel.getByRole("button", { name: /Next — your take/i }).click();
+    await panel.getByRole("heading", { name: /State the claim/i }).waitFor({ timeout: 15000 });
+    const takeField = panel.getByRole("textbox", { name: /take/i });
+    const seeded = await takeField.inputValue();
     assert.ok(
-      commentary.startsWith("Chapter: Running JavaScript"),
-      `commentary should be seeded with the chapter title, got "${commentary}"`
+      seeded.startsWith("Chapter: Running JavaScript"),
+      `take should be seeded with the chapter title, got "${seeded}"`
+    );
+    await takeField.fill(`${seeded}he never answers the question.`);
+    assert.ok(
+      (await takeField.inputValue()).endsWith("he never answers the question."),
+      "the seeded take must stay editable"
     );
 
     console.log(
-      `PASS: chapters rendered; tap set In=${inValue} Out=${outValue} (90s cap), commentary seeded "${commentary}". Screenshots in .playwright-mcp/.`
+      `PASS: chapters render; tap set ${startSec}s→${endSec}s (90s cap held); take seeded "${seeded}" and still editable.`
     );
   } finally {
     await context.close();
@@ -138,7 +188,7 @@ async function main() {
   }
 }
 
-main().catch((err) => {
-  console.error("FAIL:", err.message);
+main().catch((error) => {
+  console.error("FAIL:", error.message);
   process.exit(1);
 });

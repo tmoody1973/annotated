@@ -3,10 +3,12 @@
  * one way forward; the body owns whatever "choose the evidence" means for this
  * kind of source.
  */
-import { evaluateClipSpan, type ArticleHighlight } from "@annotated/shared";
+import { evaluateClipSpan, type ArticleHighlight, type Chapter } from "@annotated/shared";
 import type { DetectedSource } from "../../lib/use-detected-source";
 import type { Span } from "../../lib/scrubber";
 import type { Draft } from "../../lib/use-panel-flow";
+import { seedTakeFromChapter } from "../../lib/chapter-seed";
+import { ChapterList } from "./chapter-list";
 import { ClipBodyYoutube } from "./clip-body-youtube";
 import { ClipBodyArticle } from "./clip-body-article";
 import { ClipBodyPodcast } from "./clip-body-podcast";
@@ -17,6 +19,7 @@ interface ClipScreenProps {
   onSpanChange: (span: Span) => void;
   onHighlight: (highlight: ArticleHighlight | null) => void;
   onPodcastSelection: (quote: string, startMs: number, endMs: number, sourceId: string) => void;
+  onTakeText: (text: string) => void;
   onNext: () => void;
 }
 
@@ -26,8 +29,17 @@ export function ClipScreen({
   onSpanChange,
   onHighlight,
   onPodcastSelection,
+  onTakeText,
   onNext,
 }: ClipScreenProps) {
+  // Picking a chapter sets the clip and titles the take. Re-picking keeps the
+  // title in step, but text the user actually wrote is never clobbered.
+  function selectChapter(chapter: Chapter, startMs: number, endMs: number): void {
+    onSpanChange({ startMs, endMs });
+    const seeded = seedTakeFromChapter(draft.takeText, chapter.title);
+    if (seeded !== null) onTakeText(seeded);
+  }
+
   const highlight: ArticleHighlight | null =
     draft.selectedText !== null && draft.textRange !== null
       ? {
@@ -42,7 +54,10 @@ export function ClipScreen({
   return (
     <>
       {detected.kind === "youtube" && draft.spanMs ? (
-        <ClipBodyYoutube span={draft.spanMs} onChange={onSpanChange} />
+        <>
+          <ChapterList videoId={detected.videoId} onSelect={selectChapter} />
+          <ClipBodyYoutube span={draft.spanMs} onChange={onSpanChange} />
+        </>
       ) : detected.kind === "article" ? (
         <ClipBodyArticle
           detection={detected.article}

@@ -108,6 +108,7 @@ function Sidepanel() {
             detected={detected}
             draft={flow.draft}
             onSpanChange={(spanMs) => dispatch({ type: "setSpan", spanMs })}
+            onTakeText={(text) => dispatch({ type: "setTakeText", text })}
             onHighlight={(highlight) =>
               dispatch({
                 type: "setSelectedText",
