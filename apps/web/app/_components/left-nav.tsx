@@ -16,7 +16,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Curated", glyph: "★", href: "/?room=curated" },
   { label: "Latest", glyph: "◷", href: "/?room=latest" },
   { label: "Topics", glyph: "#", href: "/topics" },
-  { label: "2026 Record", glyph: "▮", href: "/2026" },
+  { label: "Midterm Record", glyph: "▮", href: "/2026" },
 ];
 
 /** Marketing destinations surfaced in the header nav + the mobile drawer. */
@@ -30,7 +30,7 @@ export const MARKETING_ITEMS: NavItem[] = [
 const SIGNED_IN_ROOMS: NavItem[] = [
   { label: "Latest", glyph: "◷", href: "/?room=latest" },
   { label: "Topics", glyph: "#", href: "/topics" },
-  { label: "2026 Record", glyph: "▮", href: "/2026" },
+  { label: "Midterm Record", glyph: "▮", href: "/2026" },
 ];
 
 /** Brutalist left dashboard rail: section/room nav + an acid tagline block.

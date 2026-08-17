@@ -19,7 +19,7 @@ import { upsertArticleSource } from "./sources";
 
 /** The visible editorial identity. Never a personal account — a reader has to
  *  be able to tell which parts a machine selected and which a person meant. */
-export const EDITORIAL_BYLINE = "The 2026 Record";
+export const EDITORIAL_BYLINE = "The Midterm Record";
 
 const MAX_QUESTION_LENGTH = 300;
 const MAX_SELECTION_NOTE_LENGTH = 800;

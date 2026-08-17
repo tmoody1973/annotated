@@ -98,7 +98,7 @@ function daysUntilElection(): number {
 }
 
 export const metadata = {
-  title: "The 2026 Record — Annotated",
+  title: "The Midterm Record — Annotated",
   description:
     "A running record of verified public sources for the 2026 midterms — Wisconsin first, plus the Senate, governor and House races that decide control. The record is the evidence; the take is yours.",
 };
@@ -130,14 +130,15 @@ export default async function RecordPage({
           <div className="flex flex-col gap-6 p-6 sm:p-8 md:flex-row md:items-end md:justify-between">
             <div className="min-w-0">
               <h1 className="font-display text-[clamp(2.75rem,10vw,5.5rem)] leading-[0.86] tracking-[-0.03em]">
-                THE 2026
+                THE MIDTERM
                 <br />
                 RECORD
               </h1>
-              <p className="mt-4 max-w-[46ch] text-[15px] font-bold leading-snug sm:text-base">
-                Every row is a public document — what it is, which body decides
-                it, where it stands, and when we last checked. The record is the
-                evidence. The take is the point, and the take is yours.
+              <p className="mt-4 max-w-[42ch] font-mono text-[12px] font-bold uppercase leading-snug tracking-[0.1em]">
+                2026 · Wisconsin, the Senate, the races that decide control
+              </p>
+              <p className="mt-3 max-w-[44ch] text-[17px] font-black leading-tight sm:text-xl">
+                We find the evidence. You say what it means.
               </p>
             </div>
 
@@ -169,6 +170,39 @@ export default async function RecordPage({
             </div>
           </dl>
         </header>
+
+        {/* Three sentences, because the page previously assumed the reader
+            already knew what a take was and that they were allowed to write
+            one. Both were assumptions, and both were wrong. */}
+        <ol className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {[
+            {
+              n: "1",
+              h: "We put up the source",
+              p: "A real article or episode about a real race, with why it is here and what it can't tell you.",
+            },
+            {
+              n: "2",
+              h: "You clip the moment",
+              p: "Highlight the passage, or drag a clip out of the audio. Anyone with an account can — you don't need an invitation.",
+            },
+            {
+              n: "3",
+              h: "You say what it means",
+              p: "That part is never written by a machine. The record holds evidence; the argument is yours and it stays yours.",
+            },
+          ].map((step) => (
+            <li
+              key={step.n}
+              className="border-[3px] border-[color:var(--b-line)] bg-[color:var(--b-card)] p-4 text-[color:var(--b-ink)]"
+            >
+              <p className="font-mono text-[11px] font-bold uppercase tracking-[0.16em] text-[color:var(--b-dim)]">
+                {step.n} · {step.h}
+              </p>
+              <p className="mt-1.5 text-[13px] font-semibold leading-snug">{step.p}</p>
+            </li>
+          ))}
+        </ol>
 
         {/* Tracks. Real links, not client state: a filtered record is a thing
             you can send someone. Empty tracks stay visible and say so, because
@@ -337,7 +371,7 @@ export default async function RecordPage({
                         ? `${row.takeCount} ${row.takeCount === 1 ? "take" : "takes"}`
                         : row.source.type === "article"
                           ? "Open for a take"
-                          : "Open for a take — drag one out of the audio"}
+                          : "Open for a take — drag one out of the audio in the side panel"}
                     </p>
                     <AddTakeButton
                       sourceUrl={row.source.url}

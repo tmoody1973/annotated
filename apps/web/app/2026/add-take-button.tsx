@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useConvexAuth } from "convex/react";
 import { SignInButton } from "@clerk/nextjs";
 import { ArticleClipModal } from "../_components/article-clip-modal";
@@ -29,16 +30,28 @@ export function AddTakeButton({
   const { isAuthenticated } = useConvexAuth();
   const [open, setOpen] = useState(false);
 
+  // Audio and video are clipped in the side panel, which means the extension.
+  // The button used to open the episode and say nothing — someone without the
+  // extension landed on a podcast page with no idea what had happened. Say the
+  // requirement before the click, and offer the way to meet it.
   if (sourceType !== "article") {
     return (
-      <a
-        href={sourceUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={className}
-      >
-        Clip it ↗
-      </a>
+      <span className="flex flex-wrap items-center gap-2">
+        <a
+          href={sourceUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={className}
+        >
+          Open the episode ↗
+        </a>
+        <Link
+          href="/extension"
+          className="font-mono text-[11px] font-bold uppercase tracking-[0.1em] underline decoration-2 underline-offset-4"
+        >
+          needs the extension
+        </Link>
+      </span>
     );
   }
 
