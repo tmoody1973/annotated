@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useConvexAuth } from "convex/react";
 import { SignInButton } from "@clerk/nextjs";
 import { ArticleClipModal } from "../_components/article-clip-modal";
+import { useBrowserInfo } from "../_lib/use-browser-info";
 
 /** Takes written from The Record belong to the campaign room by default. */
 export const CAMPAIGN_TOPIC_SLUG = "wisconsin-2026";
@@ -29,12 +30,33 @@ export function AddTakeButton({
 }) {
   const { isAuthenticated } = useConvexAuth();
   const [open, setOpen] = useState(false);
+  const browser = useBrowserInfo();
 
   // Audio and video are clipped in the side panel, which means the extension.
   // The button used to open the episode and say nothing — someone without the
   // extension landed on a podcast page with no idea what had happened. Say the
   // requirement before the click, and offer the way to meet it.
   if (sourceType !== "article") {
+    // No browser on a phone can run the extension, so sending a phone user to
+    // /extension is sending them to a page they cannot act on. Tell them the
+    // truth and let them listen instead.
+    if (browser.isMobile) {
+      return (
+        <span className="flex flex-wrap items-center gap-2">
+          <a
+            href={sourceUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={className}
+          >
+            Listen ↗
+          </a>
+          <span className="font-mono text-[11px] font-bold uppercase tracking-[0.1em]">
+            clipping audio needs a computer
+          </span>
+        </span>
+      );
+    }
     return (
       <span className="flex flex-wrap items-center gap-2">
         <a

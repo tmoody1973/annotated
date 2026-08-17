@@ -16,6 +16,7 @@ import { TopicPicker } from "./topic-picker";
 import { ExtensionCta } from "./extension-cta";
 import { useBrowserInfo } from "../_lib/use-browser-info";
 import { markManualPublish } from "../_lib/extension-nudge";
+import { usePassageSelection } from "../_lib/use-passage-selection";
 
 const BROWSER_NAMES: Record<BrowserKind, string> = {
   chrome: "Chrome",
@@ -94,21 +95,6 @@ const createArticleRef = makeFunctionReference<"mutation", CreateArticleArgs, st
   "annotations:createArticle"
 );
 
-/** Reads the current text selection's char offsets within the pre-wrap article
- *  container (offsets map 1:1 to textContent because it's a single text node). */
-function readSelectionOffsets(container: HTMLElement): { a: number; b: number } | null {
-  const sel = window.getSelection();
-  if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return null;
-  const range = sel.getRangeAt(0);
-  if (!container.contains(range.commonAncestorContainer)) return null;
-  const pre = range.cloneRange();
-  pre.selectNodeContents(container);
-  pre.setEnd(range.startContainer, range.startOffset);
-  const a = pre.toString().length;
-  const b = a + range.toString().length;
-  return { a, b };
-}
-
 export function ArticleClipModal({
   onClose,
   initialUrl,
@@ -177,12 +163,17 @@ export function ArticleClipModal({
     }
   }
 
-  function onSelect(container: HTMLElement) {
-    if (!article) return;
-    const offsets = readSelectionOffsets(container);
-    if (!offsets) return;
-    setHighlight(selectArticleHighlight(article.textContent, offsets.a, offsets.b));
-  }
+  // Every selection gesture reports here, including a finger's — see
+  // use-passage-selection.ts for why mouseup alone was not enough.
+  const passageRef = useRef<HTMLDivElement>(null);
+  usePassageSelection(
+    passageRef,
+    (offsets) => {
+      if (!article) return;
+      setHighlight(selectArticleHighlight(article.textContent, offsets.a, offsets.b));
+    },
+    article !== null
+  );
 
   const canPublish =
     !!article && !!highlight?.valid && take.trim().length > 0 && topicIds.length > 0;
@@ -311,7 +302,7 @@ export function ArticleClipModal({
                 <h3 className="text-lg font-extrabold leading-tight">{article.title}</h3>
               </div>
               <div
-                onMouseUp={(e) => onSelect(e.currentTarget)}
+                ref={passageRef}
                 // --b-bg pairs with --b-onbg, never the card's --b-ink. Without
                 // the pair the extracted passage renders black-on-black in dark
                 // mode — present, selectable, and invisible.
