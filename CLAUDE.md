@@ -24,20 +24,29 @@ A Chrome sidebar that captures 90-second clips from YouTube, podcasts, or news a
 | Backend | Convex | Real-time data, file storage, scheduled functions |
 | Auth | Clerk | X + Google providers only; email/password disabled |
 | UI library | **HeroUI v3 + HeroUI Pro** (license held) | Shared across web app and extension sidepanel |
-| Theme | **`brutalism-light`** (HeroUI v3 official theme) | Brutalism-dark for system dark mode via `next-themes` |
+| Design system | **The `--b-*` tokens in `apps/web/app/globals.css`** | Hand-rolled, and what everything actually renders in. Documented in `brand/brand-kit.html`. HeroUI's brutalism theme sits underneath but is overridden. |
+| Type | Archivo Black (display) · Archivo (body) · Newsreader (quotes) · JetBrains Mono (data) | Self-hosted via `next/font`. Earlier notes said Anton + Share Tech Mono — that has not been true since the type-forward pass. |
 | CSS framework | Tailwind CSS v4 | Required by HeroUI v3; install via `@heroui/styles` |
 | Transcription | Deepgram Nova-3 | Podcasts; word-level timestamps + speaker diarization |
 | Transcription | yt-dlp VTT | YouTube; no extra service needed |
 | Email | Resend | Claim dispute notifications to Tarik; triggered by Convex action on claims insert |
 | Package mgr | pnpm workspaces | Turborepo for task orchestration |
 
-### UI conventions (HeroUI-specific)
+### UI conventions
 
-- Use HeroUI components as the default; only drop to raw Tailwind when no component fits
-- Theme is set on `<html>` via `data-theme="brutalism-light"` (or `"brutalism-dark"`) — flip via `next-themes`
-- Compound API: `<Card><Card.Header>...</Card.Header></Card>`, not deeply nested prop blocks
-- Brutalism discipline: monospace runs are reserved for timestamps and code only — never body text. Audio waveforms read as data viz, not decoration. The brutalism is the *frame*; content stays readable.
-- HeroUI Pro MCP is installed in Claude Code — use it to look up component APIs and theme tokens rather than guessing
+**Read `brand/brand-kit.html` before designing anything.** It documents the live
+system rather than proposing one, and it is rendered in that system.
+
+- Build with the `--b-*` tokens, not HeroUI components. The Pro theme is loaded but
+  the app overrides it; new UI that reaches for HeroUI components will not match.
+- **Pair the tokens.** `--b-bg` goes with `--b-onbg`; `--b-card` goes with `--b-ink`.
+  Mixing them renders text the same colour as its ground — it has shipped twice.
+- Form: 3px keylines, hard offset shadows with zero blur, no radius. Cards stay
+  light in both themes; dark mode flips the page ground and turns the shadow acid.
+- Acid `#e1ff00` is a ground, never a text colour, and its ink is always `#0a0a0a`.
+- Mono is for measurement — timestamps, hex, counts. Never body copy, never
+  atmosphere.
+- HeroUI Pro MCP is installed — useful for component APIs, but the tokens above win.
 
 ## Spec requirements (non-negotiable)
 
